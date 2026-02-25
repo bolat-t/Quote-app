@@ -1,0 +1,354 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Draw the Moment | AR Studio</title>
+    <style>
+        :root {
+            --glass: rgba(10, 10, 10, 0.85);
+            --accent: #00ffcc;
+            --blur: blur(25px);
+        }
+
+        body,
+        html {
+            margin: 0;
+            padding: 0;
+            overflow: hidden;
+            background: #000;
+            font-family: 'Inter', -apple-system, sans-serif;
+        }
+
+        /* Fullscreen Viewport */
+        #camera-feed {
+            position: absolute;
+            width: 100vw;
+            height: 100vh;
+            object-fit: cover;
+            z-index: 1;
+        }
+
+        #draw-layer {
+            position: absolute;
+            top: 0;
+            left: 0;
+            z-index: 2;
+            touch-action: none;
+        }
+
+        /* Floating UI Panels */
+        .ui-panel {
+            position: absolute;
+            z-index: 3;
+            background: var(--glass);
+            backdrop-filter: var(--blur);
+            -webkit-backdrop-filter: var(--blur);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 24px;
+            display: flex;
+            padding: 12px;
+            gap: 15px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
+        }
+
+        .left-bar {
+            left: 15px;
+            top: 50%;
+            transform: translateY(-50%);
+            flex-direction: column;
+        }
+
+        .right-bar {
+            right: 15px;
+            top: 50%;
+            transform: translateY(-50%);
+            flex-direction: column;
+            align-items: center;
+            padding: 20px 10px;
+        }
+
+        .bottom-bar {
+            bottom: 30px;
+            left: 50%;
+            transform: translateX(-50%);
+            flex-direction: row;
+            align-items: center;
+        }
+
+        /* Tools */
+        .tool-btn {
+            width: 48px;
+            height: 48px;
+            border-radius: 14px;
+            border: none;
+            background: rgba(255, 255, 255, 0.1);
+            color: white;
+            cursor: pointer;
+            font-size: 20px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: 0.2s;
+        }
+
+        .tool-btn.active {
+            background: var(--accent);
+            color: #000;
+        }
+
+        .export-btn {
+            background: #fff;
+            color: #000;
+            font-weight: bold;
+            width: auto;
+            padding: 0 24px;
+            border-radius: 30px;
+        }
+
+        /* Vertical Size Slider */
+        input[type=range] {
+            -webkit-appearance: slider-vertical;
+            width: 12px;
+            height: 180px;
+            background: rgba(255, 255, 255, 0.2);
+            border-radius: 10px;
+            outline: none;
+        }
+
+        /* Export Overlay */
+        #export-modal {
+            display: none;
+            position: fixed;
+            z-index: 10;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: #000;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+        }
+
+        #preview-canvas {
+            max-width: 95%;
+            max-height: 55vh;
+            border-radius: 4px;
+            border: 1px solid #333;
+        }
+
+        .form-group {
+            margin-top: 25px;
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+            width: 320px;
+        }
+
+        .form-group input {
+            background: #1a1a1a;
+            border: 1px solid #333;
+            color: #fff;
+            padding: 14px;
+            border-radius: 12px;
+            text-align: center;
+            font-size: 16px;
+        }
+    </style>
+
+</head>
+
+<body>
+
+    <video id="camera-feed" autoplay playsinline></video>
+    <canvas id="draw-layer"></canvas>
+
+    <div class="ui-panel left-bar">
+        <input type="color" id="colorPicker" value="#ffffff"
+            style="width:40px; height:40px; border:none; border-radius:50%; background:none; cursor:pointer;">
+        <button class="tool-btn" id="flipBtn" onclick="switchCamera()">🔄</button>
+        <button class="tool-btn" id="eraserBtn" onclick="setMode('eraser')">🧽</button>
+        <button class="tool-btn" onclick="clearCanvas()">🗑️</button>
+    </div>
+
+    <div class="ui-panel right-bar">
+        <span style="color:white; font-size:10px; margin-bottom:10px; font-weight:bold; opacity:0.6;">SIZE</span>
+        <input type="range" id="sizeSlider" min="2" max="60" value="15">
+    </div>
+
+    <div class="ui-panel bottom-bar">
+        <button class="tool-btn active" id="btn-pencil" onclick="setBrush('pencil')">✏️</button>
+        <button class="tool-btn" id="btn-ink" onclick="setBrush('ink')">🖋️</button>
+        <button class="tool-btn" id="btn-glow" onclick="setBrush('glow')">✨</button>
+        <button class="tool-btn export-btn" onclick="openExport()">KEEP THE MOMENT</button>
+    </div>
+
+    <div id="export-modal">
+        <canvas id="preview-canvas"></canvas>
+        <div class="form-group">
+            <input type="text" id="userName" placeholder="Artist Name" oninput="renderExport()">
+            <input type="text" id="userTitle" placeholder="Moment Title (e.g. Rainy Cafe)" oninput="renderExport()">
+            <div style="display:flex; gap:10px;">
+                <button class="tool-btn export-btn" style="flex:2;" onclick="download()">SAVE TO GALLERY</button>
+                <button class="tool-btn" style="flex:1; background:#333;" onclick="closeExport()">BACK</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const canvas = document.getElementById('draw-layer');
+        const ctx = canvas.getContext('2d');
+        const video = document.getElementById('camera-feed');
+        const sizeSlider = document.getElementById('sizeSlider');
+
+        let drawing = false, currentBrush = 'pencil', currentMode = 'draw', brushColor = '#ffffff';
+        let lastX = 0, lastY = 0, lastTime = 0;
+        let currentFacingMode = 'environment';
+
+        // 1. Initial Camera Setup
+        async function initCamera() {
+            if (video.srcObject) {
+                video.srcObject.getTracks().forEach(track => track.stop());
+            }
+            try {
+                const stream = await navigator.mediaDevices.getUserMedia({
+                    video: { facingMode: currentFacingMode }, audio: false
+                });
+                video.srcObject = stream;
+                resize();
+            } catch (err) { alert("Camera not found or permission denied."); }
+        }
+
+        function switchCamera() {
+            currentFacingMode = (currentFacingMode === 'environment') ? 'user' : 'environment';
+            initCamera();
+        }
+
+        function resize() {
+            canvas.width = window.innerWidth;
+            canvas.height = window.innerHeight;
+        }
+
+        // 2. Drawing Engine
+        function draw(e) {
+            if (!drawing) return;
+            const x = (e.touches ? e.touches[0].clientX : e.clientX);
+            const y = (e.touches ? e.touches[0].clientY : e.clientY);
+            const currentTime = Date.now();
+            const baseSize = parseInt(sizeSlider.value);
+
+            if (currentMode === 'eraser') {
+                ctx.globalCompositeOperation = 'destination-out';
+                ctx.lineWidth = baseSize * 2.5; ctx.lineCap = 'round';
+                ctx.beginPath(); ctx.moveTo(lastX, lastY); ctx.lineTo(x, y); ctx.stroke();
+            } else {
+                ctx.globalCompositeOperation = 'source-over';
+                ctx.fillStyle = ctx.strokeStyle = brushColor;
+
+                if (currentBrush === 'pencil') {
+                    // Dense Graphite Texture
+                    const density = 80;
+                    for (let i = 0; i < density; i++) {
+                        const r = (baseSize / 1.5) * Math.sqrt(Math.random()), theta = Math.random() * 2 * Math.PI;
+                        ctx.globalAlpha = Math.random() * 0.6;
+                        const grain = Math.random() * 2.5;
+                        ctx.fillRect(x + r * Math.cos(theta), y + r * Math.sin(theta), grain, grain);
+                    }
+                }
+                else if (currentBrush === 'ink') {
+                    // Fluid Velocity Ink
+                    const dist = Math.hypot(x - lastX, y - lastY);
+                    const speed = Math.min(dist / (currentTime - lastTime), 10);
+                    ctx.lineWidth = Math.max(baseSize - (speed * (baseSize / 5)), 2);
+                    ctx.lineCap = 'round'; ctx.globalAlpha = 1.0;
+                    ctx.beginPath(); ctx.moveTo(lastX, lastY); ctx.lineTo(x, y); ctx.stroke();
+                }
+                else if (currentBrush === 'glow') {
+                    ctx.lineWidth = baseSize; ctx.globalAlpha = 1; ctx.shadowBlur = 20; ctx.shadowColor = brushColor;
+                    ctx.beginPath(); ctx.moveTo(lastX, lastY); ctx.lineTo(x, y); ctx.stroke();
+                    ctx.shadowBlur = 0;
+                }
+            }
+            lastX = x; lastY = y; lastTime = currentTime;
+        }
+
+        // 3. Museum Diptych Export Logic
+        function openExport() {
+            document.getElementById('export-modal').style.display = 'flex';
+            renderExport();
+        }
+        function closeExport() { document.getElementById('export-modal').style.display = 'none'; }
+
+        function renderExport() {
+            const pCanvas = document.getElementById('preview-canvas');
+            const pCtx = pCanvas.getContext('2d');
+            const name = (document.getElementById('userName').value || "Observer").toUpperCase();
+            const note = document.getElementById('userTitle').value || "Untraced Moment";
+            const date = new Date().toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' });
+
+            // Diptych Dimensions
+            pCanvas.width = 1800; pCanvas.height = 1000;
+            pCtx.fillStyle = "white"; pCtx.fillRect(0, 0, 1800, 1000);
+
+            const winW = 750, winH = 650, topY = 120, leftX = 100, rightX = 950;
+
+            // Mirror Camera Fix for Selfies
+            if (currentFacingMode === 'user') {
+                pCtx.save();
+                pCtx.translate(leftX + winW, topY);
+                pCtx.scale(-1, 1);
+                pCtx.drawImage(video, 0, 0, canvas.width, canvas.height, 0, 0, winW, winH);
+                pCtx.restore();
+            } else {
+                pCtx.drawImage(video, 0, 0, canvas.width, canvas.height, leftX, topY, winW, winH);
+            }
+
+            // Draw Art Layers
+            pCtx.drawImage(canvas, 0, 0, canvas.width, canvas.height, leftX, topY, winW, winH); // Layer I
+            pCtx.strokeStyle = "#f0f0f0"; pCtx.strokeRect(rightX, topY, winW, winH);
+            pCtx.drawImage(canvas, 0, 0, canvas.width, canvas.height, rightX, topY, winW, winH); // Layer II
+
+            // Labels & Museum Text
+            pCtx.fillStyle = "#999"; pCtx.font = "16px monospace";
+            pCtx.fillText("I. THE MOMENT", leftX, topY + winH + 40);
+            pCtx.fillText("II. THE INTERPRETATION", rightX, topY + winH + 40);
+
+            pCtx.fillStyle = "#111"; pCtx.font = "bold 46px serif";
+            pCtx.fillText(name, leftX, 880);
+            pCtx.font = "italic 26px serif"; pCtx.globalAlpha = 0.6;
+            pCtx.fillText(`${note} — ${date}`, leftX, 930);
+        }
+
+        function download() {
+            const link = document.createElement('a');
+            link.download = `Moment_${Date.now()}.png`;
+            link.href = document.getElementById('preview-canvas').toDataURL(); link.click();
+        }
+
+        // 4. Utility Glue
+        function setBrush(b) { currentBrush = b;['pencil', 'ink', 'glow'].forEach(t => document.getElementById(`btn-${t}`).classList.toggle('active', t === b)); }
+        function setMode(m) { currentMode = m; document.getElementById('eraserBtn').classList.toggle('active', m === 'eraser'); }
+        function clearCanvas() { ctx.clearRect(0, 0, canvas.width, canvas.height); }
+        document.getElementById('colorPicker').oninput = (e) => brushColor = e.target.value;
+
+        const startDraw = (e) => {
+            drawing = true;
+            const pos = e.touches ? e.touches[0] : e;
+            lastX = pos.clientX; lastY = pos.clientY; lastTime = Date.now();
+        };
+
+        canvas.addEventListener('mousedown', startDraw);
+        window.addEventListener('mouseup', () => drawing = false);
+        canvas.addEventListener('mousemove', draw);
+        canvas.addEventListener('touchstart', (e) => { e.preventDefault(); startDraw(e); });
+        window.addEventListener('touchend', () => drawing = false);
+        canvas.addEventListener('touchmove', (e) => { e.preventDefault(); draw(e); });
+        window.addEventListener('resize', resize);
+
+        initCamera();
+    </script>
+</body>
+
+</html>

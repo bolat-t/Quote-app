@@ -1,0 +1,10 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(python:*)",
+      "Bash(npx tsc:*)",
+      "Bash(find:*)",
+      "Bash(npx expo start:*)"
+    ]
+  }
+}

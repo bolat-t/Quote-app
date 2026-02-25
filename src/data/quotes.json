@@ -1,0 +1,502 @@
+[
+    {
+        "id": 1,
+        "text": "You made it to another day. That matters more than you think. Every sunrise is proof you're still in the game.",
+        "category": "Resilience"
+    },
+    {
+        "id": 2,
+        "text": "Remember that time you failed and thought it was over? Look at you now. Failure was never the end—it was the teacher.",
+        "category": "Growth"
+    },
+    {
+        "id": 3,
+        "text": "That overwhelming thing? You don't have to tackle it all at once. Break it down. One piece at a time. You've done this before.",
+        "category": "Action"
+    },
+    {
+        "id": 4,
+        "text": "You've fallen before. You'll fall again. But here's your secret: you always get up one more time than you fall.",
+        "category": "Resilience"
+    },
+    {
+        "id": 5,
+        "text": "Everyone you admire started exactly where you are. The only difference? Time and consistency. You're already on the path.",
+        "category": "Growth"
+    },
+    {
+        "id": 6,
+        "text": "Yes, it's scary. Do it anyway. Courage isn't the absence of fear—it's action in spite of it. You know this.",
+        "category": "Action"
+    },
+    {
+        "id": 7,
+        "text": "Today is hard. Tomorrow might be harder. But tomorrow's you will be stronger too. Trust the process.",
+        "category": "Resilience"
+    },
+    {
+        "id": 8,
+        "text": "Small actions compound. The version of you reading this in three months will thank you for what you start today.",
+        "category": "Growth"
+    },
+    {
+        "id": 9,
+        "text": "Stop comparing yourself to others. Compare yourself to who you were yesterday. That's the only race that matters.",
+        "category": "Mindset"
+    },
+    {
+        "id": 10,
+        "text": "Rome wasn't built in a day, and neither is anything worth having. Patience. Keep stacking those small wins.",
+        "category": "Growth"
+    },
+    {
+        "id": 11,
+        "text": "Tired? Rest. But don't quit. There's a difference. Recharge and come back. The work will wait.",
+        "category": "Resilience"
+    },
+    {
+        "id": 12,
+        "text": "Water shapes stone not by force, but by persistence. Your small daily efforts are doing more than you realize.",
+        "category": "Consistency"
+    },
+    {
+        "id": 13,
+        "text": "Your thoughts shape your reality. What you focus on expands. Choose your thoughts like you'd choose your friends.",
+        "category": "Mindset"
+    },
+    {
+        "id": 14,
+        "text": "Today didn't go as planned? Tomorrow is a fresh start. Problems don't last forever, and neither does this moment.",
+        "category": "Resilience"
+    },
+    {
+        "id": 15,
+        "text": "That discomfort you're feeling? That's growth. Muscles don't grow without resistance. Neither do you.",
+        "category": "Growth"
+    },
+    {
+        "id": 16,
+        "text": "Every expert was once a beginner. Every master was once a disaster. Start now. Start messy. Just start.",
+        "category": "Action"
+    },
+    {
+        "id": 17,
+        "text": "You can't control the storm, but you can build a stronger shelter. Focus on what you can control. Let go of the rest.",
+        "category": "Mindset"
+    },
+    {
+        "id": 18,
+        "text": "The past is done. The future is uncertain. Right now is all you've got. Use it well.",
+        "category": "Mindset"
+    },
+    {
+        "id": 19,
+        "text": "You've been wrong before. You'll be wrong again. But each mistake carries a lesson. You're getting smarter.",
+        "category": "Growth"
+    },
+    {
+        "id": 20,
+        "text": "Be as kind to yourself as you'd be to a good friend. You deserve your own compassion.",
+        "category": "Mindset"
+    },
+    {
+        "id": 21,
+        "text": "One day you'll wake up and what felt impossible will feel easy. Keep practicing. That day is coming.",
+        "category": "Growth"
+    },
+    {
+        "id": 22,
+        "text": "You don't need the perfect plan. You need to start. Figure out the rest as you go. Motion creates clarity.",
+        "category": "Action"
+    },
+    {
+        "id": 23,
+        "text": "You already know what you need to do. The scary thing? That's exactly where your growth lives. Step outside.",
+        "category": "Action"
+    },
+    {
+        "id": 24,
+        "text": "When you lift others up, you rise too. Your success and theirs aren't mutually exclusive. Help freely.",
+        "category": "Mindset"
+    },
+    {
+        "id": 25,
+        "text": "A bad day isn't a bad life. This storm will pass. The sun always comes back. Hang in there.",
+        "category": "Resilience"
+    },
+    {
+        "id": 26,
+        "text": "Rest isn't weakness—it's strategy. Your mind and body need downtime to perform. Sleep well. Attack fresh.",
+        "category": "Resilience"
+    },
+    {
+        "id": 27,
+        "text": "That voice of doubt? It's just trying to protect you. Acknowledge it, thank it, and then do the thing anyway.",
+        "category": "Mindset"
+    },
+    {
+        "id": 28,
+        "text": "Made a mistake in front of others? They still respect you. Mistakes are human. Own them. Move forward.",
+        "category": "Resilience"
+    },
+    {
+        "id": 29,
+        "text": "What you focus on grows. Focus on problems, they multiply. Focus on solutions, they emerge. Choose wisely.",
+        "category": "Mindset"
+    },
+    {
+        "id": 30,
+        "text": "Your ancestors survived ice ages and famines. You can handle today's challenges. You carry their resilience.",
+        "category": "Resilience"
+    },
+    {
+        "id": 31,
+        "text": "Slow progress is still progress. The tortoise beats the hare because the tortoise never stops. Keep moving.",
+        "category": "Consistency"
+    },
+    {
+        "id": 32,
+        "text": "Every missed shot is practice for the one that lands. Missing is part of aiming. Keep shooting.",
+        "category": "Action"
+    },
+    {
+        "id": 33,
+        "text": "Jealousy is wasted energy. Use that fire to build your own thing. Someone else's success doesn't diminish yours.",
+        "category": "Mindset"
+    },
+    {
+        "id": 34,
+        "text": "You can't change the wind, but you can adjust your sails. Adapt. Flexibility is strength.",
+        "category": "Resilience"
+    },
+    {
+        "id": 35,
+        "text": "Done is better than perfect. Finished work, however imperfect, beats the flawless idea that never ships.",
+        "category": "Action"
+    },
+    {
+        "id": 36,
+        "text": "Your energy is precious. Spend it on what makes you grow, not on what drains you. Protect your fire.",
+        "category": "Mindset"
+    },
+    {
+        "id": 37,
+        "text": "The best time to plant a tree was 20 years ago. The second best time is right now. Start planting.",
+        "category": "Action"
+    },
+    {
+        "id": 38,
+        "text": "You're not behind. You're not ahead. You're exactly where you need to be. Trust your timeline.",
+        "category": "Mindset"
+    },
+    {
+        "id": 39,
+        "text": "Celebrate small wins. They're the building blocks of massive victories. Every step counts.",
+        "category": "Growth"
+    },
+    {
+        "id": 40,
+        "text": "Overthinking is the thief of joy and action. Sometimes you just need to trust yourself and jump.",
+        "category": "Action"
+    },
+    {
+        "id": 41,
+        "text": "The obstacle isn't in your way—it IS the way. Challenges are the curriculum of growth.",
+        "category": "Resilience"
+    },
+    {
+        "id": 42,
+        "text": "You've survived 100% of your worst days so far. Those odds are pretty good. Keep going.",
+        "category": "Resilience"
+    },
+    {
+        "id": 43,
+        "text": "Comfort zone is where dreams go to sleep. Step outside. That's where the magic happens.",
+        "category": "Action"
+    },
+    {
+        "id": 44,
+        "text": "The person you'll be in 5 years depends on the books you read and the people you surround yourself with. Choose wisely.",
+        "category": "Growth"
+    },
+    {
+        "id": 45,
+        "text": "Discipline is choosing between what you want NOW and what you want MOST. Play the long game.",
+        "category": "Consistency"
+    },
+    {
+        "id": 46,
+        "text": "You don't rise to the level of your goals—you fall to the level of your systems. Build better habits.",
+        "category": "Consistency"
+    },
+    {
+        "id": 47,
+        "text": "Rejection is redirection. That closed door is pushing you toward the right one. Keep knocking.",
+        "category": "Resilience"
+    },
+    {
+        "id": 48,
+        "text": "Gratitude turns what we have into enough. Take a moment. What are you thankful for right now?",
+        "category": "Mindset"
+    },
+    {
+        "id": 49,
+        "text": "Your words become your beliefs. Your beliefs become your actions. Speak life into yourself.",
+        "category": "Mindset"
+    },
+    {
+        "id": 50,
+        "text": "The pain you feel today is the strength you feel tomorrow. For every challenge, there's growth.",
+        "category": "Growth"
+    },
+    {
+        "id": 51,
+        "text": "Stop waiting for motivation. Action creates motivation. Just start moving.",
+        "category": "Action"
+    },
+    {
+        "id": 52,
+        "text": "You are the average of the five people you spend the most time with. Upgrade your circle.",
+        "category": "Growth"
+    },
+    {
+        "id": 53,
+        "text": "Failure isn't the opposite of success—it's part of it. Every failure is a data point. Learn and iterate.",
+        "category": "Growth"
+    },
+    {
+        "id": 54,
+        "text": "What you do when no one is watching defines who you really are. Show up for yourself.",
+        "category": "Consistency"
+    },
+    {
+        "id": 55,
+        "text": "The only thing standing between you and your goal is the story you keep telling yourself. Rewrite it.",
+        "category": "Mindset"
+    },
+    {
+        "id": 56,
+        "text": "Inspiration is for amateurs. Professionals show up every day whether they feel like it or not.",
+        "category": "Consistency"
+    },
+    {
+        "id": 57,
+        "text": "Your potential is like a seed. It won't grow unless you water it with effort and nurture it with patience.",
+        "category": "Growth"
+    },
+    {
+        "id": 58,
+        "text": "Don't let a bad chapter make you forget about the whole story. You're writing a masterpiece.",
+        "category": "Perspective"
+    },
+    {
+        "id": 59,
+        "text": "Confidence isn't 'I know I'll succeed.' It's 'I'll be okay regardless of the outcome.' That's true strength.",
+        "category": "Mindset"
+    },
+    {
+        "id": 60,
+        "text": "You don't have to be great to start, but you have to start to be great. Take that first step.",
+        "category": "Action"
+    },
+    {
+        "id": 61,
+        "text": "Energy flows where attention goes. What are you feeding with your focus today?",
+        "category": "Mindset"
+    },
+    {
+        "id": 62,
+        "text": "The mountain doesn't care about your feelings. It just waits—until you're ready to climb. Get ready.",
+        "category": "Action"
+    },
+    {
+        "id": 63,
+        "text": "You are one decision away from a completely different life. Make bold choices.",
+        "category": "Action"
+    },
+    {
+        "id": 64,
+        "text": "Invest in yourself. The return is unlimited. Read, learn, grow, repeat.",
+        "category": "Growth"
+    },
+    {
+        "id": 65,
+        "text": "Hard work beats talent when talent doesn't work hard. Be the hardest worker in the room.",
+        "category": "Effort"
+    },
+    {
+        "id": 66,
+        "text": "The universe rewards action, not intention. Stop planning. Start doing.",
+        "category": "Action"
+    },
+    {
+        "id": 67,
+        "text": "Ships are safe in harbor, but that's not what ships are built for. Sail out. Explore.",
+        "category": "Action"
+    },
+    {
+        "id": 68,
+        "text": "Your future self is watching you right now through memories. Make them proud.",
+        "category": "Perspective"
+    },
+    {
+        "id": 69,
+        "text": "The darkest hour has only 60 minutes. This too shall pass. Hang in there.",
+        "category": "Resilience"
+    },
+    {
+        "id": 70,
+        "text": "Excuses sound best to the person making them. Results speak louder. Focus on results.",
+        "category": "Effort"
+    },
+    {
+        "id": 71,
+        "text": "Dream big. Start small. Act now. That's the formula. Use it.",
+        "category": "Action"
+    },
+    {
+        "id": 72,
+        "text": "You were born to be real, not perfect. Authenticity beats perfection every time.",
+        "category": "Authenticity"
+    },
+    {
+        "id": 73,
+        "text": "What consumes your mind controls your life. Guard your thoughts like a treasure.",
+        "category": "Mindset"
+    },
+    {
+        "id": 74,
+        "text": "Pain is temporary. Quitting lasts forever. Push through the hard parts.",
+        "category": "Resilience"
+    },
+    {
+        "id": 75,
+        "text": "If it doesn't challenge you, it won't change you. Embrace the struggle.",
+        "category": "Growth"
+    },
+    {
+        "id": 76,
+        "text": "Life is 10% what happens to you and 90% how you react to it. Choose your reactions wisely.",
+        "category": "Mindset"
+    },
+    {
+        "id": 77,
+        "text": "The graveyard is full of unfulfilled potential. Don't let your dreams die inside you.",
+        "category": "Action"
+    },
+    {
+        "id": 78,
+        "text": "You miss 100% of the shots you don't take. Take the shot. What's the worst that could happen?",
+        "category": "Action"
+    },
+    {
+        "id": 79,
+        "text": "Success is not final, failure is not fatal. It's the courage to continue that counts.",
+        "category": "Resilience"
+    },
+    {
+        "id": 80,
+        "text": "The secret to getting ahead is getting started. Stop preparing and start doing.",
+        "category": "Action"
+    },
+    {
+        "id": 81,
+        "text": "Winners are not people who never fail, but people who never quit. Stay in the game.",
+        "category": "Resilience"
+    },
+    {
+        "id": 82,
+        "text": "Every morning you have two choices: continue to sleep with your dreams, or wake up and chase them.",
+        "category": "Action"
+    },
+    {
+        "id": 83,
+        "text": "The only limit to our realization of tomorrow is our doubts of today. Believe harder.",
+        "category": "Mindset"
+    },
+    {
+        "id": 84,
+        "text": "Fall seven times, stand up eight. Resilience is your superpower. Use it.",
+        "category": "Resilience"
+    },
+    {
+        "id": 85,
+        "text": "Today's struggles develop tomorrow's strength. Don't wish it were easier—wish you were stronger.",
+        "category": "Growth"
+    },
+    {
+        "id": 86,
+        "text": "Great things never come from comfort zones. Stretch yourself daily.",
+        "category": "Growth"
+    },
+    {
+        "id": 87,
+        "text": "You are never too old to set another goal or to dream a new dream. Keep dreaming.",
+        "category": "Mindset"
+    },
+    {
+        "id": 88,
+        "text": "The harder you work for something, the greater you'll feel when you achieve it.",
+        "category": "Effort"
+    },
+    {
+        "id": 89,
+        "text": "Believe you can and you're halfway there. Self-belief is the first step to success.",
+        "category": "Mindset"
+    },
+    {
+        "id": 90,
+        "text": "What lies behind us and what lies before us are tiny matters compared to what lies within us.",
+        "category": "Mindset"
+    },
+    {
+        "id": 91,
+        "text": "The distance between dreams and reality is called action. Bridge that gap today.",
+        "category": "Action"
+    },
+    {
+        "id": 92,
+        "text": "Don't watch the clock; do what it does. Keep going. Time stops for no one.",
+        "category": "Consistency"
+    },
+    {
+        "id": 93,
+        "text": "A river cuts through rock not because of its power, but its persistence. Be the river.",
+        "category": "Consistency"
+    },
+    {
+        "id": 94,
+        "text": "The way to get started is to quit talking and start doing. Actions speak.",
+        "category": "Action"
+    },
+    {
+        "id": 95,
+        "text": "Your limitation—it's only your imagination. Think bigger. Dream bigger.",
+        "category": "Mindset"
+    },
+    {
+        "id": 96,
+        "text": "Sometimes later becomes never. Do it now while you have the chance.",
+        "category": "Action"
+    },
+    {
+        "id": 97,
+        "text": "Work hard in silence, let success make the noise. Focus on the grind.",
+        "category": "Effort"
+    },
+    {
+        "id": 98,
+        "text": "Success isn't about how much money you make. It's about the difference you make in people's lives.",
+        "category": "Purpose"
+    },
+    {
+        "id": 99,
+        "text": "The mind is everything. What you think, you become. Think victory.",
+        "category": "Mindset"
+    },
+    {
+        "id": 100,
+        "text": "Don't be afraid to give up the good to go for the great. Aim higher.",
+        "category": "Growth"
+    }
+]
