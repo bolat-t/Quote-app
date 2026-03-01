@@ -11,8 +11,11 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Svg, Path } from 'react-native-svg';
-import { useTheme } from '../../context/ThemeContext';
 import { AnimatedBonsai } from './AnimatedBonsai';
+
+const YELLOW = '#FFE600';
+const BLACK = '#000000';
+const WHITE = '#FFFFFF';
 
 const { width: SCREEN_W, height: SCREEN_H } = Dimensions.get('window');
 
@@ -53,8 +56,6 @@ interface Props {
 }
 
 export const BonsaiImagePickerModal: React.FC<Props> = ({ visible, onClose }) => {
-    const { theme, isDark } = useTheme();
-    const { colors } = theme;
     const [index, setIndex] = useState(0);
     const flatListRef = useRef<FlatList>(null);
 
@@ -65,21 +66,21 @@ export const BonsaiImagePickerModal: React.FC<Props> = ({ visible, onClose }) =>
     };
 
     const current = IMAGES[index];
-    const btnBg = isDark ? '#FFFFFF' : '#1A1D23';
-    const btnText = isDark ? '#1A1D23' : '#FFFFFF';
+    const btnBg = BLACK;
+    const btnText = WHITE;
 
     return (
         <Modal visible={visible} animationType="slide" transparent={false} onRequestClose={onClose}>
-            <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]}>
+            <SafeAreaView style={[styles.container, { backgroundColor: WHITE }]}>
 
                 {/* Header */}
                 <View style={styles.header}>
-                    <Text style={[styles.headerTitle, { color: colors.onSurface }]}>Bonsai Images</Text>
+                    <Text style={[styles.headerTitle, { color: BLACK }]}>Bonsai Images</Text>
                     <TouchableOpacity onPress={onClose} style={styles.closeBtn}>
                         <Svg width={24} height={24} viewBox="0 0 24 24" fill="none">
                             <Path
                                 d="M18 6L6 18M6 6l12 12"
-                                stroke={colors.onSurface + '70'}
+                                stroke={BLACK + '70'}
                                 strokeWidth={2}
                                 strokeLinecap="round"
                             />
@@ -113,18 +114,18 @@ export const BonsaiImagePickerModal: React.FC<Props> = ({ visible, onClose }) =>
                                 <View style={[
                                     styles.dot,
                                     i === index
-                                        ? [styles.dotActive, { backgroundColor: colors.primary }]
-                                        : [styles.dotInactive, { backgroundColor: colors.onSurface + '25' }]
+                                        ? [styles.dotActive, { backgroundColor: YELLOW }]
+                                        : [styles.dotInactive, { backgroundColor: BLACK + '25' }]
                                 ]} />
                             </TouchableOpacity>
                         ))}
                     </View>
 
                     {/* Label */}
-                    <Text style={[styles.label, { color: colors.onSurface }]}>{current.label}</Text>
-                    <Text style={[styles.sublabel, { color: colors.onSurface + '60' }]}>{current.desc}</Text>
-                    <View style={[styles.stagePill, { backgroundColor: colors.primary + '18' }]}>
-                        <Text style={[styles.stagePillText, { color: colors.primary }]}>
+                    <Text style={[styles.label, { color: BLACK }]}>{current.label}</Text>
+                    <Text style={[styles.sublabel, { color: BLACK + '60' }]}>{current.desc}</Text>
+                    <View style={[styles.stagePill, { backgroundColor: YELLOW + '30' }]}>
+                        <Text style={[styles.stagePillText, { color: BLACK }]}>
                             Currently used at stage {current.currentStages}
                         </Text>
                     </View>
@@ -132,28 +133,28 @@ export const BonsaiImagePickerModal: React.FC<Props> = ({ visible, onClose }) =>
                     {/* Prev / Next */}
                     <View style={styles.navRow}>
                         <TouchableOpacity
-                            style={[styles.navBtn, { backgroundColor: index === 0 ? colors.onSurface + '10' : btnBg }]}
+                            style={[styles.navBtn, { backgroundColor: index === 0 ? BLACK + '10' : btnBg }]}
                             onPress={() => go(-1)}
                             disabled={index === 0}
                             activeOpacity={0.8}
                         >
                             <Svg width={20} height={20} viewBox="0 0 24 24" fill="none">
-                                <Path d="M15 18l-6-6 6-6" stroke={index === 0 ? colors.onSurface + '30' : btnText} strokeWidth={2.5} strokeLinecap="round" strokeLinejoin="round" />
+                                <Path d="M15 18l-6-6 6-6" stroke={index === 0 ? BLACK + '30' : btnText} strokeWidth={2.5} strokeLinecap="round" strokeLinejoin="round" />
                             </Svg>
                         </TouchableOpacity>
 
-                        <Text style={[styles.counter, { color: colors.onSurface + '50' }]}>
+                        <Text style={[styles.counter, { color: BLACK + '50' }]}>
                             {index + 1} / {IMAGES.length}
                         </Text>
 
                         <TouchableOpacity
-                            style={[styles.navBtn, { backgroundColor: index === IMAGES.length - 1 ? colors.onSurface + '10' : btnBg }]}
+                            style={[styles.navBtn, { backgroundColor: index === IMAGES.length - 1 ? BLACK + '10' : btnBg }]}
                             onPress={() => go(1)}
                             disabled={index === IMAGES.length - 1}
                             activeOpacity={0.8}
                         >
                             <Svg width={20} height={20} viewBox="0 0 24 24" fill="none">
-                                <Path d="M9 18l6-6-6-6" stroke={index === IMAGES.length - 1 ? colors.onSurface + '30' : btnText} strokeWidth={2.5} strokeLinecap="round" strokeLinejoin="round" />
+                                <Path d="M9 18l6-6-6-6" stroke={index === IMAGES.length - 1 ? BLACK + '30' : btnText} strokeWidth={2.5} strokeLinecap="round" strokeLinejoin="round" />
                             </Svg>
                         </TouchableOpacity>
                     </View>
@@ -176,7 +177,7 @@ const styles = StyleSheet.create({
         paddingVertical: 16,
     },
     headerTitle: {
-        fontFamily: 'Caveat-Bold',
+        fontFamily: 'GasoekOne',
         fontSize: 26,
     },
     closeBtn: {
@@ -216,12 +217,12 @@ const styles = StyleSheet.create({
         borderRadius: 4,
     },
     label: {
-        fontFamily: 'Caveat-Bold',
+        fontFamily: 'GasoekOne',
         fontSize: 28,
         textAlign: 'center',
     },
     sublabel: {
-        fontFamily: 'Carlito',
+        fontFamily: 'GasoekOne',
         fontSize: 15,
         textAlign: 'center',
         lineHeight: 22,
@@ -233,7 +234,7 @@ const styles = StyleSheet.create({
         marginTop: 4,
     },
     stagePillText: {
-        fontFamily: 'Carlito-Bold',
+        fontFamily: 'GasoekOne',
         fontSize: 13,
     },
     navRow: {
@@ -250,7 +251,7 @@ const styles = StyleSheet.create({
         alignItems: 'center',
     },
     counter: {
-        fontFamily: 'Carlito',
+        fontFamily: 'GasoekOne',
         fontSize: 15,
         minWidth: 40,
         textAlign: 'center',

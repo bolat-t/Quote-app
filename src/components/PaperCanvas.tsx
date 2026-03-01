@@ -6,8 +6,10 @@ import { TextBoxData } from './DraggableTextBox';
 import { DraggableTextBox } from './DraggableTextBox';
 import { Mascot } from './Mascot';
 import { MascotMood } from '../hooks/useMascotState';
-import { useTheme } from '../context/ThemeContext';
 import { PAPER_TYPES } from '../data/progressionConfig';
+
+const YELLOW = '#FFE600';
+const BLACK  = '#000000';
 
 interface PaperCanvasProps {
     viewRef: React.RefObject<View | null>;
@@ -113,18 +115,15 @@ export const PaperCanvas: React.FC<PaperCanvasProps> = ({
     onEditing,
     activePaper,
 }) => {
-    const { theme, isDark } = useTheme();
-    const colors = theme.colors;
-
     // Determine paper style
     const paperConfig = (PAPER_TYPES[activePaper as keyof typeof PAPER_TYPES] || PAPER_TYPES.plain) as any;
-    const canvasBg = paperConfig.color || (isDark ? '#1A1D23' : '#F8FAFC');
-    const textColor = paperConfig.textColor || colors.text;
+    const canvasBg = paperConfig.color || '#F8FAFC';
+    const textColor = paperConfig.textColor || BLACK;
 
     const renderPattern = () => {
         if (paperConfig.type !== 'pattern') return null;
 
-        const patternColor = paperConfig.id === 'starry' ? '#FFF' : (isDark ? '#FFFFFF10' : '#00000008');
+        const patternColor = paperConfig.id === 'starry' ? '#FFF' : '#00000008';
 
         switch (paperConfig.pattern) {
             case 'grid':
@@ -185,7 +184,7 @@ export const PaperCanvas: React.FC<PaperCanvasProps> = ({
             <View
                 ref={viewRef}
                 onLayout={onCanvasLayout}
-                style={[styles.paperSheet, { backgroundColor: canvasBg, borderColor: colors.primary + '10' }]}
+                style={[styles.paperSheet, { backgroundColor: canvasBg, borderColor: YELLOW + '40' }]}
                 pointerEvents={isAnyTextEditing ? 'box-none' : 'auto'}
                 onTouchStart={onTouchStart}
                 onTouchMove={onTouchMove}
@@ -247,18 +246,18 @@ export const PaperCanvas: React.FC<PaperCanvasProps> = ({
                     <Svg width={24} height={24} viewBox="0 0 24 24" fill="none" style={{ marginBottom: 12, opacity: 0.25 }}>
                         <SvgPath
                             d="M3 21c3 0 7-1 7-8V5c0-1.25-.756-2.017-2-2H4c-1.25 0-2 .75-2 1.972V11c0 1.25.75 2 2 2 1 0 1 0 1 1v1c0 1-1 2-2 2s-1 .008-1 1.031V20c0 1 0 1 1 1z"
-                            fill={colors.primary + '40'}
+                            fill={BLACK + '30'}
                         />
                         <SvgPath
                             d="M15 21c3 0 7-1 7-8V5c0-1.25-.757-2.017-2-2h-4c-1.25 0-2 .75-2 1.972V11c0 1.25.75 2 2 2h.75c0 2.25.25 4-2.75 5.25"
-                            fill={colors.primary + '40'}
+                            fill={BLACK + '30'}
                         />
                     </Svg>
                     <Text style={[styles.quoteText, { color: textColor }]}>
                         {quote.text}
                     </Text>
                     {/* Decorative line */}
-                    <View style={[styles.quoteLine, { backgroundColor: colors.primary + '20' }]} />
+                    <View style={[styles.quoteLine, { backgroundColor: YELLOW + '60' }]} />
                 </View>
 
                 {/* Mascot */}
@@ -324,7 +323,7 @@ const styles = StyleSheet.create({
         zIndex: 20,
     },
     quoteText: {
-        fontFamily: 'Caveat-Medium',
+        fontFamily: 'GasoekOne',
         fontSize: 22,
         lineHeight: 30,
         textAlign: 'center',
@@ -350,7 +349,7 @@ const styles = StyleSheet.create({
         pointerEvents: 'none',
     },
     emptyStateText: {
-        fontFamily: 'Caveat',
+        fontFamily: 'GasoekOne',
         fontSize: 14,
         marginTop: 8,
     },

@@ -1,17 +1,60 @@
 
-import React from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import {
     View,
     Text,
     StyleSheet,
     Modal,
     TouchableOpacity,
-    Dimensions,
+    Animated,
 } from 'react-native';
-import { useTheme } from '../context/ThemeContext';
 import { Svg, Path } from 'react-native-svg';
 
-const { width } = Dimensions.get('window');
+const YELLOW = '#FFE600';
+const BLACK = '#000000';
+const WHITE = '#FFFFFF';
+
+const LOADING_MESSAGES = [
+    'Ulbo is reading your words...',
+    'Thinking it over...',
+    'Almost got it...',
+    'Putting thoughts together...',
+];
+
+const LoadingDots: React.FC = () => {
+    const dots = [useRef(new Animated.Value(0)).current, useRef(new Animated.Value(0)).current, useRef(new Animated.Value(0)).current];
+
+    useEffect(() => {
+        const animations = dots.map((dot, i) =>
+            Animated.loop(
+                Animated.sequence([
+                    Animated.delay(i * 180),
+                    Animated.timing(dot, { toValue: 1, duration: 300, useNativeDriver: true }),
+                    Animated.timing(dot, { toValue: 0, duration: 300, useNativeDriver: true }),
+                    Animated.delay((dots.length - i) * 180),
+                ])
+            )
+        );
+        animations.forEach(a => a.start());
+        return () => animations.forEach(a => a.stop());
+    }, []);
+
+    return (
+        <View style={{ flexDirection: 'row', gap: 8, marginTop: 16 }}>
+            {dots.map((dot, i) => (
+                <Animated.View
+                    key={i}
+                    style={{
+                        width: 10, height: 10, borderRadius: 5,
+                        backgroundColor: BLACK,
+                        opacity: dot,
+                        transform: [{ scaleY: dot.interpolate({ inputRange: [0, 1], outputRange: [0.5, 1] }) }],
+                    }}
+                />
+            ))}
+        </View>
+    );
+};
 
 interface SpiritResponseModalProps {
     visible: boolean;
@@ -27,7 +70,16 @@ interface SpiritResponseModalProps {
 }
 
 export const SpiritResponseModal: React.FC<SpiritResponseModalProps> = ({ visible, onClose, onShare, data, loading }) => {
-    const { theme } = useTheme();
+    const [msgIndex, setMsgIndex] = useState(0);
+
+    useEffect(() => {
+        if (!loading) return;
+        setMsgIndex(0);
+        const interval = setInterval(() => {
+            setMsgIndex(i => (i + 1) % LOADING_MESSAGES.length);
+        }, 2000);
+        return () => clearInterval(interval);
+    }, [loading]);
 
     return (
         <Modal
@@ -36,18 +88,18 @@ export const SpiritResponseModal: React.FC<SpiritResponseModalProps> = ({ visibl
             animationType="fade"
             onRequestClose={onClose}
         >
-            <View style={[styles.overlay, { backgroundColor: 'rgba(0,0,0,0.5)' }]}>
-                <View style={[styles.container, { backgroundColor: theme.colors.paper }]}>
+            <View style={styles.overlay}>
+                <View style={styles.container}>
 
                     {/* Header */}
                     <View style={styles.header}>
-                        <Text style={[styles.title, { color: theme.colors.primary }]}>
+                        <Text style={styles.title}>
                             {loading ? "Ulbo is reading..." : "Ulbo's Take"}
                         </Text>
                         {!loading && (
                             <TouchableOpacity onPress={onClose} style={styles.closeButton}>
                                 <Svg width={24} height={24} viewBox="0 0 24 24" fill="none">
-                                    <Path d="M18 6L6 18M6 6l12 12" stroke={theme.colors.text} strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" />
+                                    <Path d="M18 6L6 18M6 6l12 12" stroke={BLACK + '80'} strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" />
                                 </Svg>
                             </TouchableOpacity>
                         )}
@@ -57,44 +109,38 @@ export const SpiritResponseModal: React.FC<SpiritResponseModalProps> = ({ visibl
                     <View style={styles.content}>
                         {loading ? (
                             <View style={styles.loadingContainer}>
-                                <Text style={[styles.loadingText, { color: theme.colors.text }]}>
-                                    Reading your entry...
-                                </Text>
-                                {/* Add a simple pulse animation or illustration here if needed */}
+                                <Text style={styles.loadingText}>{LOADING_MESSAGES[msgIndex]}</Text>
+                                <LoadingDots />
                             </View>
                         ) : data ? (
                             <>
                                 <View style={styles.replyContainer}>
-                                    <Text style={[styles.replyText, { color: theme.colors.text }]}>
-                                        "{data.reply}"
-                                    </Text>
+                                    <Text style={styles.replyText}>"{data.reply}"</Text>
                                 </View>
 
                                 <View style={styles.statsContainer}>
-                                    <View style={[styles.statBadge, { backgroundColor: theme.colors.background }]}>
-                                        <Text style={[styles.statLabel, { color: theme.colors.accent }]}>MOOD</Text>
-                                        <Text style={[styles.statValue, { color: theme.colors.text }]}>{data.mood}/10</Text>
+                                    <View style={styles.statBadge}>
+                                        <Text style={styles.statLabel}>MOOD</Text>
+                                        <Text style={styles.statValue}>{data.mood}/10</Text>
                                     </View>
-                                    <View style={[styles.tagsWrapper]}>
+                                    <View style={styles.tagsWrapper}>
                                         {data.tags.map((tag, i) => (
-                                            <View key={i} style={[styles.tag, { backgroundColor: theme.colors.background }]}>
-                                                <Text style={[styles.tagText, { color: theme.colors.text }]}>#{tag}</Text>
+                                            <View key={i} style={styles.tag}>
+                                                <Text style={styles.tagText}>#{tag}</Text>
                                             </View>
                                         ))}
                                     </View>
                                 </View>
 
                                 {data.followUp && (
-                                    <View style={[styles.followUpContainer, { backgroundColor: theme.colors.background, borderColor: theme.colors.accent }]}>
+                                    <View style={styles.followUpContainer}>
                                         <View style={styles.followUpHeader}>
                                             <Svg width={16} height={16} viewBox="0 0 24 24" fill="none">
-                                                <Path d="M12 2C6.48 2 2 6.48 2 12C2 17.52 6.48 22 12 22C17.52 22 22 17.52 22 12C22 6.48 17.52 2 12 2ZM12 17V16C12 15.5 12.25 15.25 12.5 15C13.5 14 14.5 13.5 14.5 12.5C14.5 11.5 13.5 11 12.5 11C11.5 11 11 11.5 11 12H9C9 10.5 10 9 12 9C14 9 16 10 16 12C16 13.5 14.5 14.5 13.25 15.5C12.95 15.75 12.75 16 12.75 16.5H12V17ZM13 19H11V18H13V19Z" fill={theme.colors.accent} />
+                                                <Path d="M12 2C6.48 2 2 6.48 2 12C2 17.52 6.48 22 12 22C17.52 22 22 17.52 22 12C22 6.48 17.52 2 12 2ZM12 17V16C12 15.5 12.25 15.25 12.5 15C13.5 14 14.5 13.5 14.5 12.5C14.5 11.5 13.5 11 12.5 11C11.5 11 11 11.5 11 12H9C9 10.5 10 9 12 9C14 9 16 10 16 12C16 13.5 14.5 14.5 13.25 15.5C12.95 15.75 12.75 16 12.75 16.5H12V17ZM13 19H11V18H13V19Z" fill={BLACK} />
                                             </Svg>
-                                            <Text style={[styles.followUpLabel, { color: theme.colors.accent }]}>THINK ABOUT THIS</Text>
+                                            <Text style={styles.followUpLabel}>THINK ABOUT THIS</Text>
                                         </View>
-                                        <Text style={[styles.followUpText, { color: theme.colors.text }]}>
-                                            "{data.followUp}"
-                                        </Text>
+                                        <Text style={styles.followUpText}>"{data.followUp}"</Text>
                                     </View>
                                 )}
 
@@ -102,20 +148,20 @@ export const SpiritResponseModal: React.FC<SpiritResponseModalProps> = ({ visibl
                                 {onShare && (
                                     <TouchableOpacity
                                         onPress={onShare}
-                                        style={[styles.shareButton, { backgroundColor: theme.colors.primary }]}
+                                        style={styles.shareButton}
                                         activeOpacity={0.8}
                                     >
                                         <Svg width={18} height={18} viewBox="0 0 24 24" fill="none">
-                                            <Path d="M4 12v8a2 2 0 002 2h12a2 2 0 002-2v-8" stroke="#FFF" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" />
-                                            <Path d="M16 6l-4-4-4 4" stroke="#FFF" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" />
-                                            <Path d="M12 2v13" stroke="#FFF" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" />
+                                            <Path d="M4 12v8a2 2 0 002 2h12a2 2 0 002-2v-8" stroke={BLACK} strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" />
+                                            <Path d="M16 6l-4-4-4 4" stroke={BLACK} strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" />
+                                            <Path d="M12 2v13" stroke={BLACK} strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" />
                                         </Svg>
                                         <Text style={styles.shareButtonText}>Share to Community</Text>
                                     </TouchableOpacity>
                                 )}
                             </>
                         ) : (
-                            <Text style={{ color: theme.colors.text }}>Something went wrong. Try again later~</Text>
+                            <Text style={{ color: BLACK }}>Something went wrong. Try again later~</Text>
                         )}
                     </View>
 
@@ -131,6 +177,7 @@ const styles = StyleSheet.create({
         justifyContent: 'center',
         alignItems: 'center',
         padding: 20,
+        backgroundColor: 'rgba(0,0,0,0.5)',
     },
     container: {
         width: '100%',
@@ -138,14 +185,12 @@ const styles = StyleSheet.create({
         borderRadius: 24,
         padding: 24,
         alignItems: 'center',
-        shadowColor: "#000",
-        shadowOffset: {
-            width: 0,
-            height: 4,
-        },
-        shadowOpacity: 0.3,
-        shadowRadius: 4.65,
-        elevation: 8,
+        backgroundColor: WHITE,
+        elevation: 10,
+        shadowColor: BLACK,
+        shadowOffset: { width: 0, height: 4 },
+        shadowOpacity: 0.15,
+        shadowRadius: 16,
     },
     header: {
         width: '100%',
@@ -157,8 +202,9 @@ const styles = StyleSheet.create({
     },
     title: {
         fontSize: 24,
-        fontFamily: 'Caveat-Bold',
+        fontFamily: 'GasoekOne',
         textAlign: 'center',
+        color: BLACK,
     },
     closeButton: {
         position: 'absolute',
@@ -174,19 +220,21 @@ const styles = StyleSheet.create({
         alignItems: 'center',
     },
     loadingText: {
-        fontFamily: 'Carlito',
-        fontSize: 18,
-        opacity: 0.8,
+        fontFamily: 'IndieFlower-Regular',
+        fontSize: 19,
+        opacity: 0.85,
+        color: BLACK,
     },
     replyContainer: {
         marginBottom: 24,
         width: '100%',
     },
     replyText: {
-        fontSize: 20,
-        fontFamily: 'Carlito',
+        fontSize: 21,
+        fontFamily: 'IndieFlower-Regular',
         textAlign: 'center',
-        lineHeight: 28,
+        lineHeight: 30,
+        color: BLACK,
     },
     statsContainer: {
         width: '100%',
@@ -195,23 +243,26 @@ const styles = StyleSheet.create({
         alignItems: 'center',
         paddingTop: 16,
         borderTopWidth: 1,
-        borderTopColor: 'rgba(0,0,0,0.05)',
+        borderTopColor: BLACK + '15',
     },
     statBadge: {
         paddingHorizontal: 16,
         paddingVertical: 8,
         borderRadius: 12,
         alignItems: 'center',
+        backgroundColor: YELLOW,
     },
     statLabel: {
+        fontFamily: 'Carlito-Bold',
         fontSize: 10,
-        fontWeight: 'bold',
         letterSpacing: 1,
         marginBottom: 2,
+        color: BLACK,
     },
     statValue: {
         fontSize: 18,
-        fontFamily: 'Caveat-Bold',
+        fontFamily: 'GasoekOne',
+        color: BLACK,
     },
     tagsWrapper: {
         flexDirection: 'row',
@@ -225,10 +276,14 @@ const styles = StyleSheet.create({
         paddingHorizontal: 12,
         paddingVertical: 6,
         borderRadius: 16,
+        backgroundColor: '#F0F0F0',
+        borderWidth: 1,
+        borderColor: BLACK + '10',
     },
     tagText: {
-        fontSize: 14,
-        fontFamily: 'Caveat-Regular',
+        fontSize: 13,
+        fontFamily: 'Carlito-Bold',
+        color: BLACK,
     },
     followUpContainer: {
         marginTop: 20,
@@ -236,6 +291,8 @@ const styles = StyleSheet.create({
         borderRadius: 16,
         borderWidth: 1,
         borderStyle: 'dashed',
+        borderColor: BLACK + '20',
+        backgroundColor: '#F8F8F8',
         width: '100%',
     },
     followUpHeader: {
@@ -245,15 +302,16 @@ const styles = StyleSheet.create({
         gap: 6,
     },
     followUpLabel: {
+        fontFamily: 'Carlito-Bold',
         fontSize: 10,
-        fontWeight: 'bold',
         letterSpacing: 1,
+        color: BLACK,
     },
     followUpText: {
-        fontSize: 16,
-        fontFamily: 'Carlito',
-        lineHeight: 24,
-        fontStyle: 'italic',
+        fontSize: 17,
+        fontFamily: 'Carlito-Italic',
+        lineHeight: 25,
+        color: BLACK,
     },
     shareButton: {
         flexDirection: 'row',
@@ -265,10 +323,16 @@ const styles = StyleSheet.create({
         borderRadius: 14,
         gap: 8,
         width: '100%',
+        backgroundColor: YELLOW,
+        elevation: 4,
+        shadowColor: BLACK,
+        shadowOffset: { width: 0, height: 4 },
+        shadowOpacity: 0.1,
+        shadowRadius: 8,
     },
     shareButtonText: {
-        color: '#FFF',
-        fontFamily: 'Carlito-Bold',
+        color: BLACK,
+        fontFamily: 'GasoekOne',
         fontSize: 16,
     },
 });

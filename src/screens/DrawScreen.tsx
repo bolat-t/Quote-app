@@ -9,22 +9,22 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import Svg, { Path as SvgPath } from 'react-native-svg';
-import { useTheme } from '../context/ThemeContext';
-import { ThemeToggle } from '../components/ThemeToggle';
 import { Stroke, Point } from '../types';
 import { generateId } from '../utils/dateHelpers';
 import { saveDrawings, getDrawings } from '../utils/storage';
 
 const { width: screenWidth, height: screenHeight } = Dimensions.get('window');
 
+const BLACK = '#000000';
+const WHITE = '#FFFFFF';
+
 export const DrawScreen: React.FC = () => {
-    const { theme } = useTheme();
     const [strokes, setStrokes] = useState<Stroke[]>([]);
     const [currentStroke, setCurrentStroke] = useState<Point[]>([]);
     const [undoStack, setUndoStack] = useState<Stroke[][]>([]);
     const [redoStack, setRedoStack] = useState<Stroke[][]>([]);
 
-    const strokeColor = theme.colors.text;
+    const strokeColor = BLACK;
     const strokeWidth = 2.5;
 
     const handleTouchStart = useCallback((event: any) => {
@@ -126,14 +126,12 @@ export const DrawScreen: React.FC = () => {
 
     return (
         <SafeAreaView
-            style={[styles.container, { backgroundColor: theme.colors.background }]}
+            style={styles.container}
             edges={['top']}
         >
             {/* Header */}
             <View style={styles.header}>
-                <Text style={[styles.headerTitle, { color: theme.colors.text }]}>
-                    ulbo.
-                </Text>
+                <Text style={styles.headerTitle}>ulbo.</Text>
                 <View style={styles.headerRight}>
                     <TouchableOpacity
                         style={styles.iconButton}
@@ -141,25 +139,16 @@ export const DrawScreen: React.FC = () => {
                         disabled={undoStack.length === 0}
                         activeOpacity={0.7}
                     >
-                        <Text
-                            style={[
-                                styles.iconText,
-                                {
-                                    color: theme.colors.text,
-                                    opacity: undoStack.length === 0 ? 0.3 : 1,
-                                },
-                            ]}
-                        >
+                        <Text style={[styles.iconText, { opacity: undoStack.length === 0 ? 0.3 : 1 }]}>
                             ↩
                         </Text>
                     </TouchableOpacity>
-                    <ThemeToggle />
                 </View>
             </View>
 
             {/* Canvas */}
             <View
-                style={[styles.canvas, { backgroundColor: theme.colors.background }]}
+                style={styles.canvas}
                 onTouchStart={handleTouchStart}
                 onTouchMove={handleTouchMove}
                 onTouchEnd={handleTouchEnd}
@@ -190,22 +179,14 @@ export const DrawScreen: React.FC = () => {
             </View>
 
             {/* Toolbar */}
-            <View style={[styles.toolbar, { backgroundColor: theme.colors.toolbar }]}>
+            <View style={styles.toolbar}>
                 <TouchableOpacity
                     style={styles.toolButton}
                     onPress={handleClear}
                     disabled={strokes.length === 0}
                     activeOpacity={0.7}
                 >
-                    <Text
-                        style={[
-                            styles.toolButtonText,
-                            {
-                                color: theme.colors.toolbarText,
-                                opacity: strokes.length === 0 ? 0.3 : 1,
-                            },
-                        ]}
-                    >
+                    <Text style={[styles.toolButtonText, { opacity: strokes.length === 0 ? 0.3 : 1 }]}>
                         Clear
                     </Text>
                 </TouchableOpacity>
@@ -216,15 +197,7 @@ export const DrawScreen: React.FC = () => {
                     disabled={redoStack.length === 0}
                     activeOpacity={0.7}
                 >
-                    <Text
-                        style={[
-                            styles.toolButtonText,
-                            {
-                                color: theme.colors.toolbarText,
-                                opacity: redoStack.length === 0 ? 0.3 : 1,
-                            },
-                        ]}
-                    >
+                    <Text style={[styles.toolButtonText, { opacity: redoStack.length === 0 ? 0.3 : 1 }]}>
                         Redo
                     </Text>
                 </TouchableOpacity>
@@ -234,11 +207,7 @@ export const DrawScreen: React.FC = () => {
                     onPress={handleSave}
                     activeOpacity={0.7}
                 >
-                    <Text
-                        style={[styles.toolButtonText, { color: theme.colors.toolbarText }]}
-                    >
-                        Save
-                    </Text>
+                    <Text style={styles.saveButtonText}>Save</Text>
                 </TouchableOpacity>
             </View>
         </SafeAreaView>
@@ -248,6 +217,7 @@ export const DrawScreen: React.FC = () => {
 const styles = StyleSheet.create({
     container: {
         flex: 1,
+        backgroundColor: WHITE,
     },
     header: {
         flexDirection: 'row',
@@ -260,6 +230,8 @@ const styles = StyleSheet.create({
         fontSize: 20,
         fontWeight: '400',
         letterSpacing: 1,
+        color: BLACK,
+        fontFamily: 'GasoekOne',
     },
     headerRight: {
         flexDirection: 'row',
@@ -271,9 +243,11 @@ const styles = StyleSheet.create({
     },
     iconText: {
         fontSize: 20,
+        color: BLACK,
     },
     canvas: {
         flex: 1,
+        backgroundColor: WHITE,
     },
     svg: {
         flex: 1,
@@ -285,6 +259,9 @@ const styles = StyleSheet.create({
         paddingVertical: 16,
         paddingHorizontal: 24,
         paddingBottom: 32,
+        backgroundColor: '#F0F0F0',
+        borderTopWidth: 2,
+        borderTopColor: BLACK,
     },
     toolButton: {
         paddingHorizontal: 20,
@@ -293,8 +270,17 @@ const styles = StyleSheet.create({
     toolButtonText: {
         fontSize: 14,
         fontWeight: '500',
+        color: BLACK,
     },
     saveButton: {
         borderRadius: 20,
+        backgroundColor: '#FFE600',
+        borderWidth: 2,
+        borderColor: BLACK,
+    },
+    saveButtonText: {
+        fontSize: 14,
+        fontWeight: '600',
+        color: BLACK,
     },
 });

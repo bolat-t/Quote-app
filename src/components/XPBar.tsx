@@ -2,8 +2,10 @@ import React, { useEffect, useRef } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, Animated } from 'react-native';
 import { UserProgress } from '../types';
 import { getXPProgress } from '../data/progressionConfig';
-import { useTheme } from '../context/ThemeContext';
 import { LevelIcon } from './LevelIcon';
+
+const YELLOW = '#FFE600';
+const BLACK  = '#000000';
 
 interface XPBarProps {
     progress: UserProgress;
@@ -11,8 +13,6 @@ interface XPBarProps {
 }
 
 export const XPBar: React.FC<XPBarProps> = ({ progress, onPress }) => {
-    const { theme } = useTheme();
-    const colors = theme.colors;
     const { currentLevel, nextLevel, xpInCurrentLevel, xpNeededForNext, percentage } = getXPProgress(progress.totalXP);
     const animatedWidth = useRef(new Animated.Value(0)).current;
     const glowAnim = useRef(new Animated.Value(0)).current;
@@ -36,33 +36,30 @@ export const XPBar: React.FC<XPBarProps> = ({ progress, onPress }) => {
     return (
         <TouchableOpacity style={styles.container} onPress={onPress} activeOpacity={0.7}>
             <Animated.View style={[styles.inner, {
-                backgroundColor: colors.onSurface + '08',
-                borderColor: colors.onSurface + '12',
                 opacity: Animated.add(0.85, Animated.multiply(glowAnim, 0.15)),
             }]}>
                 {/* Level badge */}
-                <View style={[styles.levelBadge, { backgroundColor: colors.primary + '20' }]}>
-                    <LevelIcon level={currentLevel.level} color={colors.primary} size={14} />
+                <View style={styles.levelBadge}>
+                    <LevelIcon level={currentLevel.level} color={BLACK} size={14} />
                 </View>
 
                 {/* Bar + label */}
                 <View style={styles.barSection}>
                     <View style={styles.labelRow}>
-                        <Text style={[styles.levelText, { color: colors.onSurface }]}>
+                        <Text style={styles.levelText}>
                             Lv.{currentLevel.level} {currentLevel.title}
                         </Text>
-                        <Text style={[styles.xpText, { color: colors.onSurface + '80' }]}>
+                        <Text style={styles.xpText}>
                             {nextLevel ? `${xpInCurrentLevel}/${xpNeededForNext}` : 'MAX'}
                         </Text>
                     </View>
 
                     {/* Progress track */}
-                    <View style={[styles.track, { backgroundColor: colors.onSurface + '10' }]}>
+                    <View style={styles.track}>
                         <Animated.View
                             style={[
                                 styles.fill,
                                 {
-                                    backgroundColor: colors.primary,
                                     width: animatedWidth.interpolate({
                                         inputRange: [0, 1],
                                         outputRange: ['0%', '100%'],
@@ -86,7 +83,9 @@ const styles = StyleSheet.create({
         flexDirection: 'row',
         alignItems: 'center',
         borderRadius: 12,
-        borderWidth: 1,
+        borderWidth: 1.5,
+        borderColor: BLACK,
+        backgroundColor: '#FFFFFF',
         paddingHorizontal: 8,
         paddingVertical: 5,
     },
@@ -97,6 +96,7 @@ const styles = StyleSheet.create({
         alignItems: 'center',
         justifyContent: 'center',
         marginRight: 6,
+        backgroundColor: YELLOW,
     },
     barSection: {
         flex: 1,
@@ -109,20 +109,24 @@ const styles = StyleSheet.create({
     },
     levelText: {
         fontSize: 10,
-        fontFamily: 'Caveat-Bold',
+        fontFamily: 'GasoekOne',
         letterSpacing: 0.3,
+        color: BLACK,
     },
     xpText: {
         fontSize: 9,
-        fontFamily: 'Carlito',
+        fontFamily: 'GasoekOne',
+        color: BLACK + '80',
     },
     track: {
         height: 4,
         borderRadius: 2,
         overflow: 'hidden',
+        backgroundColor: BLACK + '10',
     },
     fill: {
         height: '100%',
         borderRadius: 2,
+        backgroundColor: YELLOW,
     },
 });

@@ -7,8 +7,10 @@ import {
     Alert,
 } from 'react-native';
 import Svg, { Path, G } from 'react-native-svg';
-import { useTheme } from '../context/ThemeContext';
 import { Stroke, Point } from '../types';
+
+const BLACK = '#000000';
+const WHITE = '#FFFFFF';
 import { generateId } from '../utils/dateHelpers';
 
 interface DrawingCanvasProps {
@@ -19,13 +21,12 @@ const { width: screenWidth, height: screenHeight } = Dimensions.get('window');
 const CANVAS_HEIGHT = screenHeight * 0.75;
 
 export const DrawingCanvas: React.FC<DrawingCanvasProps> = ({ onStrokesChange }) => {
-    const { theme } = useTheme();
     const [strokes, setStrokes] = useState<Stroke[]>([]);
     const [currentStroke, setCurrentStroke] = useState<Point[]>([]);
     const [undoStack, setUndoStack] = useState<Stroke[][]>([]);
     const [redoStack, setRedoStack] = useState<Stroke[][]>([]);
 
-    const strokeColor = theme.colors.text;
+    const strokeColor = BLACK;
     const strokeWidth = 2.5;
 
     const canvasRef = useRef<View>(null);
@@ -157,7 +158,7 @@ export const DrawingCanvas: React.FC<DrawingCanvasProps> = ({ onStrokesChange })
     return (
         <View
             ref={canvasRef}
-            style={[styles.canvas, { backgroundColor: theme.colors.background }]}
+            style={[styles.canvas, { backgroundColor: WHITE }]}
             onLayout={onLayout}
             {...panResponder.panHandlers}
         >

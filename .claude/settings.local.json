@@ -4,7 +4,12 @@
       "Bash(python:*)",
       "Bash(npx tsc:*)",
       "Bash(find:*)",
-      "Bash(npx expo start:*)"
+      "Bash(npx expo start:*)",
+      "Bash(ls -la \"C:\\\\Users\\\\PC2\\\\Desktop\\\\Portfolio\\\\Quote-app\\\\src\\\\hooks\"\" 2>/dev/null | grep -i \"bonsai|mascot\" || echo \"Checking hooks... \")",
+      "Bash(dir \"c:\\\\Users\\\\PC2\\\\Desktop\\\\Portfolio\\\\Quote-app\\\\assets\" /B)",
+      "Bash(npm show @expo-google-fonts/gasoek-one --json)",
+      "Bash(npm install @expo-google-fonts/gasoek-one --legacy-peer-deps)",
+      "Bash(node -e \"const pkg = require\\(''./node_modules/@expo-google-fonts/gasoek-one/index.js''\\); console.log\\(Object.keys\\(pkg\\).join\\(''\\\\n''\\)\\)\")"
     ]
   }
 }

@@ -1,7 +1,6 @@
 import React, { useState } from 'react';
 import { View, Text, StyleSheet, Modal, TouchableOpacity, Switch, Alert, ActivityIndicator, ScrollView } from 'react-native';
 import { Svg, Path, Circle } from 'react-native-svg';
-import { useTheme } from '../context/ThemeContext';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useAuth } from '../context/AuthContext';
@@ -12,6 +11,10 @@ import { BonsaiImagePickerModal } from './bonsai/BonsaiImagePickerModal';
 import { useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import type { RootStackParamList } from '../types';
+
+const YELLOW = '#FFE600';
+const BLACK = '#000000';
+const WHITE = '#FFFFFF';
 
 interface SettingsModalProps {
     visible: boolean;
@@ -36,8 +39,6 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
     onShowOnboarding,
     onClearMemory,
 }) => {
-    const { theme } = useTheme();
-    const { colors } = theme;
     const insets = useSafeAreaInsets();
     const { user, signOut } = useAuth();
     const { isPremium } = usePurchase();
@@ -45,7 +46,19 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
     const [isBonsaiPreviewVisible, setIsBonsaiPreviewVisible] = useState(false);
     const [isBonsaiPickerVisible, setIsBonsaiPickerVisible] = useState(false);
     const [localPremium, setLocalPremium] = useState(isPremium);
+    const [timerMinutes, setTimerMinutesState] = useState(10);
     const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList>>();
+
+    React.useEffect(() => {
+        AsyncStorage.getItem('@ulbo_timer_minutes').then(val => {
+            if (val) setTimerMinutesState(Number(val));
+        });
+    }, []);
+
+    const handleTimerChange = async (minutes: number) => {
+        setTimerMinutesState(minutes);
+        await AsyncStorage.setItem('@ulbo_timer_minutes', String(minutes));
+    };
 
 
     const handleSignOut = async () => {
@@ -76,86 +89,119 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                 {/* Backdrop */}
                 <TouchableOpacity style={styles.backdrop} activeOpacity={1} onPress={onClose} />
 
-                <View style={[styles.modalView, { backgroundColor: colors.surface, borderColor: colors.outline + '30' }]}>
+                <View style={[styles.modalView, { backgroundColor: WHITE, borderColor: BLACK + '30' }]}>
                     <View style={styles.header}>
-                        <Text style={[styles.modalTitle, { color: colors.onSurface }]}>Settings</Text>
+                        <Text style={[styles.modalTitle, { color: BLACK }]}>Settings</Text>
                         <TouchableOpacity onPress={onClose} style={styles.closeButton}>
                             <Svg width={24} height={24} viewBox="0 0 24 24" fill="none">
-                                <Path d="M18 6L6 18M6 6L18 18" stroke={colors.onSurface} strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" />
+                                <Path d="M18 6L6 18M6 6L18 18" stroke={BLACK} strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" />
                             </Svg>
                         </TouchableOpacity>
                     </View>
 
-                    <View style={[styles.divider, { backgroundColor: colors.outline + '20' }]} />
+                    <View style={[styles.divider, { backgroundColor: BLACK + '20' }]} />
 
                     <ScrollView style={styles.scrollContent} showsVerticalScrollIndicator={false}>
                         {/* Account Section */}
                         <View style={styles.settingRow}>
                             <View style={styles.settingInfo}>
-                                <Text style={[styles.settingLabel, { color: colors.onSurface }]}>Cloud Sync</Text>
-                                <Text style={[styles.settingDescription, { color: colors.onSurface + '80' }]}>
+                                <Text style={[styles.settingLabel, { color: BLACK }]}>Cloud Sync</Text>
+                                <Text style={[styles.settingDescription, { color: BLACK + '80' }]}>
                                     {user ? `Signed in as ${user.email}` : 'Backup your journal'}
                                 </Text>
                             </View>
                             <TouchableOpacity
                                 onPress={() => user ? handleSignOut() : setIsAuthModalVisible(true)}
-                                style={[styles.smallButton, { borderColor: colors.outline + '40', backgroundColor: colors.onSurface + '05' }]}
+                                style={[styles.smallButton, { borderColor: BLACK + '40', backgroundColor: BLACK + '05' }]}
                             >
-                                <Text style={[styles.smallButtonText, { color: colors.onSurface }]}>
+                                <Text style={[styles.smallButtonText, { color: BLACK }]}>
                                     {user ? 'Sign Out' : 'Sign In'}
                                 </Text>
                             </TouchableOpacity>
                         </View>
 
-                        <View style={[styles.divider, { backgroundColor: colors.outline + '20' }]} />
+                        <View style={[styles.divider, { backgroundColor: BLACK + '20' }]} />
 
                         {/* Notification Setting */}
                         <View style={styles.settingRow}>
                             <View style={styles.settingInfo}>
-                                <Text style={[styles.settingLabel, { color: colors.onSurface }]}>Daily Reminders</Text>
-                                <Text style={[styles.settingDescription, { color: colors.onSurface + '80' }]}>
+                                <Text style={[styles.settingLabel, { color: BLACK }]}>Daily Reminders</Text>
+                                <Text style={[styles.settingDescription, { color: BLACK + '80' }]}>
                                     Receive a daily prompt to reflect.
                                 </Text>
                             </View>
                             <Switch
-                                trackColor={{ false: "#767577", true: colors.primary + '80' }}
-                                thumbColor={areNotificationsEnabled ? colors.primary : "#f4f3f4"}
+                                trackColor={{ false: "#767577", true: YELLOW + '80' }}
+                                thumbColor={areNotificationsEnabled ? YELLOW : "#f4f3f4"}
                                 ios_backgroundColor="#3e3e3e"
                                 onValueChange={onNotificationToggle}
                                 value={areNotificationsEnabled}
                             />
                         </View>
 
+                        <View style={[styles.divider, { backgroundColor: BLACK + '20' }]} />
+
+                        {/* Focus Timer Duration */}
+                        <View style={styles.settingRow}>
+                            <View style={styles.settingInfo}>
+                                <Text style={[styles.settingLabel, { color: BLACK }]}>Focus Timer</Text>
+                                <Text style={[styles.settingDescription, { color: BLACK + '80' }]}>
+                                    Default journaling session length
+                                </Text>
+                            </View>
+                        </View>
+                        <View style={{ flexDirection: 'row', gap: 8, paddingHorizontal: 16, paddingBottom: 16 }}>
+                            {[5, 10, 15, 20].map(min => (
+                                <TouchableOpacity
+                                    key={min}
+                                    onPress={() => handleTimerChange(min)}
+                                    style={{
+                                        flex: 1,
+                                        paddingVertical: 10,
+                                        borderRadius: 14,
+                                        alignItems: 'center',
+                                        backgroundColor: timerMinutes === min ? YELLOW : BLACK + '08',
+                                        borderWidth: timerMinutes === min ? 2 : 1,
+                                        borderColor: timerMinutes === min ? BLACK : BLACK + '20',
+                                    }}
+                                >
+                                    <Text style={{ fontFamily: 'GasoekOne', fontSize: 14, color: BLACK }}>
+                                        {min}m
+                                    </Text>
+                                </TouchableOpacity>
+                            ))}
+                        </View>
+
                         {/* Export Data */}
-                        <View style={[styles.divider, { backgroundColor: colors.outline + '20', marginVertical: 16 }]} />
+                        <View style={[styles.divider, { backgroundColor: BLACK + '20', marginVertical: 16 }]} />
 
                         <TouchableOpacity
-                            style={[styles.exportButton, { borderColor: colors.outline + '40', backgroundColor: colors.onSurface + '05' }]}
+                            style={[styles.exportButton, { borderColor: BLACK + '40', backgroundColor: BLACK + '05' }]}
                             onPress={onExportData}
                             disabled={isExporting}
                         >
                             {isExporting ? (
-                                <ActivityIndicator size="small" color={colors.primary} />
+                                <ActivityIndicator size="small" color={YELLOW} />
                             ) : (
                                 <Svg width={20} height={20} viewBox="0 0 24 24" fill="none">
-                                    <Path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" stroke={colors.onSurface} strokeWidth={1.5} strokeLinecap="round" strokeLinejoin="round" />
-                                    <Path d="M17 8l-5-5-5 5" stroke={colors.onSurface} strokeWidth={1.5} strokeLinecap="round" strokeLinejoin="round" />
-                                    <Path d="M12 3v12" stroke={colors.onSurface} strokeWidth={1.5} strokeLinecap="round" strokeLinejoin="round" />
+                                    <Path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" stroke={BLACK} strokeWidth={1.5} strokeLinecap="round" strokeLinejoin="round" />
+                                    <Path d="M17 8l-5-5-5 5" stroke={BLACK} strokeWidth={1.5} strokeLinecap="round" strokeLinejoin="round" />
+                                    <Path d="M12 3v12" stroke={BLACK} strokeWidth={1.5} strokeLinecap="round" strokeLinejoin="round" />
                                 </Svg>
                             )}
-                            <Text style={[styles.exportButtonText, { color: colors.onSurface }]}>
+                            <Text style={[styles.exportButtonText, { color: BLACK }]}>
                                 {isExporting ? 'Exporting...' : 'Export Journal Data'}
                             </Text>
                         </TouchableOpacity>
-                        <Text style={[styles.settingDescription, { color: colors.onSurface + '60', textAlign: 'center', marginTop: 8 }]}>
+                        <Text style={[styles.settingDescription, { color: BLACK + '60', textAlign: 'center', marginTop: 8 }]}>
                             Download your reflections as a JSON file
                         </Text>
 
-                        <View style={[styles.divider, { backgroundColor: colors.outline + '20', marginVertical: 16 }]} />
+                        <View style={[styles.divider, { backgroundColor: BLACK + '20', marginVertical: 16 }]} />
 
                         {/* Memory Settings */}
                         <TouchableOpacity
-                            style={[styles.smallButton, { borderColor: colors.outline + '40', backgroundColor: colors.onSurface + '05', alignSelf: 'center', width: '100%', alignItems: 'center', paddingVertical: 12, marginBottom: 16 }]}
+                            style={[styles.smallButton, { borderColor: BLACK + '40', backgroundColor: BLACK + '05', alignSelf: 'center', width: '100%', alignItems: 'center', paddingVertical: 12, marginBottom: 16 }]}
                             onPress={() => {
                                 Alert.alert(
                                     "Clear Mascot Memory?",
@@ -182,36 +228,36 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                                 );
                             }}
                         >
-                            <Text style={[styles.smallButtonText, { color: colors.onSurface }]}>
+                            <Text style={[styles.smallButtonText, { color: BLACK }]}>
                                 Clear Mascot Memory
                             </Text>
                         </TouchableOpacity>
 
                         {/* Feedback Button */}
                         <TouchableOpacity
-                            style={[styles.smallButton, { borderColor: colors.outline + '40', backgroundColor: colors.onSurface + '05', alignSelf: 'center', width: '100%', alignItems: 'center', paddingVertical: 12 }]}
+                            style={[styles.smallButton, { borderColor: BLACK + '40', backgroundColor: BLACK + '05', alignSelf: 'center', width: '100%', alignItems: 'center', paddingVertical: 12 }]}
                             onPress={onFeedback}
                         >
-                            <Text style={[styles.smallButtonText, { color: colors.onSurface }]}>
+                            <Text style={[styles.smallButtonText, { color: BLACK }]}>
                                 Give Feedback / Report Bug
                             </Text>
                         </TouchableOpacity>
 
                         {/* Dev Tools — Testing Section */}
-                        <View style={[styles.divider, { backgroundColor: colors.outline + '20', marginVertical: 16 }]} />
-                        <Text style={[styles.settingLabel, { color: colors.primary, marginBottom: 12, fontSize: 12, textTransform: 'uppercase', letterSpacing: 1 }]}>Dev Tools</Text>
+                        <View style={[styles.divider, { backgroundColor: BLACK + '20', marginVertical: 16 }]} />
+                        <Text style={[styles.settingLabel, { color: BLACK, marginBottom: 12, fontSize: 12, textTransform: 'uppercase', letterSpacing: 1 }]}>Dev Tools</Text>
 
                         {/* Premium Toggle */}
                         <View style={styles.settingRow}>
                             <View style={styles.settingInfo}>
-                                <Text style={[styles.settingLabel, { color: colors.onSurface }]}>Premium Mode</Text>
-                                <Text style={[styles.settingDescription, { color: colors.onSurface + '80' }]}>
+                                <Text style={[styles.settingLabel, { color: BLACK }]}>Premium Mode</Text>
+                                <Text style={[styles.settingDescription, { color: BLACK + '80' }]}>
                                     {localPremium ? 'Active — all features unlocked' : 'Inactive — free version'}
                                 </Text>
                             </View>
                             <Switch
-                                trackColor={{ false: "#767577", true: colors.primary + '80' }}
-                                thumbColor={localPremium ? colors.primary : "#f4f3f4"}
+                                trackColor={{ false: "#767577", true: YELLOW + '80' }}
+                                thumbColor={localPremium ? YELLOW : "#f4f3f4"}
                                 ios_backgroundColor="#3e3e3e"
                                 onValueChange={async (value) => {
                                     await AsyncStorage.setItem('@ulbo_is_premium', value ? 'true' : 'false');
@@ -227,48 +273,48 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
 
                         <View style={{ flexDirection: 'row', gap: 8, marginTop: 8 }}>
                             <TouchableOpacity
-                                style={[styles.smallButton, { flex: 1, borderColor: colors.primary + '40', backgroundColor: colors.primary + '10', alignItems: 'center', paddingVertical: 12 }]}
+                                style={[styles.smallButton, { flex: 1, borderColor: BLACK + '40', backgroundColor: YELLOW + '10', alignItems: 'center', paddingVertical: 12 }]}
                                 onPress={() => {
                                     onClose();
                                     if (onShowOnboarding) onShowOnboarding();
                                 }}
                             >
-                                <Text style={[styles.smallButtonText, { color: colors.primary }]}>Onboarding</Text>
+                                <Text style={[styles.smallButtonText, { color: YELLOW }]}>Onboarding</Text>
                             </TouchableOpacity>
                             <TouchableOpacity
-                                style={[styles.smallButton, { flex: 1, borderColor: colors.primary + '40', backgroundColor: colors.primary + '10', alignItems: 'center', paddingVertical: 12 }]}
+                                style={[styles.smallButton, { flex: 1, borderColor: BLACK + '40', backgroundColor: YELLOW + '10', alignItems: 'center', paddingVertical: 12 }]}
                                 onPress={() => {
                                     onClose();
                                     navigation.navigate('Paywall');
                                 }}
                             >
-                                <Text style={[styles.smallButtonText, { color: colors.primary }]}>Paywall</Text>
+                                <Text style={[styles.smallButtonText, { color: YELLOW }]}>Paywall</Text>
                             </TouchableOpacity>
                         </View>
 
                         {/* Bonsai Preview */}
                         <TouchableOpacity
-                            style={[styles.smallButton, { borderColor: colors.primary + '40', backgroundColor: colors.primary + '10', alignSelf: 'center', width: '100%', alignItems: 'center', paddingVertical: 12, marginTop: 8 }]}
+                            style={[styles.smallButton, { borderColor: BLACK + '40', backgroundColor: YELLOW + '10', alignSelf: 'center', width: '100%', alignItems: 'center', paddingVertical: 12, marginTop: 8 }]}
                             onPress={() => setIsBonsaiPreviewVisible(true)}
                         >
-                            <Text style={[styles.smallButtonText, { color: colors.primary }]}>
+                            <Text style={[styles.smallButtonText, { color: YELLOW }]}>
                                 Bonsai Growth Stages
                             </Text>
                         </TouchableOpacity>
 
                         {/* Bonsai Image Picker */}
                         <TouchableOpacity
-                            style={[styles.smallButton, { borderColor: colors.primary + '40', backgroundColor: colors.primary + '10', alignSelf: 'center', width: '100%', alignItems: 'center', paddingVertical: 12, marginTop: 8 }]}
+                            style={[styles.smallButton, { borderColor: BLACK + '40', backgroundColor: YELLOW + '10', alignSelf: 'center', width: '100%', alignItems: 'center', paddingVertical: 12, marginTop: 8 }]}
                             onPress={() => setIsBonsaiPickerVisible(true)}
                         >
-                            <Text style={[styles.smallButtonText, { color: colors.primary }]}>
+                            <Text style={[styles.smallButtonText, { color: YELLOW }]}>
                                 Bonsai Image Picker
                             </Text>
                         </TouchableOpacity>
                     </ScrollView>
 
-                    <View style={[styles.footer, { borderTopColor: colors.outline + '20' }]}>
-                        <Text style={[styles.versionText, { color: colors.onSurface + '40' }]}>ulbo. v1.0.1</Text>
+                    <View style={[styles.footer, { borderTopColor: BLACK + '20' }]}>
+                        <Text style={[styles.versionText, { color: BLACK + '40' }]}>ulbo. v1.0.1</Text>
                     </View>
                 </View>
             </View>
@@ -296,15 +342,11 @@ const styles = StyleSheet.create({
         backgroundColor: 'white',
         borderRadius: 20,
         padding: 24,
-        borderWidth: 1,
-        shadowColor: '#000',
-        shadowOffset: {
-            width: 0,
-            height: 2,
-        },
-        shadowOpacity: 0.25,
-        shadowRadius: 4,
-        elevation: 5,
+        elevation: 10,
+        shadowColor: BLACK,
+        shadowOffset: { width: 0, height: 4 },
+        shadowOpacity: 0.15,
+        shadowRadius: 16,
     },
     header: {
         flexDirection: 'row',
@@ -314,7 +356,7 @@ const styles = StyleSheet.create({
     },
     modalTitle: {
         fontSize: 24,
-        fontFamily: 'Caveat-Bold',
+        fontFamily: 'GasoekOne',
     },
     closeButton: {
         padding: 4,
@@ -341,11 +383,11 @@ const styles = StyleSheet.create({
     },
     settingLabel: {
         fontSize: 20,
-        fontFamily: 'Caveat-Medium',
+        fontFamily: 'GasoekOne',
     },
     settingDescription: {
         fontSize: 14,
-        fontFamily: 'Carlito',
+        fontFamily: 'GasoekOne',
         marginTop: 4,
     },
     footer: {
@@ -355,7 +397,7 @@ const styles = StyleSheet.create({
         alignItems: 'center',
     },
     versionText: {
-        fontFamily: 'Carlito',
+        fontFamily: 'GasoekOne',
         fontSize: 12,
     },
     exportButton: {
@@ -365,21 +407,19 @@ const styles = StyleSheet.create({
         paddingVertical: 14,
         paddingHorizontal: 20,
         borderRadius: 12,
-        borderWidth: 1,
         gap: 10,
     },
     exportButtonText: {
-        fontFamily: 'Caveat-Medium',
+        fontFamily: 'GasoekOne',
         fontSize: 18,
     },
     smallButton: {
         paddingVertical: 8,
         paddingHorizontal: 16,
         borderRadius: 8,
-        borderWidth: 1,
     },
     smallButtonText: {
-        fontFamily: 'Caveat-Medium',
+        fontFamily: 'GasoekOne',
         fontSize: 16,
     },
 });

@@ -1,7 +1,10 @@
 import React from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, ScrollView } from 'react-native';
 import * as Haptics from 'expo-haptics';
-import { useTheme } from '../context/ThemeContext';
+
+const YELLOW = '#FFE600';
+const BLACK = '#000000';
+const WHITE = '#FFFFFF';
 
 interface CategoryPickerProps {
     categories: string[];
@@ -10,9 +13,6 @@ interface CategoryPickerProps {
 }
 
 export const CategoryPicker: React.FC<CategoryPickerProps> = ({ categories, selected, onSelect }) => {
-    const { theme } = useTheme();
-    const colors = theme.colors;
-
     return (
         <View style={styles.categoryContainer}>
             <ScrollView
@@ -25,7 +25,7 @@ export const CategoryPicker: React.FC<CategoryPickerProps> = ({ categories, sele
                         key={cat}
                         style={[
                             styles.categoryChip,
-                            selected === cat && { backgroundColor: colors.primaryContainer, borderColor: colors.primary }
+                            selected === cat && styles.categoryChipSelected
                         ]}
                         onPress={() => {
                             Haptics.selectionAsync();
@@ -34,8 +34,8 @@ export const CategoryPicker: React.FC<CategoryPickerProps> = ({ categories, sele
                     >
                         <Text style={[
                             styles.categoryText,
-                            { color: selected === cat ? colors.onSurface : colors.onSurface + '60' },
-                            selected === cat && { fontFamily: 'Caveat-Bold' }
+                            { color: selected === cat ? BLACK : BLACK + '60' },
+                            selected === cat && { fontFamily: 'GasoekOne' }
                         ]}>
                             {cat}
                         </Text>
@@ -60,11 +60,16 @@ const styles = StyleSheet.create({
         paddingHorizontal: 12,
         paddingVertical: 6,
         borderRadius: 20,
-        borderWidth: 1,
+        borderWidth: 2,
         borderColor: 'transparent',
+        backgroundColor: 'transparent',
+    },
+    categoryChipSelected: {
+        backgroundColor: YELLOW,
+        borderColor: BLACK,
     },
     categoryText: {
-        fontFamily: 'Caveat-Medium',
+        fontFamily: 'GasoekOne',
         fontSize: 16,
     },
 });

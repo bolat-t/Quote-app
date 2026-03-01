@@ -1152,7 +1152,7 @@ const styles = StyleSheet.create({
         alignItems: 'center',
     },
     bubbleText: {
-        fontFamily: 'Carlito', // Consistent with app font
+        fontFamily: 'GasoekOne', // Consistent with app font
         fontSize: 14,
         color: '#5E4B3C',
     },

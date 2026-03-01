@@ -14,9 +14,12 @@ import { useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import type { RootStackParamList } from '../types';
 import * as Haptics from 'expo-haptics';
-import { useTheme } from '../context/ThemeContext';
 import { usePurchase, PurchasesPackage } from '../context/PurchaseContext';
 import { Svg, Path } from 'react-native-svg';
+
+const YELLOW = '#FFE600';
+const BLACK = '#000000';
+const WHITE = '#FFFFFF';
 
 const FEATURES = [
     { title: 'Deeper Reflections', desc: 'Unlock guided prompts & themes', color: '#7C5CFC' },
@@ -43,19 +46,17 @@ const FeatureIcon: React.FC<{ color: string }> = ({ color }) => (
 );
 
 /** Checkmark circle for plan selection */
-const CheckCircle: React.FC<{ selected: boolean; color: string }> = ({ selected, color }) => (
-    <View style={[styles.checkCircle, { borderColor: selected ? color : '#D1D5DB', backgroundColor: selected ? color : 'transparent' }]}>
+const CheckCircle: React.FC<{ selected: boolean }> = ({ selected }) => (
+    <View style={[styles.checkCircle, selected && styles.checkCircleSelected]}>
         {selected && (
             <Svg width={14} height={14} viewBox="0 0 24 24" fill="none">
-                <Path d="M20 6L9 17l-5-5" stroke="#FFF" strokeWidth={3} strokeLinecap="round" strokeLinejoin="round" />
+                <Path d="M20 6L9 17l-5-5" stroke={BLACK} strokeWidth={3} strokeLinecap="round" strokeLinejoin="round" />
             </Svg>
         )}
     </View>
 );
 
 export const PaywallScreen = () => {
-    const { theme, isDark } = useTheme();
-    const { colors } = theme;
     const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList, 'Paywall'>>();
     const { packages, purchasePackage, restorePurchases, isLoading } = usePurchase();
     const [purchasing, setPurchasing] = useState(false);
@@ -66,10 +67,8 @@ export const PaywallScreen = () => {
         Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
         try {
             const success = await purchasePackage(pkg);
-            if (success) {
-                navigation.goBack();
-            }
-        } catch (e) {
+            if (success) navigation.goBack();
+        } catch {
             Alert.alert('Error', 'Purchase failed. Please try again.');
         } finally {
             setPurchasing(false);
@@ -78,48 +77,36 @@ export const PaywallScreen = () => {
 
     const handleRestore = async () => {
         setPurchasing(true);
-        try {
-            await restorePurchases();
-        } finally {
-            setPurchasing(false);
-        }
+        try { await restorePurchases(); }
+        finally { setPurchasing(false); }
     };
 
     if (isLoading) {
         return (
-            <View style={[styles.container, { backgroundColor: colors.background, justifyContent: 'center', alignItems: 'center' }]}>
-                <ActivityIndicator size="large" color={colors.primary} />
+            <View style={styles.loadingWrap}>
+                <ActivityIndicator size="large" color={YELLOW} />
             </View>
         );
     }
 
     const displayPackages = packages.length > 0 ? packages : [
-        {
-            identifier: 'monthly',
-            product: { identifier: 'w', priceString: '$7.99', title: 'Weekly', description: '' },
-            packageType: 'MONTHLY'
-        },
-        {
-            identifier: 'annual',
-            product: { identifier: 'y', priceString: '$70.99', title: 'Yearly', description: '' },
-            packageType: 'ANNUAL'
-        }
+        { identifier: 'monthly', product: { identifier: 'w', priceString: '$7.99', title: 'Weekly', description: '' }, packageType: 'MONTHLY' },
+        { identifier: 'annual', product: { identifier: 'y', priceString: '$70.99', title: 'Yearly', description: '' }, packageType: 'ANNUAL' },
     ] as PurchasesPackage[];
 
     const annualPkg = displayPackages.find(p => p.packageType === 'ANNUAL');
     const weeklyPkg = displayPackages.find(p => p.packageType === 'MONTHLY');
-
     const annualPrice = annualPkg?.product.priceString || '$70.99';
     const weeklyPrice = weeklyPkg?.product.priceString || '$7.99';
 
     return (
-        <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]}>
+        <SafeAreaView style={styles.container}>
             <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
 
-                {/* Close Button */}
+                {/* Close */}
                 <TouchableOpacity onPress={() => navigation.goBack()} style={styles.closeButton}>
                     <Svg width={24} height={24} viewBox="0 0 24 24" fill="none">
-                        <Path d="M18 6L6 18M6 6l12 12" stroke={colors.onSurface + '50'} strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" />
+                        <Path d="M18 6L6 18M6 6l12 12" stroke={BLACK + '55'} strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" />
                     </Svg>
                 </TouchableOpacity>
 
@@ -133,9 +120,7 @@ export const PaywallScreen = () => {
                 </View>
 
                 {/* Title */}
-                <Text style={[styles.title, { color: colors.onSurface }]}>
-                    Unlock All Features
-                </Text>
+                <Text style={styles.title}>Unlock All Features</Text>
 
                 {/* Feature List */}
                 <View style={styles.featureList}>
@@ -143,8 +128,8 @@ export const PaywallScreen = () => {
                         <View key={i} style={styles.featureRow}>
                             <FeatureIcon color={f.color} />
                             <View style={styles.featureText}>
-                                <Text style={[styles.featureTitle, { color: colors.onSurface }]}>{f.title}</Text>
-                                <Text style={[styles.featureDesc, { color: colors.onSurface + '70' }]}>{f.desc}</Text>
+                                <Text style={styles.featureTitle}>{f.title}</Text>
+                                <Text style={styles.featureDesc}>{f.desc}</Text>
                             </View>
                         </View>
                     ))}
@@ -154,67 +139,47 @@ export const PaywallScreen = () => {
                 <View style={styles.planSection}>
                     {/* Annual */}
                     <TouchableOpacity
-                        style={[
-                            styles.planCard,
-                            {
-                                borderColor: selectedPlan === 'annual' ? colors.primary : (isDark ? '#333' : '#E5E7EB'),
-                                backgroundColor: selectedPlan === 'annual'
-                                    ? (isDark ? colors.primary + '15' : colors.primary + '08')
-                                    : (isDark ? '#1A1A1A' : '#FAFAFA'),
-                                borderWidth: selectedPlan === 'annual' ? 2 : 1,
-                            }
-                        ]}
+                        style={[styles.planCard, selectedPlan === 'annual' && styles.planCardSelected]}
                         onPress={() => setSelectedPlan('annual')}
                         activeOpacity={0.8}
                     >
-                        <View style={[styles.bestOfferBadge, { backgroundColor: colors.primary }]}>
+                        <View style={styles.bestOfferBadge}>
                             <Text style={styles.bestOfferText}>BEST OFFER</Text>
                         </View>
-                        <CheckCircle selected={selectedPlan === 'annual'} color={colors.primary} />
+                        <CheckCircle selected={selectedPlan === 'annual'} />
                         <View style={styles.planInfo}>
-                            <Text style={[styles.planName, { color: colors.onSurface }]}>Annual</Text>
-                            <Text style={[styles.planPriceMain, { color: colors.onSurface }]}>
-                                {annualPrice}<Text style={[styles.planPeriod, { color: colors.onSurface + '60' }]}>/year</Text>
+                            <Text style={styles.planName}>Annual</Text>
+                            <Text style={styles.planPriceMain}>
+                                {annualPrice}<Text style={styles.planPeriod}>/year</Text>
                             </Text>
                         </View>
-                        <Text style={[styles.planWeekly, { color: colors.onSurface + '60' }]}>
-                            $1.37/week
-                        </Text>
+                        <Text style={styles.planWeekly}>$1.37/week</Text>
                     </TouchableOpacity>
 
                     {/* Weekly */}
                     <TouchableOpacity
-                        style={[
-                            styles.planCard,
-                            {
-                                borderColor: selectedPlan === 'weekly' ? colors.primary : (isDark ? '#333' : '#E5E7EB'),
-                                backgroundColor: selectedPlan === 'weekly'
-                                    ? (isDark ? colors.primary + '15' : colors.primary + '08')
-                                    : (isDark ? '#1A1A1A' : '#FAFAFA'),
-                                borderWidth: selectedPlan === 'weekly' ? 2 : 1,
-                            }
-                        ]}
+                        style={[styles.planCard, selectedPlan === 'weekly' && styles.planCardSelected]}
                         onPress={() => setSelectedPlan('weekly')}
                         activeOpacity={0.8}
                     >
-                        <CheckCircle selected={selectedPlan === 'weekly'} color={colors.primary} />
+                        <CheckCircle selected={selectedPlan === 'weekly'} />
                         <View style={styles.planInfo}>
-                            <Text style={[styles.planName, { color: colors.onSurface }]}>Weekly</Text>
-                            <Text style={[styles.planPriceMain, { color: colors.onSurface }]}>
-                                {weeklyPrice}<Text style={[styles.planPeriod, { color: colors.onSurface + '60' }]}>/week</Text>
+                            <Text style={styles.planName}>Weekly</Text>
+                            <Text style={styles.planPriceMain}>
+                                {weeklyPrice}<Text style={styles.planPeriod}>/week</Text>
                             </Text>
                         </View>
                     </TouchableOpacity>
                 </View>
 
                 {/* Billing note */}
-                <Text style={[styles.billingNote, { color: colors.onSurface + '50' }]}>
+                <Text style={styles.billingNote}>
                     {selectedPlan === 'annual' ? 'Billed annually. Cancel anytime.' : 'Billed weekly. Cancel anytime.'}
                 </Text>
 
                 {/* CTA Button */}
                 <TouchableOpacity
-                    style={[styles.ctaButton, { backgroundColor: isDark ? '#FFFFFF' : '#1A1D23' }]}
+                    style={styles.ctaButton}
                     onPress={() => {
                         const pkg = selectedPlan === 'annual' ? annualPkg : weeklyPkg;
                         if (pkg) handlePurchase(pkg);
@@ -222,25 +187,24 @@ export const PaywallScreen = () => {
                     disabled={purchasing}
                     activeOpacity={0.85}
                 >
-                    {purchasing ? (
-                        <ActivityIndicator size="small" color={isDark ? '#1A1D23' : '#FFFFFF'} />
-                    ) : (
-                        <Text style={[styles.ctaText, { color: isDark ? '#1A1D23' : '#FFFFFF' }]}>Continue</Text>
-                    )}
+                    {purchasing
+                        ? <ActivityIndicator size="small" color={BLACK} />
+                        : <Text style={styles.ctaText}>Continue</Text>
+                    }
                 </TouchableOpacity>
 
                 {/* Footer Links */}
                 <View style={styles.footerLinks}>
                     <TouchableOpacity onPress={handleRestore} disabled={purchasing}>
-                        <Text style={[styles.footerLink, { color: colors.onSurface + '50' }]}>Restore</Text>
+                        <Text style={styles.footerLink}>Restore</Text>
                     </TouchableOpacity>
-                    <Text style={[styles.footerDot, { color: colors.onSurface + '30' }]}>·</Text>
+                    <Text style={styles.footerDot}>·</Text>
                     <TouchableOpacity>
-                        <Text style={[styles.footerLink, { color: colors.onSurface + '50' }]}>Terms</Text>
+                        <Text style={styles.footerLink}>Terms</Text>
                     </TouchableOpacity>
-                    <Text style={[styles.footerDot, { color: colors.onSurface + '30' }]}>·</Text>
+                    <Text style={styles.footerDot}>·</Text>
                     <TouchableOpacity>
-                        <Text style={[styles.footerLink, { color: colors.onSurface + '50' }]}>Privacy Policy</Text>
+                        <Text style={styles.footerLink}>Privacy Policy</Text>
                     </TouchableOpacity>
                 </View>
 
@@ -252,6 +216,13 @@ export const PaywallScreen = () => {
 const styles = StyleSheet.create({
     container: {
         flex: 1,
+        backgroundColor: WHITE,
+    },
+    loadingWrap: {
+        flex: 1,
+        backgroundColor: WHITE,
+        justifyContent: 'center',
+        alignItems: 'center',
     },
     scrollContent: {
         paddingHorizontal: 24,
@@ -272,10 +243,11 @@ const styles = StyleSheet.create({
         height: 90,
     },
     title: {
-        fontSize: 28,
-        fontFamily: 'Caveat-Bold',
+        fontSize: 32,
+        fontFamily: 'GasoekOne',
         textAlign: 'center',
         marginBottom: 28,
+        color: BLACK,
     },
     featureList: {
         gap: 16,
@@ -298,12 +270,14 @@ const styles = StyleSheet.create({
     },
     featureTitle: {
         fontSize: 16,
-        fontFamily: 'Carlito-Bold',
+        fontFamily: 'GasoekOne',
         marginBottom: 1,
+        color: BLACK,
     },
     featureDesc: {
         fontSize: 13,
-        fontFamily: 'Carlito',
+        fontFamily: 'GasoekOne',
+        color: '#666',
     },
     planSection: {
         gap: 12,
@@ -317,6 +291,18 @@ const styles = StyleSheet.create({
         borderRadius: 14,
         position: 'relative',
         gap: 12,
+        backgroundColor: WHITE,
+        elevation: 4,
+        shadowColor: BLACK,
+        shadowOffset: { width: 0, height: 2 },
+        shadowOpacity: 0.1,
+        shadowRadius: 6,
+    },
+    planCardSelected: {
+        backgroundColor: '#FFFBE6',
+        elevation: 8,
+        shadowOpacity: 0.15,
+        shadowRadius: 10,
     },
     bestOfferBadge: {
         position: 'absolute',
@@ -325,9 +311,10 @@ const styles = StyleSheet.create({
         paddingHorizontal: 10,
         paddingVertical: 3,
         borderRadius: 6,
+        backgroundColor: BLACK,
     },
     bestOfferText: {
-        color: '#FFF',
+        color: YELLOW,
         fontSize: 10,
         fontWeight: '800',
         letterSpacing: 0.8,
@@ -336,46 +323,61 @@ const styles = StyleSheet.create({
         width: 24,
         height: 24,
         borderRadius: 12,
-        borderWidth: 2,
+        backgroundColor: '#F0F0F0',
         justifyContent: 'center',
         alignItems: 'center',
+    },
+    checkCircleSelected: {
+        backgroundColor: YELLOW,
     },
     planInfo: {
         flex: 1,
     },
     planName: {
         fontSize: 16,
-        fontFamily: 'Carlito-Bold',
+        fontFamily: 'GasoekOne',
         marginBottom: 2,
+        color: BLACK,
     },
     planPriceMain: {
         fontSize: 15,
-        fontFamily: 'Carlito-Bold',
+        fontFamily: 'GasoekOne',
+        color: BLACK,
     },
     planPeriod: {
         fontSize: 13,
         fontWeight: '400',
+        color: BLACK + '88',
     },
     planWeekly: {
         fontSize: 13,
-        fontFamily: 'Carlito',
+        fontFamily: 'GasoekOne',
+        color: BLACK + '88',
     },
     billingNote: {
         textAlign: 'center',
         fontSize: 13,
-        fontFamily: 'Carlito',
+        fontFamily: 'GasoekOne',
         marginBottom: 20,
+        color: '#888',
     },
     ctaButton: {
         paddingVertical: 18,
-        borderRadius: 14,
+        borderRadius: 50,
         alignItems: 'center',
         justifyContent: 'center',
         marginBottom: 20,
+        backgroundColor: YELLOW,
+        elevation: 6,
+        shadowColor: BLACK,
+        shadowOffset: { width: 0, height: 4 },
+        shadowOpacity: 0.15,
+        shadowRadius: 8,
     },
     ctaText: {
-        fontSize: 17,
-        fontFamily: 'Carlito-Bold',
+        fontSize: 20,
+        fontFamily: 'GasoekOne',
+        color: BLACK,
         letterSpacing: 0.3,
     },
     footerLinks: {
@@ -386,9 +388,11 @@ const styles = StyleSheet.create({
     },
     footerLink: {
         fontSize: 13,
-        fontFamily: 'Carlito',
+        fontFamily: 'GasoekOne',
+        color: '#888',
     },
     footerDot: {
         fontSize: 13,
+        color: '#CCC',
     },
 });

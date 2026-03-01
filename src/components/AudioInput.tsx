@@ -9,7 +9,6 @@ import {
 } from 'react-native';
 import { Audio } from 'expo-av';
 import { Svg, Path, Circle } from 'react-native-svg';
-import { useTheme } from '../context/ThemeContext';
 // Use legacy import for readAsStringAsync as per deprecation warning
 import * as FileSystem from 'expo-file-system/legacy';
 import { supabase } from '../lib/supabase';
@@ -22,11 +21,18 @@ interface AudioInputProps {
 // Animated SVG-compatible view for wave bars
 const AnimatedView = Animated.View;
 
+const YELLOW = '#FFE600';
+const BLACK  = '#000000';
+
 export const AudioInput: React.FC<AudioInputProps> = ({ onTranscriptionComplete, onError }) => {
-    const { theme } = useTheme();
     const [recording, setRecording] = useState<Audio.Recording | null>(null);
     const [isRecording, setIsRecording] = useState(false);
     const [isProcessing, setIsProcessing] = useState(false);
+    const [secondsLeft, setSecondsLeft] = useState(20);
+    const autoStopTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+    const countdownRef = useRef<ReturnType<typeof setInterval> | null>(null);
+
+    const MAX_SECONDS = 20;
 
     // Pulse animation for mic button
     const pulseAnim = useRef(new Animated.Value(1)).current;
@@ -167,6 +173,13 @@ export const AudioInput: React.FC<AudioInputProps> = ({ onTranscriptionComplete,
             setRecording(newRecording);
             setIsRecording(true);
             startAnimations();
+
+            // Auto-stop after MAX_SECONDS
+            setSecondsLeft(MAX_SECONDS);
+            autoStopTimerRef.current = setTimeout(() => stopRecording(), MAX_SECONDS * 1000);
+            countdownRef.current = setInterval(() => {
+                setSecondsLeft(prev => Math.max(0, prev - 1));
+            }, 1000);
         } catch (err) {
             console.error('Failed to start recording', err);
             onError('Could not start recording.');
@@ -178,6 +191,9 @@ export const AudioInput: React.FC<AudioInputProps> = ({ onTranscriptionComplete,
 
         setIsRecording(false);
         stopAnimations();
+        if (autoStopTimerRef.current) { clearTimeout(autoStopTimerRef.current); autoStopTimerRef.current = null; }
+        if (countdownRef.current) { clearInterval(countdownRef.current); countdownRef.current = null; }
+        setSecondsLeft(MAX_SECONDS);
 
         try {
             await recording.stopAndUnloadAsync();
@@ -243,9 +259,9 @@ export const AudioInput: React.FC<AudioInputProps> = ({ onTranscriptionComplete,
         }
     };
 
-    const primaryColor = theme.colors.primary;
-    const primaryBg = primaryColor + '18';
-    const primaryRing = primaryColor + '25';
+    const primaryColor = YELLOW;
+    const primaryBg = BLACK + '10';
+    const primaryRing = YELLOW + '50';
 
     // Render wave bars
     const renderWaveBars = (color: string) => (
@@ -301,6 +317,9 @@ export const AudioInput: React.FC<AudioInputProps> = ({ onTranscriptionComplete,
     return (
         <View style={styles.container}>
             <View style={{ alignItems: 'center' }}>
+                {isRecording && (
+                    <Text style={styles.countdown}>{secondsLeft}s</Text>
+                )}
                 <TouchableOpacity
                     onPressIn={startRecording}
                     onPressOut={stopRecording}
@@ -399,5 +418,11 @@ const styles = StyleSheet.create({
         alignItems: 'center',
         justifyContent: 'center',
         gap: 6,
+    },
+    countdown: {
+        fontFamily: 'GasoekOne',
+        fontSize: 13,
+        color: YELLOW,
+        marginBottom: 4,
     },
 });

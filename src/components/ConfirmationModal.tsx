@@ -1,7 +1,10 @@
 import React from 'react';
 import { View, Text, StyleSheet, Modal, TouchableOpacity, Dimensions } from 'react-native';
 import { BlurView } from 'expo-blur';
-import { useTheme } from '../context/ThemeContext';
+
+const YELLOW = '#FFE600';
+const BLACK  = '#000000';
+const WHITE  = '#FFFFFF';
 
 interface ConfirmationModalProps {
     visible: boolean;
@@ -26,9 +29,6 @@ export const ConfirmationModal: React.FC<ConfirmationModalProps> = ({
     onCancel,
     isDestructive = false,
 }) => {
-    const { theme } = useTheme();
-    const colors = theme.colors;
-
     return (
         <Modal
             visible={visible}
@@ -41,23 +41,20 @@ export const ConfirmationModal: React.FC<ConfirmationModalProps> = ({
                     <BlurView intensity={20} style={StyleSheet.absoluteFill} tint="dark" />
                 </TouchableOpacity>
 
-                <View style={[styles.card, { backgroundColor: colors.surface, borderColor: colors.border }]}>
-                    <Text style={[styles.title, { color: colors.text }]}>{title}</Text>
-                    <Text style={[styles.message, { color: colors.text }]}>{message}</Text>
+                <View style={styles.card}>
+                    <Text style={styles.title}>{title}</Text>
+                    <Text style={styles.message}>{message}</Text>
 
                     <View style={styles.actions}>
-                        <TouchableOpacity
-                            style={[styles.button, styles.cancelButton, { borderColor: colors.border }]}
-                            onPress={onCancel}
-                        >
-                            <Text style={[styles.buttonText, { color: colors.text }]}>{cancelLabel}</Text>
+                        <TouchableOpacity style={styles.cancelButton} onPress={onCancel}>
+                            <Text style={[styles.buttonText, { color: BLACK }]}>{cancelLabel}</Text>
                         </TouchableOpacity>
 
                         <TouchableOpacity
-                            style={[styles.button, styles.confirmButton, { backgroundColor: isDestructive ? colors.error : colors.primary }]}
+                            style={[styles.confirmButton, isDestructive && styles.destructiveButton]}
                             onPress={onConfirm}
                         >
-                            <Text style={[styles.buttonText, { color: '#FFF' }]}>{confirmLabel}</Text>
+                            <Text style={[styles.buttonText, { color: isDestructive ? WHITE : BLACK }]}>{confirmLabel}</Text>
                         </TouchableOpacity>
                     </View>
                 </View>
@@ -78,49 +75,57 @@ const styles = StyleSheet.create({
         maxWidth: 340,
         padding: 24,
         borderRadius: 24,
-        borderWidth: 1,
+        borderWidth: 2.5,
+        borderColor: BLACK,
+        backgroundColor: WHITE,
         alignItems: 'center',
-        shadowColor: '#000',
-        shadowOffset: { width: 0, height: 10 },
-        shadowOpacity: 0.1,
-        shadowRadius: 20,
-        elevation: 10,
     },
     title: {
-        fontFamily: 'Caveat-Bold',
+        fontFamily: 'GasoekOne',
         fontSize: 28,
         marginBottom: 8,
         textAlign: 'center',
+        color: BLACK,
     },
     message: {
-        fontFamily: 'Carlito',
+        fontFamily: 'GasoekOne',
         fontSize: 17,
         marginBottom: 24,
         textAlign: 'center',
         opacity: 0.8,
         lineHeight: 24,
+        color: BLACK,
     },
     actions: {
         flexDirection: 'row',
         gap: 12,
         width: '100%',
     },
-    button: {
+    cancelButton: {
         flex: 1,
         paddingVertical: 12,
         borderRadius: 14,
         alignItems: 'center',
         justifyContent: 'center',
-    },
-    cancelButton: {
-        backgroundColor: 'transparent',
-        borderWidth: 1,
+        borderWidth: 2,
+        borderColor: BLACK + '40',
     },
     confirmButton: {
-        borderWidth: 0,
+        flex: 1,
+        paddingVertical: 12,
+        borderRadius: 14,
+        alignItems: 'center',
+        justifyContent: 'center',
+        backgroundColor: YELLOW,
+        borderWidth: 2,
+        borderColor: BLACK,
+    },
+    destructiveButton: {
+        backgroundColor: '#D32F2F',
+        borderColor: '#D32F2F',
     },
     buttonText: {
-        fontFamily: 'Caveat-Bold',
+        fontFamily: 'GasoekOne',
         fontSize: 18,
     },
 });

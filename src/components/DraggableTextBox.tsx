@@ -9,9 +9,11 @@ import {
     TouchableOpacity,
     Keyboard,
 } from 'react-native';
-import { useTheme } from '../context/ThemeContext';
-
 const { width: screenWidth, height: screenHeight } = Dimensions.get('window');
+
+const YELLOW = '#FFE600';
+const BLACK = '#000000';
+const WHITE = '#FFFFFF';
 
 export interface TextBoxData {
     id: string;
@@ -53,7 +55,6 @@ export const DraggableTextBox: React.FC<DraggableTextBoxProps> = ({
     onDragEnd,
     onEditing,
 }) => {
-    const { theme } = useTheme();
     const [isEditing, setIsEditing] = useState(false);
     const [editText, setEditText] = useState(data.text);
     const [isDragging, setIsDragging] = useState(false);
@@ -210,8 +211,8 @@ export const DraggableTextBox: React.FC<DraggableTextBoxProps> = ({
                             { rotate: `${rotation}deg` },
                             { scale: scale }
                         ],
-                        backgroundColor: isReflection ? theme.colors.background : 'transparent',
-                        borderColor: isReflection ? theme.colors.accent : 'transparent',
+                        backgroundColor: isReflection ? WHITE : 'transparent',
+                        borderColor: isReflection ? BLACK : 'transparent',
                         borderWidth: isReflection ? 2 : 0,
                         padding: 12,
                         alignItems: 'flex-start',
@@ -224,11 +225,11 @@ export const DraggableTextBox: React.FC<DraggableTextBoxProps> = ({
                     onPress={() => onDelete(data.id)}
                     hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
                 >
-                    <Text style={[styles.deleteText, { color: theme.colors.text }]}>✕</Text>
+                    <Text style={[styles.deleteText, { color: BLACK }]}>✕</Text>
                 </TouchableOpacity>
 
                 {isReflection && (
-                    <Text style={[styles.label, { color: theme.colors.accent }]}>
+                    <Text style={[styles.label, { color: BLACK + '70' }]}>
                         My reflection
                     </Text>
                 )}
@@ -237,7 +238,7 @@ export const DraggableTextBox: React.FC<DraggableTextBoxProps> = ({
                     ref={inputRef}
                     style={[
                         styles.editInput,
-                        { color: theme.colors.text },
+                        { color: BLACK },
                         !isReflection && styles.plainInput
                     ]}
                     value={editText}
@@ -248,15 +249,15 @@ export const DraggableTextBox: React.FC<DraggableTextBoxProps> = ({
                     returnKeyType="done"
                     blurOnSubmit
                     placeholder="Type here..."
-                    placeholderTextColor={theme.colors.accent ? theme.colors.accent + '80' : '#888'}
+                    placeholderTextColor={BLACK + '40'}
                 />
 
                 <View style={styles.actionRow}>
                     <TouchableOpacity
-                        style={[styles.doneButton, { backgroundColor: theme.colors.text }]}
+                        style={styles.doneButton}
                         onPress={handleEndEditing}
                     >
-                        <Text style={[styles.doneText, { color: theme.colors.background }]}>Done</Text>
+                        <Text style={styles.doneText}>Done</Text>
                     </TouchableOpacity>
                 </View>
             </View>
@@ -275,10 +276,8 @@ export const DraggableTextBox: React.FC<DraggableTextBoxProps> = ({
                         { rotate: `${rotation}deg` },
                         { scale: scale }
                     ],
-                    backgroundColor: isReflection
-                        ? theme.colors.background + 'F5'
-                        : 'transparent',
-                    borderColor: isReflection ? theme.colors.accent : 'transparent',
+                    backgroundColor: isReflection ? WHITE : 'transparent',
+                    borderColor: isReflection ? BLACK : 'transparent',
                     borderWidth: isReflection ? 1 : 0,
                 },
             ]}
@@ -296,20 +295,20 @@ export const DraggableTextBox: React.FC<DraggableTextBoxProps> = ({
             ) : (
                 <>
                     {isReflection && (
-                        <Text style={[styles.label, { color: theme.colors.accent }]}>
+                        <Text style={[styles.label, { color: BLACK + '70' }]}>
                             My reflection
                         </Text>
                     )}
                     <Text
                         style={[
                             isReflection ? styles.reflectionText : styles.plainText,
-                            { color: theme.colors.text }
+                            { color: BLACK }
                         ]}
                     >
                         {data.text}
                     </Text>
                     {!isReflection && data.text === 'Tap to edit' && (
-                        <Text style={[styles.hint, { color: theme.colors.accent }]}>
+                        <Text style={[styles.hint, { color: BLACK + '70' }]}>
                             tap to edit
                         </Text>
                     )}
@@ -347,18 +346,18 @@ const styles = StyleSheet.create({
         textTransform: 'uppercase',
         letterSpacing: 0.5,
         marginBottom: 6,
-        fontFamily: 'Caveat',
+        fontFamily: 'GasoekOne',
         opacity: 0.6,
     },
     reflectionText: {
         fontSize: 20,
         lineHeight: 26,
-        fontFamily: 'Caveat-Regular', // Handwriting
+        fontFamily: 'GasoekOne', // Handwriting
     },
     plainText: {
         fontSize: 18,
         lineHeight: 24,
-        fontFamily: 'Caveat', // "Typed" look
+        fontFamily: 'GasoekOne', // "Typed" look
         textShadowColor: 'rgba(0, 0, 0, 0.1)',
         textShadowOffset: { width: 0, height: 1 },
         textShadowRadius: 2,
@@ -370,19 +369,25 @@ const styles = StyleSheet.create({
         minHeight: 30,
         borderWidth: 0,
         minWidth: 40,
-        fontFamily: 'Caveat-Regular',
+        fontFamily: 'GasoekOne',
         textAlignVertical: 'top',
     },
     plainInput: {
         fontSize: 18,
         lineHeight: 24,
-        fontFamily: 'Caveat',
+        fontFamily: 'GasoekOne',
     },
     doneButton: {
         paddingHorizontal: 12,
         paddingVertical: 4,
         borderRadius: 12,
         marginTop: 4,
+        backgroundColor: YELLOW,
+        elevation: 2,
+        shadowColor: BLACK,
+        shadowOffset: { width: 0, height: 2 },
+        shadowOpacity: 0.1,
+        shadowRadius: 4,
     },
     actionRow: {
         flexDirection: 'row',
@@ -410,14 +415,15 @@ const styles = StyleSheet.create({
     },
     doneText: {
         fontSize: 12,
-        fontFamily: 'Caveat',
+        fontFamily: 'GasoekOne',
         fontWeight: 'bold',
+        color: BLACK,
     },
     hint: {
         fontSize: 12,
         marginTop: 4,
         opacity: 0.6,
-        fontFamily: 'Caveat',
+        fontFamily: 'GasoekOne',
     },
     canvasImage: {
         width: 140,

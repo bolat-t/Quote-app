@@ -1,6 +1,8 @@
 import React, { useState, useCallback, useEffect } from 'react';
 import {
     View,
+    Text,
+    TextInput,
     StyleSheet,
     TouchableOpacity,
     Keyboard,
@@ -8,7 +10,6 @@ import {
     KeyboardAvoidingView,
     Platform,
 } from 'react-native';
-import { Text, Surface, TextInput, IconButton, useTheme, ActivityIndicator } from 'react-native-paper';
 import Svg, { Circle, Path, G, Defs, LinearGradient, Stop } from 'react-native-svg';
 import Animated, {
     useSharedValue,
@@ -28,6 +29,10 @@ import { DailyHunt } from '../types';
 
 const { width, height } = Dimensions.get('window');
 
+const YELLOW = '#FFE600';
+const BLACK  = '#000000';
+const WHITE  = '#FFFFFF';
+
 interface PositivityHuntProps {
     hunt: DailyHunt;
     quote?: { text: string; category: string };
@@ -41,7 +46,6 @@ interface PositivityHuntProps {
 const ProgressRing: React.FC<{ progress: number; total: number; isComplete: boolean }> = ({
     progress, total, isComplete,
 }) => {
-    const theme = useTheme();
     const scale = useSharedValue(1);
 
     useEffect(() => {
@@ -63,22 +67,21 @@ const ProgressRing: React.FC<{ progress: number; total: number; isComplete: bool
     const strokeWidth = 3;
     const circumference = 2 * Math.PI * radius;
     const progressOffset = circumference - (circumference * progress) / total;
-    const primaryColor = theme.colors.primary;
 
     return (
         <Animated.View style={[styles.ringContainer, animatedStyle]}>
             <Svg width={200} height={200} viewBox="0 0 200 200">
                 <Defs>
                     <LinearGradient id="progressGrad" x1="0" y1="0" x2="1" y2="1">
-                        <Stop offset="0" stopColor={primaryColor} stopOpacity="0.9" />
-                        <Stop offset="1" stopColor={primaryColor} stopOpacity="0.5" />
+                        <Stop offset="0" stopColor={YELLOW} stopOpacity="1" />
+                        <Stop offset="1" stopColor={BLACK} stopOpacity="0.5" />
                     </LinearGradient>
                 </Defs>
 
                 {/* Background ring */}
                 <Circle
                     cx="100" cy="100" r={radius}
-                    stroke={theme.colors.outline + '12'}
+                    stroke={BLACK + '12'}
                     strokeWidth={strokeWidth}
                     fill="none"
                 />
@@ -105,7 +108,7 @@ const ProgressRing: React.FC<{ progress: number; total: number; isComplete: bool
                         <Circle
                             key={i}
                             cx={cx} cy={cy} r={i < progress ? 4 : 2.5}
-                            fill={i < progress ? primaryColor : theme.colors.outline + '30'}
+                            fill={i < progress ? YELLOW : BLACK + '30'}
                         />
                     );
                 })}
@@ -116,17 +119,13 @@ const ProgressRing: React.FC<{ progress: number; total: number; isComplete: bool
                 {isComplete ? (
                     <View style={{ alignItems: 'center' }}>
                         <Svg width={44} height={44} viewBox="0 0 24 24" fill="none">
-                            <Path d="M12 2L14.09 8.26L21 9.27L16 14.14L17.18 21.02L12 17.77L6.82 21.02L8 14.14L3 9.27L9.91 8.26L12 2Z" stroke={primaryColor} strokeWidth={1.5} fill={primaryColor + '25'} strokeLinecap="round" strokeLinejoin="round" />
+                            <Path d="M12 2L14.09 8.26L21 9.27L16 14.14L17.18 21.02L12 17.77L6.82 21.02L8 14.14L3 9.27L9.91 8.26L12 2Z" stroke={BLACK} strokeWidth={1.5} fill={YELLOW} strokeLinecap="round" strokeLinejoin="round" />
                         </Svg>
                     </View>
                 ) : (
                     <Animated.View entering={FadeIn} style={{ alignItems: 'center' }}>
-                        <Text style={[styles.ringCount, { color: theme.colors.onBackground }]}>
-                            {progress}
-                        </Text>
-                        <Text style={[styles.ringLabel, { color: theme.colors.outline }]}>
-                            of {total}
-                        </Text>
+                        <Text style={styles.ringCount}>{progress}</Text>
+                        <Text style={styles.ringLabel}>of {total}</Text>
                     </Animated.View>
                 )}
             </View>
@@ -135,23 +134,15 @@ const ProgressRing: React.FC<{ progress: number; total: number; isComplete: bool
 };
 
 // ========== Entry Card ==========
-const EntryCard: React.FC<{ text: string; index: number }> = ({ text, index }) => {
-    const theme = useTheme();
-    return (
-        <Animated.View
-            entering={FadeIn.delay(index * 80).duration(300)}
-            style={[
-                styles.entryCard,
-                { backgroundColor: theme.colors.surface, borderColor: theme.colors.primary + '10' },
-            ]}
-        >
-            <View style={[styles.entryDot, { backgroundColor: theme.colors.primary + '60' }]} />
-            <Text variant="bodyLarge" style={[styles.entryText, { color: theme.colors.onSurface }]}>
-                {text}
-            </Text>
-        </Animated.View>
-    );
-};
+const EntryCard: React.FC<{ text: string; index: number }> = ({ text, index }) => (
+    <Animated.View
+        entering={FadeIn.delay(index * 80).duration(300)}
+        style={styles.entryCard}
+    >
+        <View style={styles.entryDot} />
+        <Text style={styles.entryText}>{text}</Text>
+    </Animated.View>
+);
 
 // ========== Main Component ==========
 export const PositivityHunt: React.FC<PositivityHuntProps> = ({
@@ -162,7 +153,6 @@ export const PositivityHunt: React.FC<PositivityHuntProps> = ({
     onAddEntry,
     onHuntComplete,
 }) => {
-    const theme = useTheme();
     const [inputText, setInputText] = useState('');
     const [isFocused, setIsFocused] = useState(false);
 
@@ -188,27 +178,25 @@ export const PositivityHunt: React.FC<PositivityHuntProps> = ({
     // Locked State
     if (!isUnlocked) {
         return (
-            <Surface style={[styles.lockedContainer, { backgroundColor: theme.colors.surfaceVariant }]} elevation={0}>
-                <Text variant="headlineSmall" style={{ opacity: 0.5 }}>🔒 Hunt Locked</Text>
-                <Text variant="bodyMedium" style={{ opacity: 0.7 }}>Unlocks at Level 3</Text>
-            </Surface>
+            <View style={styles.lockedContainer}>
+                <Text style={{ fontSize: 20, opacity: 0.5 }}>🔒 Hunt Locked</Text>
+                <Text style={{ opacity: 0.7, marginTop: 4, fontFamily: 'GasoekOne', fontSize: 15 }}>Unlocks at Level 3</Text>
+            </View>
         );
     }
 
     return (
-        <View style={[styles.container, { backgroundColor: theme.colors.background }]}>
+        <View style={styles.container}>
             <KeyboardAvoidingView
                 behavior={Platform.OS === "ios" ? "padding" : "height"}
                 style={{ flex: 1 }}
             >
                 {/* Header */}
                 <Animated.View entering={FadeIn.duration(300)} style={styles.header}>
-                    <Text variant="headlineMedium" style={[styles.headerTitle, { color: theme.colors.onBackground }]}>
+                    <Text style={styles.headerTitle}>
                         {isComplete ? "Hunt Complete" : "Today's Hunt"}
                     </Text>
-                    <Text variant="labelLarge" style={{ color: theme.colors.outline, opacity: 0.7, fontFamily: 'Caveat-Medium', fontSize: 16 }}>
-                        Find 3 good things today
-                    </Text>
+                    <Text style={styles.headerSub}>Find 3 good things today</Text>
                 </Animated.View>
 
                 {/* Progress Ring */}
@@ -216,9 +204,7 @@ export const PositivityHunt: React.FC<PositivityHuntProps> = ({
                     <ProgressRing progress={progress} total={3} isComplete={isComplete} />
                     {quote && !isFocused && !isComplete && (
                         <Animated.View entering={FadeIn.delay(200)} style={styles.quoteHint}>
-                            <Text variant="bodyMedium" style={[styles.quoteText, { color: theme.colors.onBackground }]}>
-                                "{quote.text}"
-                            </Text>
+                            <Text style={styles.quoteText}>"{quote.text}"</Text>
                         </Animated.View>
                     )}
                 </View>
@@ -233,52 +219,45 @@ export const PositivityHunt: React.FC<PositivityHuntProps> = ({
                 {/* Input Sheet */}
                 {!isComplete && (
                     <Animated.View entering={FadeIn.duration(300)}>
-                        <Surface style={[styles.inputSheet, { backgroundColor: theme.colors.surface }]} elevation={2}>
-                            <Text variant="titleMedium" style={[styles.inputPrompt, { color: theme.colors.onSurface }]}>
+                        <View style={styles.inputSheet}>
+                            <Text style={styles.inputPrompt}>
                                 {entriesCount === 0 ? "What's one good thing?" : "Capture another moment..."}
                             </Text>
-                            <View style={[styles.inputRow, { backgroundColor: theme.colors.background + '80' }]}>
+                            <View style={styles.inputRow}>
                                 <TextInput
                                     value={inputText}
                                     onChangeText={setInputText}
                                     placeholder="Type here..."
-                                    placeholderTextColor={theme.colors.outline + '60'}
-                                    style={[styles.input, { color: theme.colors.onSurface }]}
-                                    underlineColor="transparent"
-                                    activeUnderlineColor="transparent"
-                                    textColor={theme.colors.onSurface}
+                                    placeholderTextColor={BLACK + '40'}
+                                    style={styles.input}
                                     onFocus={() => setIsFocused(true)}
                                     onBlur={() => setIsFocused(false)}
                                     onSubmitEditing={handleSubmitEntry}
                                     returnKeyType="done"
                                 />
-                                <IconButton
-                                    icon="arrow-up"
-                                    mode="contained"
-                                    containerColor={theme.colors.primary}
-                                    iconColor="#FFFFFF"
-                                    size={22}
-                                    disabled={!inputText.trim()}
+                                <TouchableOpacity
+                                    style={[styles.submitBtn, !inputText.trim() && styles.submitBtnDisabled]}
                                     onPress={handleSubmitEntry}
-                                    style={{ margin: 0 }}
-                                />
+                                    disabled={!inputText.trim()}
+                                    activeOpacity={0.7}
+                                >
+                                    <Svg width={18} height={18} viewBox="0 0 24 24" fill="none">
+                                        <Path d="M12 19V5M5 12l7-7 7 7" stroke={inputText.trim() ? BLACK : BLACK + '40'} strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" />
+                                    </Svg>
+                                </TouchableOpacity>
                             </View>
-                        </Surface>
+                        </View>
                     </Animated.View>
                 )}
 
                 {/* Completion Celebration */}
                 {isComplete && (
-                    <Animated.View entering={FadeIn.delay(200)} style={[styles.celebrateCard, { backgroundColor: theme.colors.primaryContainer }]}>
+                    <Animated.View entering={FadeIn.delay(200)} style={styles.celebrateCard}>
                         <Svg width={36} height={36} viewBox="0 0 24 24" fill="none" style={{ marginBottom: 8 }}>
-                            <Path d="M12 2L14.09 8.26L21 9.27L16 14.14L17.18 21.02L12 17.77L6.82 21.02L8 14.14L3 9.27L9.91 8.26L12 2Z" stroke={theme.colors.primary} strokeWidth={1.5} fill={theme.colors.primary + '20'} strokeLinecap="round" strokeLinejoin="round" />
+                            <Path d="M12 2L14.09 8.26L21 9.27L16 14.14L17.18 21.02L12 17.77L6.82 21.02L8 14.14L3 9.27L9.91 8.26L12 2Z" stroke={BLACK} strokeWidth={1.5} fill={YELLOW} strokeLinecap="round" strokeLinejoin="round" />
                         </Svg>
-                        <Text variant="titleMedium" style={{ fontFamily: 'Caveat-Bold', color: theme.colors.onPrimaryContainer, textAlign: 'center' }}>
-                            You found the good things today!
-                        </Text>
-                        <Text variant="bodySmall" style={{ color: theme.colors.onPrimaryContainer, opacity: 0.7, marginTop: 4, textAlign: 'center' }}>
-                            Come back tomorrow for a new hunt
-                        </Text>
+                        <Text style={styles.celebrateTitle}>You found the good things today!</Text>
+                        <Text style={styles.celebrateSub}>Come back tomorrow for a new hunt</Text>
                     </Animated.View>
                 )}
             </KeyboardAvoidingView>
@@ -290,6 +269,7 @@ const styles = StyleSheet.create({
     container: {
         width: '100%',
         paddingBottom: 20,
+        backgroundColor: WHITE,
     },
     header: {
         paddingTop: 56,
@@ -298,8 +278,14 @@ const styles = StyleSheet.create({
         gap: 4,
     },
     headerTitle: {
-        fontFamily: 'Caveat-Bold',
+        fontFamily: 'GasoekOne',
         fontSize: 28,
+        color: BLACK,
+    },
+    headerSub: {
+        fontFamily: 'GasoekOne',
+        fontSize: 16,
+        color: BLACK + '70',
     },
     ringWrapper: {
         flex: 1,
@@ -319,14 +305,16 @@ const styles = StyleSheet.create({
         justifyContent: 'center',
     },
     ringCount: {
-        fontFamily: 'Caveat-Bold',
+        fontFamily: 'GasoekOne',
         fontSize: 48,
         lineHeight: 52,
+        color: BLACK,
     },
     ringLabel: {
-        fontFamily: 'Caveat-Medium',
+        fontFamily: 'GasoekOne',
         fontSize: 16,
         marginTop: -4,
+        color: BLACK + '70',
     },
     quoteHint: {
         marginTop: 20,
@@ -334,11 +322,12 @@ const styles = StyleSheet.create({
         maxWidth: 300,
     },
     quoteText: {
-        fontFamily: 'Caveat-Medium',
+        fontFamily: 'GasoekOne',
         fontStyle: 'italic',
         textAlign: 'center',
         opacity: 0.5,
         fontSize: 16,
+        color: BLACK,
     },
     entriesList: {
         paddingHorizontal: 20,
@@ -351,46 +340,68 @@ const styles = StyleSheet.create({
         paddingVertical: 14,
         paddingHorizontal: 16,
         borderRadius: 14,
-        borderWidth: 1,
-        shadowColor: '#000',
-        shadowOffset: { width: 0, height: 2 },
-        shadowOpacity: 0.03,
-        shadowRadius: 6,
-        elevation: 1,
+        borderWidth: 2,
+        borderColor: BLACK,
+        backgroundColor: WHITE,
     },
     entryDot: {
         width: 8,
         height: 8,
         borderRadius: 4,
         marginRight: 14,
+        backgroundColor: YELLOW,
     },
     entryText: {
-        fontFamily: 'Caveat-Medium',
+        fontFamily: 'GasoekOne',
         fontSize: 17,
         flex: 1,
+        color: BLACK,
     },
     inputSheet: {
         borderTopLeftRadius: 24,
         borderTopRightRadius: 24,
         padding: 20,
         paddingBottom: Platform.OS === 'ios' ? 36 : 28,
+        backgroundColor: WHITE,
+        borderTopWidth: 2.5,
+        borderTopColor: BLACK,
     },
     inputPrompt: {
-        fontFamily: 'Caveat-Bold',
+        fontFamily: 'GasoekOne',
         marginBottom: 12,
         fontSize: 18,
+        color: BLACK,
     },
     inputRow: {
         flexDirection: 'row',
         alignItems: 'center',
         borderRadius: 16,
+        borderWidth: 2,
+        borderColor: BLACK,
+        backgroundColor: '#F8F8F8',
         paddingRight: 8,
     },
     input: {
         flex: 1,
-        backgroundColor: 'transparent',
         height: 52,
         fontSize: 16,
+        paddingHorizontal: 14,
+        fontFamily: 'GasoekOne',
+        color: BLACK,
+    },
+    submitBtn: {
+        width: 38,
+        height: 38,
+        borderRadius: 12,
+        backgroundColor: YELLOW,
+        borderWidth: 1.5,
+        borderColor: BLACK,
+        alignItems: 'center',
+        justifyContent: 'center',
+    },
+    submitBtnDisabled: {
+        backgroundColor: '#F0F0F0',
+        borderColor: BLACK + '30',
     },
     lockedContainer: {
         margin: 16,
@@ -399,8 +410,9 @@ const styles = StyleSheet.create({
         alignItems: 'center',
         justifyContent: 'center',
         borderStyle: 'dashed',
-        borderWidth: 1,
-        borderColor: 'rgba(0,0,0,0.1)',
+        borderWidth: 2,
+        borderColor: BLACK + '25',
+        backgroundColor: WHITE,
     },
     celebrateCard: {
         marginHorizontal: 20,
@@ -408,5 +420,21 @@ const styles = StyleSheet.create({
         padding: 24,
         borderRadius: 20,
         alignItems: 'center',
+        backgroundColor: YELLOW,
+        borderWidth: 2,
+        borderColor: BLACK,
+    },
+    celebrateTitle: {
+        fontFamily: 'GasoekOne',
+        fontSize: 20,
+        color: BLACK,
+        textAlign: 'center',
+    },
+    celebrateSub: {
+        fontFamily: 'GasoekOne',
+        fontSize: 14,
+        color: BLACK + 'AA',
+        marginTop: 4,
+        textAlign: 'center',
     },
 });

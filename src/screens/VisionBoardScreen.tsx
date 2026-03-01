@@ -31,10 +31,15 @@ import Svg, { Path as SvgPath, Circle as SvgCircle, Rect as SvgRect } from 'reac
 import {
     Text,
     Portal,
-    useTheme,
 } from 'react-native-paper';
-import { fetchVisionItems, addVisionItem, deleteVisionItem, updateVisionItemPosition, updateVisionItemStyle, VisionItem } from '../utils/visionBoardStorage';
+import { addVisionItem, deleteVisionItem, fetchVisionItems, updateVisionItemPosition, updateVisionItemStyle, VisionItem } from '../utils/visionBoardStorage';
 import { searchPhotos, UNSPLASH_ACCESS_KEY, UnsplashPhoto } from '../utils/unsplashApi';
+import { getDailyVisionBoard, saveDailyVisionBoard, DailyVisionBoard } from '../utils/dailyVisionStorage';
+import { getThemeForDate, VisionTheme } from '../data/visionThemes';
+
+const YELLOW = '#FFE600';
+const BLACK = '#000000';
+const WHITE = '#FFFFFF';
 
 const AnimatedPath = Animated.createAnimatedComponent(SvgPath);
 
@@ -153,10 +158,10 @@ const AFFIRMATION_TEMPLATES = [
 // ═══════════════════════════════════════════════════════════
 
 const FONT_OPTIONS = [
-    { label: 'Script',  value: 'Caveat-Medium' },
-    { label: 'Bold',    value: 'Caveat-Bold' },
-    { label: 'Flower',  value: 'IndieFlower-Regular' },
-    { label: 'Clean',   value: 'Carlito' },
+    { label: 'Script', value: 'GasoekOne' },
+    { label: 'Bold', value: 'GasoekOne' },
+    { label: 'Flower', value: 'GasoekOne' },
+    { label: 'Clean', value: 'GasoekOne' },
 ];
 
 const TEXT_COLORS = [
@@ -165,14 +170,14 @@ const TEXT_COLORS = [
 ];
 
 const BG_STYLES = [
-    { label: 'None',  value: 'none',  preview: 'transparent' },
+    { label: 'None', value: 'none', preview: 'transparent' },
     { label: 'Light', value: 'white', preview: '#FFFFFF' },
-    { label: 'Warm',  value: 'cream', preview: '#F5ECD7' },
-    { label: 'Dark',  value: 'dark',  preview: '#1C1C1E' },
+    { label: 'Warm', value: 'cream', preview: '#F5ECD7' },
+    { label: 'Dark', value: 'dark', preview: '#1C1C1E' },
     { label: 'Glass', value: 'glass', preview: 'rgba(255,255,255,0.18)' },
 ];
 
-const getTextBg = (bgStyle?: string, themeColors?: any) => {
+const getTextBg = (bgStyle?: string) => {
     switch (bgStyle) {
         case 'none':
             return { backgroundColor: 'transparent', borderColor: 'transparent', borderWidth: 0, shadowOpacity: 0, elevation: 0 };
@@ -184,8 +189,8 @@ const getTextBg = (bgStyle?: string, themeColors?: any) => {
             return { backgroundColor: 'rgba(255,255,255,0.15)', borderColor: 'rgba(255,255,255,0.35)', borderWidth: 1 };
         default: // 'white' or undefined
             return {
-                backgroundColor: (themeColors?.surface ?? '#FFFFFF') + 'EC',
-                borderColor: (themeColors?.primary ?? '#000000') + '12',
+                backgroundColor: WHITE + 'EC',
+                borderColor: BLACK + '12',
                 borderWidth: 1,
             };
     }
@@ -207,15 +212,15 @@ type BoardBgPreset = {
 };
 
 const BOARD_BG_PRESETS: BoardBgPreset[] = [
-    { id: 'default', label: 'Auto',    type: 'default', preview: 'transparent' },
-    { id: 'cream',   label: 'Cream',   type: 'solid',   color: '#FDF6EC', preview: '#FDF6EC' },
-    { id: 'blush',   label: 'Blush',   type: 'solid',   color: '#FAE4E4', preview: '#FAE4E4' },
-    { id: 'sage',    label: 'Sage',    type: 'solid',   color: '#E5EFE5', preview: '#E5EFE5' },
-    { id: 'sky',     label: 'Sky',     type: 'solid',   color: '#E3EDF7', preview: '#E3EDF7' },
-    { id: 'night',   label: 'Night',   type: 'solid',   color: '#0F0F1E', preview: '#0F0F1E' },
+    { id: 'default', label: 'Auto', type: 'default', preview: 'transparent' },
+    { id: 'cream', label: 'Cream', type: 'solid', color: '#FDF6EC', preview: '#FDF6EC' },
+    { id: 'blush', label: 'Blush', type: 'solid', color: '#FAE4E4', preview: '#FAE4E4' },
+    { id: 'sage', label: 'Sage', type: 'solid', color: '#E5EFE5', preview: '#E5EFE5' },
+    { id: 'sky', label: 'Sky', type: 'solid', color: '#E3EDF7', preview: '#E3EDF7' },
+    { id: 'night', label: 'Night', type: 'solid', color: '#0F0F1E', preview: '#0F0F1E' },
     { id: 'sunrise', label: 'Sunrise', type: 'gradient', colors: ['#FFE4B5', '#FFB6C1'], start: { x: 0, y: 0 }, end: { x: 1, y: 1 }, preview: '#FFCDA0' },
-    { id: 'cosmos',  label: 'Cosmos',  type: 'gradient', colors: ['#667eea', '#764ba2'], start: { x: 0, y: 0 }, end: { x: 1, y: 1 }, preview: '#7166D0' },
-    { id: 'forest',  label: 'Forest',  type: 'gradient', colors: ['#d4fc79', '#96e6a1'], start: { x: 0, y: 0 }, end: { x: 1, y: 1 }, preview: '#B5F18D' },
+    { id: 'cosmos', label: 'Cosmos', type: 'gradient', colors: ['#667eea', '#764ba2'], start: { x: 0, y: 0 }, end: { x: 1, y: 1 }, preview: '#7166D0' },
+    { id: 'forest', label: 'Forest', type: 'gradient', colors: ['#d4fc79', '#96e6a1'], start: { x: 0, y: 0 }, end: { x: 1, y: 1 }, preview: '#B5F18D' },
 ];
 
 // ═══════════════════════════════════════════════════════════
@@ -433,7 +438,6 @@ const DraggableItem = ({
     isOverDeleteZone: SharedValue<boolean>;
     layoutVersion: number;
 }) => {
-    const theme = useTheme();
     const x = useSharedValue(item.position_x);
     const y = useSharedValue(item.position_y);
     const scale = useSharedValue(item.scale);
@@ -557,9 +561,9 @@ const DraggableItem = ({
                             styles.imageWrapper,
                             {
                                 borderColor: item.syncStatus === 'error'
-                                    ? theme.colors.error
-                                    : theme.colors.primary + '18',
-                                shadowColor: theme.colors.primary,
+                                    ? '#D32F2F'
+                                    : BLACK + '18',
+                                shadowColor: BLACK,
                             }
                         ]}>
                             <Image
@@ -579,26 +583,26 @@ const DraggableItem = ({
                                 </View>
                             )}
                             {imgError && !signedUrl && item.syncStatus !== 'uploading' && (
-                                <View style={[styles.imageItem, styles.imageOverlay, { backgroundColor: theme.colors.surfaceVariant + 'CC' }]}>
-                                    <Svg width={24} height={24} viewBox="0 0 24 24" fill="none" stroke={theme.colors.outline} strokeWidth={1.5} strokeLinecap="round" strokeLinejoin="round">
+                                <View style={[styles.imageItem, styles.imageOverlay, { backgroundColor: '#F0F0F0' + 'CC' }]}>
+                                    <Svg width={24} height={24} viewBox="0 0 24 24" fill="none" stroke={BLACK} strokeWidth={1.5} strokeLinecap="round" strokeLinejoin="round">
                                         <SvgRect x="3" y="3" width="18" height="18" rx="4" />
                                         <SvgPath d="M3 9l4 4 4-4 6 6" />
                                         <SvgCircle cx="8.5" cy="7.5" r="1" />
                                     </Svg>
-                                    <Text style={{ fontSize: 11, color: theme.colors.outline, fontFamily: 'Carlito', marginTop: 4 }}>Image unavailable</Text>
+                                    <Text style={{ fontSize: 11, color: BLACK, fontFamily: 'GasoekOne', marginTop: 4 }}>Image unavailable</Text>
                                 </View>
                             )}
                         </View>
                     ) : (
                         <View style={[
                             styles.textItem,
-                            getTextBg(item.bg_style, theme.colors),
+                            getTextBg(item.bg_style),
                         ]}>
                             <Text style={[
                                 styles.textItemContent,
                                 {
-                                    color: item.text_color ?? theme.colors.onSurface,
-                                    fontFamily: item.font_family ?? 'Caveat-Medium',
+                                    color: item.text_color ?? BLACK,
+                                    fontFamily: item.font_family ?? 'GasoekOne',
                                 },
                             ]}>
                                 {item.content}
@@ -615,6 +619,74 @@ const DraggableItem = ({
 // Empty State — Compass illustration + suggestions
 // ═══════════════════════════════════════════════════════════
 
+const DailyEmptyState = ({
+    dateStr,
+    onAddImage,
+    onAddText,
+    onBrowseStock,
+}: {
+    dateStr: string;
+    onAddImage: () => void;
+    onAddText: () => void;
+    onBrowseStock: () => void;
+}) => {
+    const theme = getThemeForDate(dateStr);
+    return (
+        <Animated.View style={styles.emptyContainer} entering={FadeIn.duration(600)}>
+            {/* Decorative orbs */}
+            <View style={[styles.emptyOrb, styles.emptyOrb1, { backgroundColor: YELLOW + '15' }]} />
+            <View style={[styles.emptyOrb, styles.emptyOrb2, { backgroundColor: YELLOW + '25' }]} />
+
+            <Animated.View entering={FadeInDown.delay(200).springify().damping(14)}>
+                <SparklesIcon color={BLACK + '40'} size={64} />
+            </Animated.View>
+
+            <Animated.View entering={FadeInDown.delay(350).springify()} style={{ alignItems: 'center', paddingHorizontal: 24 }}>
+                <Text style={[styles.emptyTitle, { color: BLACK + 'AA', fontSize: 16 }]}>
+                    Today's Theme
+                </Text>
+                <Text style={[styles.emptySubtitle, { color: BLACK, fontFamily: 'Outfit-Bold', fontSize: 24, marginTop: 8, textAlign: 'center' }]}>
+                    {theme.title}
+                </Text>
+                <Text style={[styles.emptySubtitle, { color: BLACK + '80', marginTop: 12, textAlign: 'center', lineHeight: 22 }]}>
+                    {theme.description}
+                </Text>
+            </Animated.View>
+
+            <Animated.View entering={FadeInDown.delay(480).springify()} style={{ width: '100%', paddingHorizontal: 36, marginTop: 32 }}>
+                <TouchableOpacity
+                    style={[styles.emptyBrowseBtn, { backgroundColor: BLACK, shadowColor: BLACK }]}
+                    onPress={onBrowseStock}
+                    activeOpacity={0.8}
+                >
+                    <SearchImageIcon color={YELLOW} size={20} />
+                    <Text style={[styles.emptyBrowseBtnText, { color: YELLOW, marginLeft: 8 }]}>Browse Photos</Text>
+                </TouchableOpacity>
+            </Animated.View>
+
+            {/* Secondary actions */}
+            <Animated.View entering={FadeInDown.delay(560).springify()} style={styles.emptyActions}>
+                <TouchableOpacity
+                    style={[styles.emptyActionBtn, { backgroundColor: BLACK + '0A', borderWidth: 0 }]}
+                    onPress={onAddImage}
+                    activeOpacity={0.7}
+                >
+                    <ImagePlusIcon color={BLACK} size={17} />
+                    <Text style={[styles.emptyActionText, { color: BLACK, marginLeft: 6 }]}>From Gallery</Text>
+                </TouchableOpacity>
+                <TouchableOpacity
+                    style={[styles.emptyActionBtn, { backgroundColor: BLACK + '0A', borderWidth: 0 }]}
+                    onPress={onAddText}
+                    activeOpacity={0.7}
+                >
+                    <TextPlusIcon color={BLACK} size={17} />
+                    <Text style={[styles.emptyActionText, { color: BLACK, marginLeft: 6 }]}>Add Text</Text>
+                </TouchableOpacity>
+            </Animated.View>
+        </Animated.View>
+    );
+};
+
 const EmptyState = ({
     onAddImage,
     onAddText,
@@ -624,22 +696,21 @@ const EmptyState = ({
     onAddText: () => void;
     onBrowseStock: () => void;
 }) => {
-    const theme = useTheme();
     return (
         <Animated.View style={styles.emptyContainer} entering={FadeIn.duration(600)}>
             {/* Decorative orbs */}
-            <View style={[styles.emptyOrb, styles.emptyOrb1, { backgroundColor: theme.colors.primary + '06' }]} />
-            <View style={[styles.emptyOrb, styles.emptyOrb2, { backgroundColor: theme.colors.primaryContainer + '10' }]} />
+            <View style={[styles.emptyOrb, styles.emptyOrb1, { backgroundColor: YELLOW + '06' }]} />
+            <View style={[styles.emptyOrb, styles.emptyOrb2, { backgroundColor: YELLOW + '10' }]} />
 
             <Animated.View entering={FadeInDown.delay(200).springify().damping(14)}>
-                <CompassIcon color={theme.colors.primary + '30'} size={64} />
+                <CompassIcon color={YELLOW + '30'} size={64} />
             </Animated.View>
 
             <Animated.View entering={FadeInDown.delay(350).springify()} style={{ alignItems: 'center' }}>
-                <Text style={[styles.emptyTitle, { color: theme.colors.onSurface + 'AA' }]}>
+                <Text style={[styles.emptyTitle, { color: BLACK + 'AA' }]}>
                     This space is yours
                 </Text>
-                <Text style={[styles.emptySubtitle, { color: theme.colors.outline + '80' }]}>
+                <Text style={[styles.emptySubtitle, { color: BLACK + '80' }]}>
                     Pin images & affirmations that{'\n'}light up your future
                 </Text>
             </Animated.View>
@@ -647,7 +718,7 @@ const EmptyState = ({
             {/* Primary CTA — Browse stock photos */}
             <Animated.View entering={FadeInDown.delay(480).springify()} style={{ width: '100%', paddingHorizontal: 36 }}>
                 <TouchableOpacity
-                    style={[styles.emptyBrowseBtn, { backgroundColor: theme.colors.primary, shadowColor: theme.colors.primary }]}
+                    style={[styles.emptyBrowseBtn, { backgroundColor: YELLOW, shadowColor: BLACK }]}
                     onPress={onBrowseStock}
                     activeOpacity={0.8}
                 >
@@ -659,20 +730,20 @@ const EmptyState = ({
             {/* Secondary actions */}
             <Animated.View entering={FadeInDown.delay(560).springify()} style={styles.emptyActions}>
                 <TouchableOpacity
-                    style={[styles.emptyActionBtn, { backgroundColor: theme.colors.primary + '0A', borderColor: theme.colors.primary + '18' }]}
+                    style={[styles.emptyActionBtn, { backgroundColor: YELLOW + '0A', borderColor: BLACK + '18' }]}
                     onPress={onAddImage}
                     activeOpacity={0.7}
                 >
-                    <ImagePlusIcon color={theme.colors.primary} size={17} />
-                    <Text style={[styles.emptyActionText, { color: theme.colors.primary }]}>From Gallery</Text>
+                    <ImagePlusIcon color={YELLOW} size={17} />
+                    <Text style={[styles.emptyActionText, { color: YELLOW }]}>From Gallery</Text>
                 </TouchableOpacity>
                 <TouchableOpacity
-                    style={[styles.emptyActionBtn, { backgroundColor: theme.colors.primary + '0A', borderColor: theme.colors.primary + '18' }]}
+                    style={[styles.emptyActionBtn, { backgroundColor: YELLOW + '0A', borderColor: BLACK + '18' }]}
                     onPress={onAddText}
                     activeOpacity={0.7}
                 >
-                    <TextPlusIcon color={theme.colors.primary} size={17} />
-                    <Text style={[styles.emptyActionText, { color: theme.colors.primary }]}>Add Affirmation</Text>
+                    <TextPlusIcon color={YELLOW} size={17} />
+                    <Text style={[styles.emptyActionText, { color: YELLOW }]}>Add Affirmation</Text>
                 </TouchableOpacity>
             </Animated.View>
         </Animated.View>
@@ -692,7 +763,6 @@ const AffirmationSheet = ({
     onDismiss: () => void;
     onSubmit: (text: string) => void;
 }) => {
-    const theme = useTheme();
     const [textInput, setTextInput] = useState('');
 
     if (!visible) return null;
@@ -713,25 +783,25 @@ const AffirmationSheet = ({
         <Animated.View
             entering={SlideInDown.duration(350)}
             exiting={SlideOutDown.duration(200)}
-            style={[styles.sheetContainer, { backgroundColor: theme.colors.surface }]}
+            style={[styles.sheetContainer, { backgroundColor: WHITE }]}
         >
             {/* Handle */}
             <View style={styles.sheetHandle}>
-                <View style={[styles.sheetHandleBar, { backgroundColor: theme.colors.outline + '30' }]} />
+                <View style={[styles.sheetHandleBar, { backgroundColor: BLACK + '30' }]} />
             </View>
 
             {/* Header */}
             <View style={styles.sheetHeader}>
                 <View>
-                    <Text style={[styles.sheetTitle, { color: theme.colors.onSurface }]}>
+                    <Text style={[styles.sheetTitle, { color: BLACK }]}>
                         Add Affirmation
                     </Text>
-                    <Text style={[styles.sheetSubtitle, { color: theme.colors.outline }]}>
+                    <Text style={[styles.sheetSubtitle, { color: BLACK }]}>
                         Choose one or write your own
                     </Text>
                 </View>
                 <TouchableOpacity onPress={onDismiss} style={styles.sheetClose} activeOpacity={0.6}>
-                    <XIcon color={theme.colors.outline} size={20} />
+                    <XIcon color={BLACK} size={20} />
                 </TouchableOpacity>
             </View>
 
@@ -744,22 +814,22 @@ const AffirmationSheet = ({
                 {AFFIRMATION_TEMPLATES.map((t, i) => (
                     <TouchableOpacity
                         key={i}
-                        style={[styles.templateChip, { backgroundColor: theme.colors.primaryContainer + '30', borderColor: theme.colors.primary + '15' }]}
+                        style={[styles.templateChip, { backgroundColor: YELLOW + '30', borderColor: BLACK + '15' }]}
                         onPress={() => handleTemplate(t)}
                         activeOpacity={0.7}
                     >
-                        <SparklesIcon color={theme.colors.primary} size={14} />
-                        <Text style={[styles.templateText, { color: theme.colors.onSurface }]}>{t}</Text>
+                        <SparklesIcon color={YELLOW} size={14} />
+                        <Text style={[styles.templateText, { color: BLACK }]}>{t}</Text>
                     </TouchableOpacity>
                 ))}
             </ScrollView>
 
             {/* Custom input */}
-            <View style={[styles.sheetInputRow, { borderColor: theme.colors.outline + '18' }]}>
+            <View style={[styles.sheetInputRow, { borderColor: BLACK + '18' }]}>
                 <RNTextInput
-                    style={[styles.sheetInput, { color: theme.colors.onSurface }]}
+                    style={[styles.sheetInput, { color: BLACK }]}
                     placeholder="Write your own..."
-                    placeholderTextColor={theme.colors.outline + '50'}
+                    placeholderTextColor={BLACK + '50'}
                     value={textInput}
                     onChangeText={setTextInput}
                     autoFocus={false}
@@ -771,11 +841,11 @@ const AffirmationSheet = ({
                     disabled={!textInput.trim()}
                     style={[
                         styles.sheetSendBtn,
-                        { backgroundColor: textInput.trim() ? theme.colors.primary : theme.colors.outline + '15' }
+                        { backgroundColor: textInput.trim() ? YELLOW : BLACK + '15' }
                     ]}
                     activeOpacity={0.7}
                 >
-                    <HeartIcon color={textInput.trim() ? '#FFF' : theme.colors.outline + '40'} size={16} />
+                    <HeartIcon color={textInput.trim() ? '#FFF' : BLACK + '40'} size={16} />
                 </TouchableOpacity>
             </View>
         </Animated.View>
@@ -803,37 +873,35 @@ const LayoutSheet = ({
     activeBgId: string;
     onSetBg: (preset: BoardBgPreset) => void;
 }) => {
-    const theme = useTheme();
-
     if (!visible) return null;
 
     return (
         <Animated.View
             entering={SlideInDown.duration(350)}
             exiting={SlideOutDown.duration(200)}
-            style={[styles.sheetContainer, { backgroundColor: theme.colors.surface }]}
+            style={[styles.sheetContainer, { backgroundColor: WHITE }]}
         >
             <View style={styles.sheetHandle}>
-                <View style={[styles.sheetHandleBar, { backgroundColor: theme.colors.outline + '30' }]} />
+                <View style={[styles.sheetHandleBar, { backgroundColor: BLACK + '30' }]} />
             </View>
 
             <View style={styles.sheetHeader}>
                 <View>
-                    <Text style={[styles.sheetTitle, { color: theme.colors.onSurface }]}>
+                    <Text style={[styles.sheetTitle, { color: BLACK }]}>
                         Auto-Layout
                     </Text>
-                    <Text style={[styles.sheetSubtitle, { color: theme.colors.outline }]}>
+                    <Text style={[styles.sheetSubtitle, { color: BLACK }]}>
                         Rearrange your vision board instantly
                     </Text>
                 </View>
                 <TouchableOpacity onPress={onDismiss} style={styles.sheetClose} activeOpacity={0.6}>
-                    <XIcon color={theme.colors.outline} size={20} />
+                    <XIcon color={BLACK} size={20} />
                 </TouchableOpacity>
             </View>
 
             {/* ── Canvas Background ── */}
             <View style={styles.bgPickerRow}>
-                <Text style={[styles.bgPickerLabel, { color: theme.colors.outline }]}>CANVAS BACKGROUND</Text>
+                <Text style={[styles.bgPickerLabel, { color: BLACK }]}>CANVAS BACKGROUND</Text>
                 <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.bgPickerScroll}>
                     {BOARD_BG_PRESETS.map((bg) => {
                         const isActive = activeBgId === bg.id;
@@ -845,7 +913,7 @@ const LayoutSheet = ({
                                     styles.boardBgChip,
                                     {
                                         backgroundColor: isDefault ? 'transparent' : bg.preview,
-                                        borderColor: isActive ? theme.colors.primary : theme.colors.outline + '28',
+                                        borderColor: isActive ? YELLOW : BLACK + '28',
                                         borderWidth: isActive ? 2 : 1,
                                     },
                                 ]}
@@ -860,7 +928,7 @@ const LayoutSheet = ({
                                 )}
                                 <Text style={[
                                     styles.boardBgChipLabel,
-                                    { color: bg.id === 'night' ? 'rgba(255,255,255,0.7)' : theme.colors.outline },
+                                    { color: bg.id === 'night' ? 'rgba(255,255,255,0.7)' : BLACK },
                                 ]}>
                                     {bg.label}
                                 </Text>
@@ -874,7 +942,7 @@ const LayoutSheet = ({
                 {LAYOUT_PRESETS.map((p, i) => (
                     <TouchableOpacity
                         key={i}
-                        style={[styles.layoutCard, { backgroundColor: theme.colors.primaryContainer + '20', borderColor: theme.colors.primary + '15' }]}
+                        style={[styles.layoutCard, { backgroundColor: YELLOW + '20', borderColor: BLACK + '15' }]}
                         onPress={() => {
                             Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
                             onSelect(p);
@@ -882,7 +950,7 @@ const LayoutSheet = ({
                         activeOpacity={0.7}
                     >
                         <Text style={{ fontSize: 28 }}>{p.icon}</Text>
-                        <Text style={[styles.layoutName, { color: theme.colors.onSurface }]}>{p.name}</Text>
+                        <Text style={[styles.layoutName, { color: BLACK }]}>{p.name}</Text>
                     </TouchableOpacity>
                 ))}
             </View>
@@ -893,23 +961,23 @@ const LayoutSheet = ({
                     onClearBoard();
                 }}
                 style={[styles.clearBoardBtn, {
-                    backgroundColor: theme.colors.error + '10',
-                    borderColor: theme.colors.error + '30',
+                    backgroundColor: '#D32F2F' + '10',
+                    borderColor: '#D32F2F' + '30',
                 }]}
                 activeOpacity={0.75}
             >
-                <View style={[styles.clearBoardIconWrap, { backgroundColor: theme.colors.error + '18' }]}>
-                    <TrashIcon color={theme.colors.error} size={17} />
+                <View style={[styles.clearBoardIconWrap, { backgroundColor: '#D32F2F' + '18' }]}>
+                    <TrashIcon color='#D32F2F' size={17} />
                 </View>
                 <View style={{ flex: 1 }}>
-                    <Text style={[styles.clearBoardText, { color: theme.colors.error }]}>Clear Board</Text>
+                    <Text style={[styles.clearBoardText, { color: '#D32F2F' }]}>Clear Board</Text>
                     {itemCount > 0 && (
-                        <Text style={[styles.clearBoardSub, { color: theme.colors.error + '80' }]}>
+                        <Text style={[styles.clearBoardSub, { color: '#D32F2F' + '80' }]}>
                             Remove all {itemCount} item{itemCount !== 1 ? 's' : ''}
                         </Text>
                     )}
                 </View>
-                <Svg width={16} height={16} viewBox="0 0 24 24" fill="none" stroke={theme.colors.error + '50'} strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
+                <Svg width={16} height={16} viewBox="0 0 24 24" fill="none" stroke={'#D32F2F' + '50'} strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
                     <SvgPath d="M9 18l6-6-6-6" />
                 </Svg>
             </TouchableOpacity>
@@ -930,9 +998,8 @@ const TextStyleSheet = ({
     onDismiss: () => void;
     onStyleChange: (style: { text_color?: string; font_family?: string; bg_style?: string }) => void;
 }) => {
-    const theme = useTheme();
-    const activeFont = item.font_family ?? 'Caveat-Medium';
-    const activeColor = item.text_color ?? theme.colors.onSurface;
+    const activeFont = item.font_family ?? 'GasoekOne';
+    const activeColor = item.text_color ?? BLACK;
     const activeBg = item.bg_style ?? 'white';
 
     return (
@@ -947,21 +1014,21 @@ const TextStyleSheet = ({
             <Animated.View
                 entering={SlideInDown.duration(320).springify().damping(18)}
                 exiting={SlideOutDown.duration(200)}
-                style={[styles.textStyleSheet, { backgroundColor: theme.colors.surface }]}
+                style={[styles.textStyleSheet, { backgroundColor: WHITE }]}
             >
                 {/* Handle */}
                 <View style={styles.sheetHandle}>
-                    <View style={[styles.sheetHandleBar, { backgroundColor: theme.colors.outline + '30' }]} />
+                    <View style={[styles.sheetHandleBar, { backgroundColor: BLACK + '30' }]} />
                 </View>
 
                 {/* Header */}
                 <View style={styles.sheetHeader}>
                     <View>
-                        <Text style={[styles.sheetTitle, { color: theme.colors.onSurface }]}>Style Text</Text>
-                        <Text style={[styles.sheetSubtitle, { color: theme.colors.outline }]}>Font · Colour · Background</Text>
+                        <Text style={[styles.sheetTitle, { color: BLACK }]}>Style Text</Text>
+                        <Text style={[styles.sheetSubtitle, { color: BLACK }]}>Font · Colour · Background</Text>
                     </View>
                     <TouchableOpacity onPress={onDismiss} style={styles.sheetClose} activeOpacity={0.6}>
-                        <XIcon color={theme.colors.outline} size={20} />
+                        <XIcon color={BLACK} size={20} />
                     </TouchableOpacity>
                 </View>
 
@@ -976,8 +1043,8 @@ const TextStyleSheet = ({
                                     style={[
                                         styles.fontPill,
                                         {
-                                            backgroundColor: isActive ? theme.colors.primary : theme.colors.surfaceVariant,
-                                            borderColor: isActive ? theme.colors.primary : 'transparent',
+                                            backgroundColor: isActive ? YELLOW : '#F0F0F0',
+                                            borderColor: isActive ? YELLOW : 'transparent',
                                         },
                                     ]}
                                     onPress={() => {
@@ -988,8 +1055,8 @@ const TextStyleSheet = ({
                                 >
                                     <Text style={{
                                         fontFamily: f.value,
-                                        fontSize: f.value === 'Carlito' ? 14 : 16,
-                                        color: isActive ? '#FFF' : theme.colors.onSurface,
+                                        fontSize: f.value === 'GasoekOne' ? 14 : 16,
+                                        color: isActive ? '#FFF' : BLACK,
                                     }}>
                                         {f.label}
                                     </Text>
@@ -1003,7 +1070,7 @@ const TextStyleSheet = ({
                 <View style={styles.textStyleSection}>
                     <View style={[styles.textStyleRow, { justifyContent: 'space-between' }]}>
                         {TEXT_COLORS.map((c) => {
-                            const isActive = activeColor === c || (!item.text_color && c === theme.colors.onSurface);
+                            const isActive = activeColor === c || (!item.text_color && c === BLACK);
                             const isWhite = c === '#FFFFFF';
                             return (
                                 <TouchableOpacity
@@ -1011,10 +1078,10 @@ const TextStyleSheet = ({
                                     style={[
                                         styles.colorSwatch,
                                         { backgroundColor: c },
-                                        isWhite && { borderWidth: 1, borderColor: theme.colors.outline + '40' },
+                                        isWhite && { borderWidth: 1, borderColor: BLACK + '40' },
                                         isActive && {
                                             borderWidth: 2.5,
-                                            borderColor: theme.colors.primary,
+                                            borderColor: YELLOW,
                                             transform: [{ scale: 1.15 }],
                                         },
                                     ]}
@@ -1043,10 +1110,10 @@ const TextStyleSheet = ({
                                         {
                                             backgroundColor: isNone ? 'transparent' : bg.preview,
                                             borderColor: isActive
-                                                ? theme.colors.primary
+                                                ? YELLOW
                                                 : bg.value === 'glass'
                                                     ? 'rgba(180,180,180,0.4)'
-                                                    : theme.colors.outline + '28',
+                                                    : BLACK + '28',
                                             borderWidth: isActive ? 2 : 1.5,
                                         },
                                     ]}
@@ -1057,7 +1124,7 @@ const TextStyleSheet = ({
                                     activeOpacity={0.8}
                                 >
                                     {isNone && (
-                                        <Svg width={18} height={18} viewBox="0 0 24 24" fill="none" stroke={theme.colors.outline} strokeWidth={1.5} strokeLinecap="round">
+                                        <Svg width={18} height={18} viewBox="0 0 24 24" fill="none" stroke={BLACK} strokeWidth={1.5} strokeLinecap="round">
                                             <SvgPath d="M3 3l18 18" />
                                         </Svg>
                                     )}
@@ -1065,7 +1132,7 @@ const TextStyleSheet = ({
                                         color: bg.value === 'dark'
                                             ? 'rgba(255,255,255,0.7)'
                                             : bg.value === 'glass' || bg.value === 'none'
-                                                ? theme.colors.outline
+                                                ? BLACK
                                                 : 'rgba(0,0,0,0.45)',
                                     }]}>
                                         {bg.label}
@@ -1088,21 +1155,25 @@ const TextStyleSheet = ({
 const CAT_CARD_W = Math.floor((width - 3 * 8) / 2);
 const CAT_CARD_H = Math.round(CAT_CARD_W * 0.72);
 
-const StockImageSheet = ({
+export const StockImageSheet = ({
     visible,
     onDismiss,
     onSelect,
+    themeCategory,
 }: {
     visible: boolean;
     onDismiss: () => void;
     onSelect: (url: string) => void;
+    /** If set, prepends a "Today's Theme" category with these subcategories */
+    themeCategory?: { label: string; subcategories: { label: string; query: string }[] };
 }) => {
-    const theme = useTheme();
-
     // ── 4 views: categories → subcategories → photos | search ──
     const [view, setView] = useState<'categories' | 'subcategories' | 'photos' | 'search'>('categories');
     const [selectedCatIdx, setSelectedCatIdx] = useState<number>(0);
     const [selectedSubIdx, setSelectedSubIdx] = useState<number>(0);
+    // Track whether the active subcategory view is for the theme category (vs a regular category)
+    const [isThemeCat, setIsThemeCat] = useState(false);
+    const [activeSubLabel, setActiveSubLabel] = useState('');
     const [searchText, setSearchText] = useState('');
     const [photos, setPhotos] = useState<UnsplashPhoto[]>([]);
     const [loading, setLoading] = useState(false);
@@ -1146,29 +1217,49 @@ const StockImageSheet = ({
         setView('categories');
         setSearchText('');
         setPhotos([]);
+        setIsThemeCat(false);
+        setActiveSubLabel('');
     }, [visible]);
 
-    // ── Category tapped → show its subcategories ──
+    // ── Theme category tapped → show theme subcategories ──
+    const handleThemeCategorySelect = () => {
+        Haptics.selectionAsync();
+        setIsThemeCat(true);
+        setView('subcategories');
+    };
+
+    // ── Regular category tapped → show its subcategories ──
     const handleCategorySelect = (idx: number) => {
         Haptics.selectionAsync();
+        setIsThemeCat(false);
         setSelectedCatIdx(idx);
         setView('subcategories');
     };
 
-    // ── Subcategory tapped → load photos, thumbnail first ──
+    // ── Subcategory tapped → load photos ──
     const handleSubcategorySelect = (subIdx: number) => {
         Haptics.selectionAsync();
         setSelectedSubIdx(subIdx);
         setView('photos');
-        const sub = BROWSE_CATEGORIES[selectedCatIdx].subcategories[subIdx];
-        setCurrentQuery(sub.query);
-        const thumbPhoto: UnsplashPhoto = {
-            id: `sub-thumb-${selectedCatIdx}-${subIdx}`,
-            alt_description: sub.label,
-            description: null,
-            urls: { thumb: sub.thumb, small: sub.thumb, regular: sub.thumb },
-        };
-        loadPhotos(sub.query, 1, true, thumbPhoto);
+
+        if (isThemeCat && themeCategory) {
+            // Theme subcategory — no thumb image, just load photos directly
+            const sub = themeCategory.subcategories[subIdx];
+            setActiveSubLabel(sub.label);
+            setCurrentQuery(sub.query);
+            loadPhotos(sub.query, 1, true);
+        } else {
+            const sub = BROWSE_CATEGORIES[selectedCatIdx].subcategories[subIdx];
+            setActiveSubLabel(sub.label);
+            setCurrentQuery(sub.query);
+            const thumbPhoto: UnsplashPhoto = {
+                id: `sub-thumb-${selectedCatIdx}-${subIdx}`,
+                alt_description: sub.label,
+                description: null,
+                urls: { thumb: sub.thumb, small: sub.thumb, regular: sub.thumb },
+            };
+            loadPhotos(sub.query, 1, true, thumbPhoto);
+        }
     };
 
     // ── Search (debounced) ──
@@ -1210,6 +1301,7 @@ const StockImageSheet = ({
             setPhotos([]);
         } else {
             setView('categories');
+            setIsThemeCat(false);
             setSearchText('');
             setPhotos([]);
         }
@@ -1218,25 +1310,28 @@ const StockImageSheet = ({
     if (!visible) return null;
 
     const cat = BROWSE_CATEGORIES[selectedCatIdx];
-    const sub = cat.subcategories[selectedSubIdx];
+    const activeSubs = isThemeCat && themeCategory
+        ? themeCategory.subcategories
+        : cat.subcategories;
+    const activeCatLabel = isThemeCat && themeCategory ? themeCategory.label : cat.label;
     const showBackBtn = view !== 'categories';
 
     return (
         <Animated.View
             entering={SlideInDown.duration(350)}
             exiting={SlideOutDown.duration(200)}
-            style={[styles.imageBrowserSheet, { backgroundColor: theme.colors.surface }]}
+            style={[styles.imageBrowserSheet, { backgroundColor: WHITE }]}
         >
             {/* Handle */}
             <View style={styles.sheetHandle}>
-                <View style={[styles.sheetHandleBar, { backgroundColor: theme.colors.outline + '30' }]} />
+                <View style={[styles.sheetHandleBar, { backgroundColor: BLACK + '30' }]} />
             </View>
 
             {/* Header */}
             <View style={styles.browserHeader}>
                 {showBackBtn ? (
                     <TouchableOpacity onPress={handleBack} style={styles.browserBackBtn} activeOpacity={0.7}>
-                        <ChevronLeftIcon color={theme.colors.onSurface} size={22} />
+                        <ChevronLeftIcon color={BLACK} size={22} />
                     </TouchableOpacity>
                 ) : (
                     <View style={styles.browserBackBtn} />
@@ -1244,29 +1339,29 @@ const StockImageSheet = ({
 
                 {view === 'photos' ? (
                     <View style={{ flex: 1 }}>
-                        <Text style={[styles.browserDrillTitle, { color: theme.colors.onSurface }]}>
-                            {sub?.label ?? cat.label}
+                        <Text style={[styles.browserDrillTitle, { color: BLACK }]}>
+                            {activeSubLabel || activeCatLabel}
                         </Text>
-                        <Text style={[styles.browserDrillHint, { color: theme.colors.outline }]}>
+                        <Text style={[styles.browserDrillHint, { color: BLACK }]}>
                             Tap to add to your board
                         </Text>
                     </View>
                 ) : view === 'subcategories' ? (
                     <View style={{ flex: 1 }}>
-                        <Text style={[styles.browserDrillTitle, { color: theme.colors.onSurface }]}>
-                            {cat.label}
+                        <Text style={[styles.browserDrillTitle, { color: BLACK }]}>
+                            {activeCatLabel}
                         </Text>
-                        <Text style={[styles.browserDrillHint, { color: theme.colors.outline }]}>
+                        <Text style={[styles.browserDrillHint, { color: BLACK }]}>
                             Choose a style
                         </Text>
                     </View>
                 ) : (
-                    <View style={[styles.browserSearchWrap, { backgroundColor: theme.colors.surfaceVariant, borderColor: theme.colors.outline + '20' }]}>
-                        <SearchImageIcon color={theme.colors.outline} size={16} />
+                    <View style={[styles.browserSearchWrap, { backgroundColor: '#F0F0F0', borderColor: BLACK + '20' }]}>
+                        <SearchImageIcon color={BLACK} size={16} />
                         <RNTextInput
-                            style={[styles.browserSearchInput, { color: theme.colors.onSurface }]}
+                            style={[styles.browserSearchInput, { color: BLACK }]}
                             placeholder="Search images…"
-                            placeholderTextColor={theme.colors.outline + '60'}
+                            placeholderTextColor={BLACK + '60'}
                             value={searchText}
                             onChangeText={handleSearchChange}
                             returnKeyType="search"
@@ -1277,14 +1372,14 @@ const StockImageSheet = ({
                                 onPress={() => handleSearchChange('')}
                                 hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
                             >
-                                <XIcon color={theme.colors.outline} size={14} />
+                                <XIcon color={BLACK} size={14} />
                             </TouchableOpacity>
                         )}
                     </View>
                 )}
 
                 <TouchableOpacity onPress={onDismiss} style={styles.sheetClose} activeOpacity={0.6}>
-                    <XIcon color={theme.colors.outline} size={20} />
+                    <XIcon color={BLACK} size={20} />
                 </TouchableOpacity>
             </View>
 
@@ -1292,10 +1387,29 @@ const StockImageSheet = ({
             {view === 'categories' && (
                 <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.catCardsGrid}>
                     <View style={styles.catCardsRow}>
+                        {/* Today's Theme card — pinned first when available */}
+                        {themeCategory && (
+                            <TouchableOpacity
+                                key="theme"
+                                style={[styles.catCard, { backgroundColor: YELLOW }]}
+                                onPress={handleThemeCategorySelect}
+                                activeOpacity={0.85}
+                            >
+                                <View style={[styles.catCardImg, { alignItems: 'center', justifyContent: 'center' }]}>
+                                    <Text style={{ fontSize: 32 }}>✦</Text>
+                                    <Text style={{ fontFamily: 'GasoekOne', fontSize: 11, color: BLACK, marginTop: 4, textAlign: 'center', paddingHorizontal: 8 }}>
+                                        {themeCategory.label}
+                                    </Text>
+                                </View>
+                                <View style={[styles.catCardOverlay, { backgroundColor: 'rgba(0,0,0,0.18)' }]}>
+                                    <Text style={styles.catCardLabel}>Today's Theme</Text>
+                                </View>
+                            </TouchableOpacity>
+                        )}
                         {BROWSE_CATEGORIES.map((c, i) => (
                             <TouchableOpacity
                                 key={i}
-                                style={[styles.catCard, { backgroundColor: theme.colors.surfaceVariant }]}
+                                style={[styles.catCard, { backgroundColor: '#F0F0F0' }]}
                                 onPress={() => handleCategorySelect(i)}
                                 activeOpacity={0.85}
                             >
@@ -1317,18 +1431,27 @@ const StockImageSheet = ({
             {view === 'subcategories' && (
                 <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.catCardsGrid}>
                     <View style={styles.catCardsRow}>
-                        {cat.subcategories.map((s, i) => (
+                        {activeSubs.map((s, i) => (
                             <TouchableOpacity
                                 key={i}
-                                style={[styles.catCard, { backgroundColor: theme.colors.surfaceVariant }]}
+                                style={[styles.catCard, { backgroundColor: isThemeCat ? YELLOW + '33' : '#F0F0F0' }]}
                                 onPress={() => handleSubcategorySelect(i)}
                                 activeOpacity={0.85}
                             >
-                                <Image
-                                    source={{ uri: s.thumb }}
-                                    style={styles.catCardImg}
-                                    resizeMode="cover"
-                                />
+                                {isThemeCat ? (
+                                    // Theme subcategory — no image, styled label card
+                                    <View style={[styles.catCardImg, { alignItems: 'center', justifyContent: 'center', backgroundColor: YELLOW + '55' }]}>
+                                        <Text style={{ fontFamily: 'GasoekOne', fontSize: 13, color: BLACK, textAlign: 'center', paddingHorizontal: 8 }}>
+                                            {s.label}
+                                        </Text>
+                                    </View>
+                                ) : (
+                                    <Image
+                                        source={{ uri: (s as any).thumb }}
+                                        style={styles.catCardImg}
+                                        resizeMode="cover"
+                                    />
+                                )}
                                 <View style={styles.catCardOverlay}>
                                     <Text style={styles.catCardLabel}>{s.label}</Text>
                                 </View>
@@ -1342,11 +1465,11 @@ const StockImageSheet = ({
             {(view === 'photos' || view === 'search') && (
                 loading ? (
                     <View style={styles.browserCenterMsg}>
-                        <ActivityIndicator size="large" color={theme.colors.primary} />
+                        <ActivityIndicator size="large" color={YELLOW} />
                     </View>
                 ) : photos.length === 0 ? (
                     <View style={styles.browserCenterMsg}>
-                        <Text style={{ color: theme.colors.outline, fontFamily: 'Carlito', fontSize: 14 }}>
+                        <Text style={{ color: BLACK, fontFamily: 'GasoekOne', fontSize: 14 }}>
                             No images found
                         </Text>
                     </View>
@@ -1362,12 +1485,12 @@ const StockImageSheet = ({
                         showsVerticalScrollIndicator={false}
                         ListFooterComponent={loadingMore ? (
                             <View style={{ padding: 16, alignItems: 'center' }}>
-                                <ActivityIndicator size="small" color={theme.colors.primary} />
+                                <ActivityIndicator size="small" color={YELLOW} />
                             </View>
                         ) : null}
                         renderItem={({ item }) => (
                             <TouchableOpacity
-                                style={[styles.browserTile, { backgroundColor: theme.colors.surfaceVariant }]}
+                                style={[styles.browserTile, { backgroundColor: '#F0F0F0' }]}
                                 onPress={() => handlePhotoTap(item)}
                                 activeOpacity={0.85}
                             >
@@ -1390,12 +1513,19 @@ const StockImageSheet = ({
 // ═══════════════════════════════════════════════════════════
 
 export const VisionBoardScreen: React.FC = () => {
-    const theme = useTheme();
     const navigation = useNavigation();
     const boardRef = useRef<View>(null);
+    const [boardMode, setBoardMode] = useState<'master' | 'daily'>('master');
+
+    const todayStr = useMemo(() => {
+        const d = new Date();
+        return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+    }, []);
+
     const [items, setItems] = useState<LocalVisionItem[]>([]);
     const [isInputVisible, setIsInputVisible] = useState(false);
     const [isStockVisible, setIsStockVisible] = useState(false);
+    const [stockThemeCategory, setStockThemeCategory] = useState<{ label: string; subcategories: { label: string; query: string }[] } | undefined>(undefined);
     const [isLayoutVisible, setIsLayoutVisible] = useState(false);
     const [deleteId, setDeleteId] = useState<string | null>(null);
     const [showClearConfirm, setShowClearConfirm] = useState(false);
@@ -1410,17 +1540,17 @@ export const VisionBoardScreen: React.FC = () => {
     const isOverDeleteZone = useSharedValue(false);
 
     const deleteZoneStyle = useAnimatedStyle(() => ({
-        backgroundColor: isOverDeleteZone.value ? '#FF3B30' : theme.colors.surface,
-        borderColor: isOverDeleteZone.value ? '#FF3B30' : theme.colors.outline + '20',
+        backgroundColor: isOverDeleteZone.value ? '#FF3B30' : WHITE,
+        borderColor: isOverDeleteZone.value ? '#FF3B30' : BLACK + '20',
         transform: [{ scale: withTiming(isOverDeleteZone.value ? 1.1 : 1, { duration: 180 }) }],
     }));
 
     const deleteTextStyle = useAnimatedStyle(() => ({
-        color: isOverDeleteZone.value ? '#FFF' : theme.colors.onSurfaceVariant,
+        color: isOverDeleteZone.value ? '#FFF' : BLACK,
     }));
 
     const deleteIconProps = useAnimatedProps(() => ({
-        stroke: isOverDeleteZone.value ? '#FFF' : theme.colors.onSurfaceVariant,
+        stroke: isOverDeleteZone.value ? '#FFF' : BLACK,
     }));
 
     // Item count text
@@ -1431,12 +1561,21 @@ export const VisionBoardScreen: React.FC = () => {
     }, [items.length]);
 
     const loadItems = async () => {
-        const data = await fetchVisionItems();
-        setItems(data);
+        if (boardMode === 'master') {
+            const data = await fetchVisionItems();
+            setItems(data);
+        } else {
+            const daily = await getDailyVisionBoard(todayStr);
+            if (daily && daily.completed) {
+                setItems(daily.items as LocalVisionItem[]);
+            } else {
+                setItems([]);
+            }
+        }
     };
 
     useFocusEffect(
-        useCallback(() => { loadItems(); }, [])
+        useCallback(() => { loadItems(); }, [boardMode])
     );
 
     const handleShareBoard = async () => {
@@ -1597,29 +1736,57 @@ export const VisionBoardScreen: React.FC = () => {
     const handleUpdate = (id: string, x: number, y: number, s: number, r: number) => {
         // Skip items that still have a temporary local ID (not yet persisted to DB)
         if (id.startsWith('temp-') || id.startsWith('stock-')) return;
-        updateVisionItemPosition(id, x, y, s, r);
+
+        if (boardMode === 'daily') {
+            setItems(prev => {
+                const updated = prev.map(i => i.id === id ? { ...i, position_x: x, position_y: y, scale: s, rotation: r } : i);
+                saveDailyVisionBoard({ date: todayStr, themeId: getThemeForDate(todayStr).id, completed: true, items: updated });
+                return updated;
+            });
+        } else {
+            updateVisionItemPosition(id, x, y, s, r);
+        }
     };
 
     const confirmDelete = async () => {
         if (deleteId) {
-            await deleteVisionItem(deleteId);
-            setItems(prev => prev.filter(i => i.id !== deleteId));
+            if (boardMode === 'daily') {
+                setItems(prev => {
+                    const updated = prev.filter(i => i.id !== deleteId);
+                    saveDailyVisionBoard({ date: todayStr, themeId: getThemeForDate(todayStr).id, completed: true, items: updated });
+                    return updated;
+                });
+            } else {
+                await deleteVisionItem(deleteId);
+                setItems(prev => prev.filter(i => i.id !== deleteId));
+            }
             setDeleteId(null);
         }
     };
 
     const handleUpdateTextStyle = (style: { text_color?: string; font_family?: string; bg_style?: string }) => {
         if (!editingTextItem) return;
-        setItems(prev => prev.map(i => i.id === editingTextItem.id ? { ...i, ...style } : i));
-        setEditingTextItem(prev => prev ? { ...prev, ...style } : null);
-        if (!editingTextItem.id.startsWith('temp-')) {
-            updateVisionItemStyle(editingTextItem.id, style);
+
+        if (boardMode === 'daily') {
+            setItems(prev => {
+                const updated = prev.map(i => i.id === editingTextItem.id ? { ...i, ...style } : i);
+                saveDailyVisionBoard({ date: todayStr, themeId: getThemeForDate(todayStr).id, completed: true, items: updated });
+                return updated;
+            });
+            setEditingTextItem(prev => prev ? { ...prev, ...style } : null);
+        } else {
+            setItems(prev => prev.map(i => i.id === editingTextItem.id ? { ...i, ...style } : i));
+            setEditingTextItem(prev => prev ? { ...prev, ...style } : null);
+            if (!editingTextItem.id.startsWith('temp-')) {
+                updateVisionItemStyle(editingTextItem.id, style);
+            }
         }
     };
 
+
     return (
         <GestureHandlerRootView style={{ flex: 1 }}>
-            <View style={[styles.container, { backgroundColor: theme.colors.background }]}>
+            <View style={[styles.container, { backgroundColor: WHITE }]}>
                 {/* ── Header ── */}
                 <SafeAreaView edges={['top']} style={styles.headerSafe}>
                     <View style={styles.header}>
@@ -1629,17 +1796,23 @@ export const VisionBoardScreen: React.FC = () => {
                             activeOpacity={0.6}
                             hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
                         >
-                            <ChevronLeftIcon color={theme.colors.onSurface} size={24} />
+                            <ChevronLeftIcon color={BLACK} size={24} />
                         </TouchableOpacity>
                         <View style={styles.headerTitleWrap}>
-                            <Text style={[styles.headerTitle, { color: theme.colors.onSurface }]}>
-                                My Vision Board
-                            </Text>
-                            {itemCountText ? (
-                                <Text style={[styles.headerSub, { color: theme.colors.outline }]}>
-                                    {itemCountText}
-                                </Text>
-                            ) : null}
+                            <View style={{ flexDirection: 'row', backgroundColor: BLACK + '08', borderRadius: 20, padding: 4, alignSelf: 'center' }}>
+                                <TouchableOpacity
+                                    onPress={() => setBoardMode('master')}
+                                    style={{ paddingVertical: 8, paddingHorizontal: 16, borderRadius: 16, backgroundColor: boardMode === 'master' ? WHITE : 'transparent', shadowColor: boardMode === 'master' ? BLACK : 'transparent', shadowOpacity: 0.1, shadowRadius: 4, elevation: boardMode === 'master' ? 2 : 0 }}
+                                >
+                                    <Text style={{ fontFamily: 'Outfit-Medium', fontSize: 14, color: boardMode === 'master' ? BLACK : BLACK + '60' }}>Master</Text>
+                                </TouchableOpacity>
+                                <TouchableOpacity
+                                    onPress={() => setBoardMode('daily')}
+                                    style={{ paddingVertical: 8, paddingHorizontal: 16, borderRadius: 16, backgroundColor: boardMode === 'daily' ? WHITE : 'transparent', shadowColor: boardMode === 'daily' ? BLACK : 'transparent', shadowOpacity: 0.1, shadowRadius: 4, elevation: boardMode === 'daily' ? 2 : 0 }}
+                                >
+                                    <Text style={{ fontFamily: 'Outfit-Medium', fontSize: 14, color: boardMode === 'daily' ? BLACK : BLACK + '60' }}>Today</Text>
+                                </TouchableOpacity>
+                            </View>
                         </View>
                         <TouchableOpacity
                             onPress={handleShareBoard}
@@ -1647,10 +1820,17 @@ export const VisionBoardScreen: React.FC = () => {
                             activeOpacity={0.6}
                             hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
                         >
-                            <ShareIcon color={theme.colors.onSurface} size={22} />
+                            <ShareIcon color={BLACK} size={22} />
                         </TouchableOpacity>
                     </View>
                 </SafeAreaView>
+
+                {boardMode === 'daily' && items.length > 0 && (
+                    <Animated.View entering={FadeInDown.duration(300)} style={{ paddingHorizontal: 16, paddingVertical: 12, backgroundColor: BLACK, borderBottomWidth: 0 }}>
+                        <Text style={{ fontFamily: 'Outfit-Bold', fontSize: 16, color: YELLOW }}>{getThemeForDate(todayStr).title}</Text>
+                        <Text style={{ fontFamily: 'Outfit-Regular', fontSize: 13, color: '#FFF', opacity: 0.8, marginTop: 4 }}>{getThemeForDate(todayStr).description}</Text>
+                    </Animated.View>
+                )}
 
                 {/* ── Board ── */}
                 <View style={styles.board} ref={boardRef} collapsable={false}>
@@ -1701,11 +1881,27 @@ export const VisionBoardScreen: React.FC = () => {
                         />
                     ))}
                     {items.length === 0 && (
-                        <EmptyState
-                            onAddImage={handleAddImage}
-                            onAddText={() => setIsInputVisible(true)}
-                            onBrowseStock={() => setIsStockVisible(true)}
-                        />
+                        boardMode === 'master' ? (
+                            <EmptyState
+                                onAddImage={handleAddImage}
+                                onAddText={() => setIsInputVisible(true)}
+                                onBrowseStock={() => { setStockThemeCategory(undefined); setIsStockVisible(true); }}
+                            />
+                        ) : (
+                            <DailyEmptyState
+                                dateStr={todayStr}
+                                onAddImage={handleAddImage}
+                                onAddText={() => setIsInputVisible(true)}
+                                onBrowseStock={() => {
+                                    const theme = getThemeForDate(todayStr);
+                                    setStockThemeCategory({
+                                        label: theme.title,
+                                        subcategories: theme.keywords,
+                                    });
+                                    setIsStockVisible(true);
+                                }}
+                            />
+                        )
                     )}
 
                     {/* Delete zone */}
@@ -1737,39 +1933,39 @@ export const VisionBoardScreen: React.FC = () => {
                 {items.length > 0 && !isDraggingAny && !isStockVisible && (
                     <Animated.View
                         entering={FadeInDown.duration(300)}
-                        style={[styles.bottomBar, { backgroundColor: theme.colors.background + 'F0' }]}
+                        style={[styles.bottomBar, { backgroundColor: WHITE + 'F0' }]}
                     >
                         <TouchableOpacity
-                            style={[styles.actionPill, styles.actionPillIconOnly, { backgroundColor: theme.colors.surface, borderColor: theme.colors.outline + '12' }]}
-                            onPress={() => setIsStockVisible(true)}
+                            style={[styles.actionPill, styles.actionPillIconOnly, { backgroundColor: WHITE, borderColor: BLACK + '12' }]}
+                            onPress={() => { setStockThemeCategory(undefined); setIsStockVisible(true); }}
                             activeOpacity={0.7}
                         >
-                            <SearchImageIcon color={theme.colors.onSurface} size={20} />
+                            <SearchImageIcon color={BLACK} size={20} />
                         </TouchableOpacity>
 
                         <TouchableOpacity
-                            style={[styles.actionPill, styles.actionPillIconOnly, { backgroundColor: theme.colors.surface, borderColor: theme.colors.outline + '12' }]}
+                            style={[styles.actionPill, styles.actionPillIconOnly, { backgroundColor: WHITE, borderColor: BLACK + '12' }]}
                             onPress={() => setIsLayoutVisible(true)}
                             activeOpacity={0.7}
                         >
-                            <LayoutIcon color={theme.colors.onSurface} size={20} />
+                            <LayoutIcon color={BLACK} size={20} />
                         </TouchableOpacity>
 
                         <View style={styles.vertDivider} />
 
                         <TouchableOpacity
-                            style={[styles.actionPill, { backgroundColor: theme.colors.surface, borderColor: theme.colors.outline + '12' }]}
+                            style={[styles.actionPill, { backgroundColor: WHITE, borderColor: BLACK + '12' }]}
                             onPress={handleAddImage}
                             activeOpacity={0.7}
                         >
-                            <ImagePlusIcon color={theme.colors.primary} size={20} />
-                            <Text style={[styles.actionPillText, { color: theme.colors.onSurface, marginLeft: 4 }]}>
+                            <ImagePlusIcon color={YELLOW} size={20} />
+                            <Text style={[styles.actionPillText, { color: BLACK, marginLeft: 4 }]}>
                                 Image
                             </Text>
                         </TouchableOpacity>
 
                         <TouchableOpacity
-                            style={[styles.actionPill, { backgroundColor: theme.colors.primary, borderColor: theme.colors.primary }]}
+                            style={[styles.actionPill, { backgroundColor: YELLOW, borderColor: YELLOW }]}
                             onPress={() => setIsInputVisible(true)}
                             activeOpacity={0.7}
                         >
@@ -1802,8 +1998,9 @@ export const VisionBoardScreen: React.FC = () => {
                     />
                     <StockImageSheet
                         visible={isStockVisible}
-                        onDismiss={() => setIsStockVisible(false)}
+                        onDismiss={() => { setIsStockVisible(false); setStockThemeCategory(undefined); }}
                         onSelect={handleAddStockImage}
+                        themeCategory={stockThemeCategory}
                     />
                     {editingTextItem?.type === 'text' && (
                         <TextStyleSheet
@@ -1818,25 +2015,25 @@ export const VisionBoardScreen: React.FC = () => {
                 {deleteId && (
                     <Portal>
                         <Animated.View entering={FadeIn.duration(200)} style={styles.dialogOverlay}>
-                            <View style={[styles.dialogCard, { backgroundColor: theme.colors.surface }]}>
-                                <TrashIcon color={theme.colors.error} size={28} />
-                                <Text style={[styles.dialogTitle, { color: theme.colors.onSurface }]}>
+                            <View style={[styles.dialogCard, { backgroundColor: WHITE }]}>
+                                <TrashIcon color='#D32F2F' size={28} />
+                                <Text style={[styles.dialogTitle, { color: BLACK }]}>
                                     Remove this?
                                 </Text>
-                                <Text style={[styles.dialogBody, { color: theme.colors.outline }]}>
+                                <Text style={[styles.dialogBody, { color: BLACK }]}>
                                     It'll be removed from your vision board
                                 </Text>
                                 <View style={styles.dialogActions}>
                                     <TouchableOpacity
                                         onPress={() => setDeleteId(null)}
-                                        style={[styles.dialogBtn, { backgroundColor: theme.colors.surfaceVariant }]}
+                                        style={[styles.dialogBtn, { backgroundColor: '#F0F0F0' }]}
                                         activeOpacity={0.7}
                                     >
-                                        <Text style={[styles.dialogBtnText, { color: theme.colors.onSurface }]}>Keep</Text>
+                                        <Text style={[styles.dialogBtnText, { color: BLACK }]}>Keep</Text>
                                     </TouchableOpacity>
                                     <TouchableOpacity
                                         onPress={confirmDelete}
-                                        style={[styles.dialogBtn, { backgroundColor: theme.colors.error }]}
+                                        style={[styles.dialogBtn, { backgroundColor: '#D32F2F' }]}
                                         activeOpacity={0.7}
                                     >
                                         <Text style={[styles.dialogBtnText, { color: '#FFF' }]}>Remove</Text>
@@ -1853,37 +2050,37 @@ export const VisionBoardScreen: React.FC = () => {
                         <Animated.View entering={FadeIn.duration(200)} style={styles.dialogOverlay}>
                             <Animated.View
                                 entering={FadeInDown.duration(280).springify().damping(16)}
-                                style={[styles.dialogCard, { backgroundColor: theme.colors.surface }]}
+                                style={[styles.dialogCard, { backgroundColor: WHITE }]}
                             >
                                 {/* Icon badge */}
-                                <View style={[styles.clearDialogIconBadge, { backgroundColor: theme.colors.error + '14' }]}>
-                                    <TrashIcon color={theme.colors.error} size={30} />
+                                <View style={[styles.clearDialogIconBadge, { backgroundColor: '#D32F2F' + '14' }]}>
+                                    <TrashIcon color='#D32F2F' size={30} />
                                 </View>
 
-                                <Text style={[styles.dialogTitle, { color: theme.colors.onSurface, marginTop: 6 }]}>
+                                <Text style={[styles.dialogTitle, { color: BLACK, marginTop: 6 }]}>
                                     Clear entire board?
                                 </Text>
-                                <Text style={[styles.dialogBody, { color: theme.colors.outline }]}>
+                                <Text style={[styles.dialogBody, { color: BLACK }]}>
                                     {`All ${items.length} item${items.length !== 1 ? 's' : ''} will be permanently removed.\nThis cannot be undone.`}
                                 </Text>
 
                                 {/* Divider */}
-                                <View style={[styles.clearDialogDivider, { backgroundColor: theme.colors.outline + '15' }]} />
+                                <View style={[styles.clearDialogDivider, { backgroundColor: BLACK + '15' }]} />
 
                                 <View style={[styles.dialogActions, { flexDirection: 'column', gap: 8 }]}>
                                     <TouchableOpacity
                                         onPress={confirmClearBoard}
-                                        style={[styles.dialogBtn, { backgroundColor: theme.colors.error, width: '100%' }]}
+                                        style={[styles.dialogBtn, { backgroundColor: '#D32F2F', width: '100%' }]}
                                         activeOpacity={0.75}
                                     >
                                         <Text style={[styles.dialogBtnText, { color: '#FFF' }]}>Clear All</Text>
                                     </TouchableOpacity>
                                     <TouchableOpacity
                                         onPress={() => setShowClearConfirm(false)}
-                                        style={[styles.dialogBtn, { backgroundColor: theme.colors.surfaceVariant, width: '100%' }]}
+                                        style={[styles.dialogBtn, { backgroundColor: '#F0F0F0', width: '100%' }]}
                                         activeOpacity={0.7}
                                     >
-                                        <Text style={[styles.dialogBtnText, { color: theme.colors.onSurface }]}>Cancel</Text>
+                                        <Text style={[styles.dialogBtnText, { color: BLACK }]}>Cancel</Text>
                                     </TouchableOpacity>
                                 </View>
                             </Animated.View>
@@ -1925,12 +2122,12 @@ const styles = StyleSheet.create({
         alignItems: 'center',
     },
     headerTitle: {
-        fontFamily: 'Caveat-Bold',
+        fontFamily: 'GasoekOne',
         fontSize: 26,
         lineHeight: 30,
     },
     headerSub: {
-        fontFamily: 'Carlito',
+        fontFamily: 'GasoekOne',
         fontSize: 13,
         marginTop: 1,
     },
@@ -1973,7 +2170,7 @@ const styles = StyleSheet.create({
     overlayText: {
         fontSize: 12,
         color: '#FFF',
-        fontFamily: 'Carlito',
+        fontFamily: 'GasoekOne',
         fontWeight: '600',
         textAlign: 'center',
     },
@@ -1991,7 +2188,7 @@ const styles = StyleSheet.create({
         elevation: 2,
     },
     textItemContent: {
-        fontFamily: 'Caveat-Medium',
+        fontFamily: 'GasoekOne',
         fontSize: 17,
         lineHeight: 24,
         textAlign: 'center',
@@ -2022,11 +2219,11 @@ const styles = StyleSheet.create({
         left: -40,
     },
     emptyTitle: {
-        fontFamily: 'Caveat-Bold',
+        fontFamily: 'GasoekOne',
         fontSize: 24,
     },
     emptySubtitle: {
-        fontFamily: 'Carlito',
+        fontFamily: 'GasoekOne',
         fontSize: 14,
         marginTop: 6,
         textAlign: 'center',
@@ -2046,7 +2243,7 @@ const styles = StyleSheet.create({
         marginBottom: 4,
     },
     emptyBrowseBtnText: {
-        fontFamily: 'Carlito',
+        fontFamily: 'GasoekOne',
         fontSize: 16,
         fontWeight: '700',
     },
@@ -2065,7 +2262,7 @@ const styles = StyleSheet.create({
         borderWidth: 1,
     },
     emptyActionText: {
-        fontFamily: 'Carlito',
+        fontFamily: 'GasoekOne',
         fontSize: 14,
         fontWeight: '600',
     },
@@ -2092,7 +2289,7 @@ const styles = StyleSheet.create({
         gap: 10,
     },
     deleteText: {
-        fontFamily: 'Carlito',
+        fontFamily: 'GasoekOne',
         fontSize: 15,
         fontWeight: '600',
     },
@@ -2130,7 +2327,7 @@ const styles = StyleSheet.create({
         height: 48,
     },
     actionPillText: {
-        fontFamily: 'Carlito',
+        fontFamily: 'GasoekOne',
         fontSize: 15,
         fontWeight: '600',
     },
@@ -2159,7 +2356,7 @@ const styles = StyleSheet.create({
         gap: 8,
     },
     layoutName: {
-        fontFamily: 'Carlito',
+        fontFamily: 'GasoekOne',
         fontSize: 14,
         fontWeight: '600',
     },
@@ -2183,12 +2380,12 @@ const styles = StyleSheet.create({
         justifyContent: 'center',
     },
     clearBoardText: {
-        fontFamily: 'Carlito',
+        fontFamily: 'GasoekOne',
         fontSize: 15,
         fontWeight: '600',
     },
     clearBoardSub: {
-        fontFamily: 'Carlito',
+        fontFamily: 'GasoekOne',
         fontSize: 12,
         marginTop: 1,
     },
@@ -2209,7 +2406,7 @@ const styles = StyleSheet.create({
         alignItems: 'center',
     },
     catText: {
-        fontFamily: 'Carlito',
+        fontFamily: 'GasoekOne',
         fontSize: 14,
         fontWeight: '600',
         textAlign: 'center',
@@ -2252,17 +2449,17 @@ const styles = StyleSheet.create({
     },
     browserSearchInput: {
         flex: 1,
-        fontFamily: 'Carlito',
+        fontFamily: 'GasoekOne',
         fontSize: 15,
         padding: 0,
     },
     browserDrillHint: {
-        fontFamily: 'Carlito',
+        fontFamily: 'GasoekOne',
         fontSize: 11,
         opacity: 0.6,
     },
     browserDrillTitle: {
-        fontFamily: 'Caveat-Bold',
+        fontFamily: 'GasoekOne',
         fontSize: 22,
         lineHeight: 26,
     },
@@ -2298,7 +2495,7 @@ const styles = StyleSheet.create({
     },
     catCardLabel: {
         color: '#FFF',
-        fontFamily: 'Caveat-Bold',
+        fontFamily: 'GasoekOne',
         fontSize: 20,
     },
     // Photo grid
@@ -2330,7 +2527,7 @@ const styles = StyleSheet.create({
     browserMoreText: {
         color: '#FFF',
         fontSize: 9,
-        fontFamily: 'Carlito',
+        fontFamily: 'GasoekOne',
     },
     browserCenterMsg: {
         flex: 1,
@@ -2340,11 +2537,11 @@ const styles = StyleSheet.create({
         gap: 12,
     },
     browserMsgTitle: {
-        fontFamily: 'Caveat-Bold',
+        fontFamily: 'GasoekOne',
         fontSize: 22,
     },
     browserMsgBody: {
-        fontFamily: 'Carlito',
+        fontFamily: 'GasoekOne',
         fontSize: 14,
         textAlign: 'center',
         lineHeight: 22,
@@ -2384,11 +2581,11 @@ const styles = StyleSheet.create({
         paddingBottom: 8,
     },
     sheetTitle: {
-        fontFamily: 'Caveat-Bold',
+        fontFamily: 'GasoekOne',
         fontSize: 24,
     },
     sheetSubtitle: {
-        fontFamily: 'Carlito',
+        fontFamily: 'GasoekOne',
         fontSize: 13,
         marginTop: 2,
     },
@@ -2415,7 +2612,7 @@ const styles = StyleSheet.create({
         marginRight: 8,
     },
     templateText: {
-        fontFamily: 'Carlito',
+        fontFamily: 'GasoekOne',
         fontSize: 13,
         maxWidth: 180,
     },
@@ -2430,7 +2627,7 @@ const styles = StyleSheet.create({
     },
     sheetInput: {
         flex: 1,
-        fontFamily: 'Carlito',
+        fontFamily: 'GasoekOne',
         fontSize: 15,
         paddingHorizontal: 16,
         paddingVertical: 12,
@@ -2465,12 +2662,12 @@ const styles = StyleSheet.create({
         elevation: 12,
     },
     dialogTitle: {
-        fontFamily: 'Caveat-Bold',
+        fontFamily: 'GasoekOne',
         fontSize: 22,
         marginTop: 4,
     },
     dialogBody: {
-        fontFamily: 'Carlito',
+        fontFamily: 'GasoekOne',
         fontSize: 14,
         textAlign: 'center',
         lineHeight: 20,
@@ -2488,7 +2685,7 @@ const styles = StyleSheet.create({
         alignItems: 'center',
     },
     dialogBtnText: {
-        fontFamily: 'Carlito',
+        fontFamily: 'GasoekOne',
         fontSize: 15,
         fontWeight: '600',
     },
@@ -2553,7 +2750,7 @@ const styles = StyleSheet.create({
         gap: 3,
     },
     bgChipLabel: {
-        fontFamily: 'Carlito',
+        fontFamily: 'GasoekOne',
         fontSize: 11,
         fontWeight: '600',
     },
@@ -2565,7 +2762,7 @@ const styles = StyleSheet.create({
         gap: 8,
     },
     bgPickerLabel: {
-        fontFamily: 'Carlito',
+        fontFamily: 'GasoekOne',
         fontSize: 11,
         fontWeight: '700',
         letterSpacing: 0.8,
@@ -2583,7 +2780,7 @@ const styles = StyleSheet.create({
         gap: 2,
     },
     boardBgChipLabel: {
-        fontFamily: 'Carlito',
+        fontFamily: 'GasoekOne',
         fontSize: 10,
         fontWeight: '600',
     },

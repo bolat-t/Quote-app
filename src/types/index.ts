@@ -57,13 +57,14 @@ export type RootStackParamList = {
   Paywall: undefined;
   Analytics: undefined;
   VisionBoard: undefined;
+  Walking: undefined;
 };
 
 export type RootTabParamList = {
   Home: undefined;
   Canvas: undefined;
-  Hunt: undefined;
   Journal: undefined;
+  History: undefined;
   Vision: undefined;
 };
 

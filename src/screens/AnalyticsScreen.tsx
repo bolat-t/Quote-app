@@ -1,9 +1,12 @@
 import React, { useEffect, useState } from 'react';
 import { View, Text, StyleSheet, ScrollView, Dimensions, TouchableOpacity } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { useTheme } from '../context/ThemeContext';
 import { getJournalEntries, JournalEntry } from '../utils/journalStorage';
 import { Svg, Path, Circle, Line, Text as SvgText } from 'react-native-svg';
+
+const YELLOW = '#FFE600';
+const BLACK = '#000000';
+const WHITE = '#FFFFFF';
 
 const { width: screenWidth } = Dimensions.get('window');
 
@@ -12,7 +15,6 @@ type NavProps = {
 };
 
 export const AnalyticsScreen: React.FC<NavProps> = ({ navigation }) => {
-    const { theme } = useTheme();
     const [entries, setEntries] = useState<JournalEntry[]>([]);
     const [averageMood, setAverageMood] = useState(0);
     const [tagCounts, setTagCounts] = useState<{ [tag: string]: number }>({});
@@ -52,7 +54,7 @@ export const AnalyticsScreen: React.FC<NavProps> = ({ navigation }) => {
     const renderMoodChart = () => {
         const data = entries.filter(e => e.moodScore).slice(-7); // Last 7 entries with mood
         if (data.length < 2) return (
-            <Text style={{ color: theme.colors.text, opacity: 0.5, textAlign: 'center', marginVertical: 20, fontFamily: 'Carlito' }}>
+            <Text style={{ color: BLACK, opacity: 0.5, textAlign: 'center', marginVertical: 20, fontFamily: 'GasoekOne' }}>
                 Not enough data for chart yet. Keep journaling!
             </Text>
         );
@@ -82,14 +84,14 @@ export const AnalyticsScreen: React.FC<NavProps> = ({ navigation }) => {
                             y1={getY(val)}
                             x2={width - padding}
                             y2={getY(val)}
-                            stroke={theme.colors.text}
+                            stroke={BLACK}
                             strokeOpacity={0.1}
                             strokeDasharray="4 4"
                         />
                     ))}
 
                     {/* Line */}
-                    <Path d={pathD} stroke={theme.colors.primary} strokeWidth={3} fill="none" />
+                    <Path d={pathD} stroke={YELLOW} strokeWidth={3} fill="none" />
 
                     {/* Dots */}
                     {data.map((e, i) => (
@@ -98,15 +100,15 @@ export const AnalyticsScreen: React.FC<NavProps> = ({ navigation }) => {
                             cx={getX(i)}
                             cy={getY(e.moodScore || 5)}
                             r={4}
-                            fill={theme.colors.background}
-                            stroke={theme.colors.primary}
+                            fill={WHITE}
+                            stroke={YELLOW}
                             strokeWidth={2}
                         />
                     ))}
                 </Svg>
                 <View style={{ flexDirection: 'row', justifyContent: 'space-between', width: width - 2 * padding, marginTop: 4 }}>
                     {data.map((e, i) => (
-                        <Text key={i} style={{ fontSize: 10, color: theme.colors.text, opacity: 0.7 }}>
+                        <Text key={i} style={{ fontSize: 10, color: BLACK, opacity: 0.7 }}>
                             {new Date(e.date).getDate()}
                         </Text>
                     ))}
@@ -116,54 +118,54 @@ export const AnalyticsScreen: React.FC<NavProps> = ({ navigation }) => {
     };
 
     return (
-        <SafeAreaView style={[styles.container, { backgroundColor: theme.colors.background }]}>
+        <SafeAreaView style={styles.container}>
             <View style={styles.header}>
                 <TouchableOpacity onPress={() => navigation.goBack()} style={{ marginRight: 16 }}>
                     <Svg width={24} height={24} viewBox="0 0 24 24" fill="none">
-                        <Path d="M15 18l-6-6 6-6" stroke={theme.colors.text} strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" />
+                        <Path d="M15 18l-6-6 6-6" stroke={BLACK} strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" />
                     </Svg>
                 </TouchableOpacity>
-                <Text style={[styles.title, { color: theme.colors.text }]}>Mood Analytics</Text>
+                <Text style={styles.title}>Mood Analytics</Text>
             </View>
 
             <ScrollView contentContainerStyle={styles.content}>
                 {/* Stats Cards */}
                 <View style={styles.statsRow}>
-                    <View style={[styles.statCard, { backgroundColor: theme.colors.paper }]}>
-                        <Text style={[styles.statLabel, { color: theme.colors.accent }]}>AVG MOOD</Text>
-                        <Text style={[styles.statValue, { color: theme.colors.primary }]}>{averageMood}</Text>
-                        <Text style={[styles.statSub, { color: theme.colors.text }]}>/ 10</Text>
+                    <View style={styles.statCard}>
+                        <Text style={styles.statLabel}>AVG MOOD</Text>
+                        <Text style={styles.statValue}>{averageMood}</Text>
+                        <Text style={styles.statSub}>/ 10</Text>
                     </View>
-                    <View style={[styles.statCard, { backgroundColor: theme.colors.paper }]}>
-                        <Text style={[styles.statLabel, { color: theme.colors.accent }]}>ENTRIES</Text>
-                        <Text style={[styles.statValue, { color: theme.colors.primary }]}>{entries.length}</Text>
-                        <Text style={[styles.statSub, { color: theme.colors.text }]}>Total</Text>
+                    <View style={styles.statCard}>
+                        <Text style={styles.statLabel}>ENTRIES</Text>
+                        <Text style={styles.statValue}>{entries.length}</Text>
+                        <Text style={styles.statSub}>Total</Text>
                     </View>
                 </View>
 
                 {/* Chart Section */}
-                <View style={[styles.section, { backgroundColor: theme.colors.paper }]}>
-                    <Text style={[styles.sectionTitle, { color: theme.colors.text }]}>Mood Flow (Last 7 Entries)</Text>
+                <View style={styles.section}>
+                    <Text style={styles.sectionTitle}>Mood Flow (Last 7 Entries)</Text>
                     {renderMoodChart()}
                 </View>
 
                 {/* Tags Cloud */}
-                <View style={[styles.section, { backgroundColor: theme.colors.paper }]}>
-                    <Text style={[styles.sectionTitle, { color: theme.colors.text }]}>Emotional Themes</Text>
+                <View style={styles.section}>
+                    <Text style={styles.sectionTitle}>Emotional Themes</Text>
                     <View style={styles.tagCloud}>
                         {Object.entries(tagCounts)
                             .sort(([, a], [, b]) => b - a)
                             .slice(0, 15) // Top 15 tags
                             .map(([tag, count], idx) => (
-                                <View key={idx} style={[styles.cloudTag, { backgroundColor: theme.colors.background }]}>
-                                    <Text style={[styles.cloudTagText, { color: theme.colors.text }]}>#{tag}</Text>
-                                    <View style={[styles.countBadge, { backgroundColor: theme.colors.accent }]}>
+                                <View key={idx} style={styles.cloudTag}>
+                                    <Text style={styles.cloudTagText}>#{tag}</Text>
+                                    <View style={styles.countBadge}>
                                         <Text style={styles.countText}>{count}</Text>
                                     </View>
                                 </View>
                             ))}
                         {Object.keys(tagCounts).length === 0 && (
-                            <Text style={{ color: theme.colors.text, opacity: 0.5, fontFamily: 'Carlito' }}>
+                            <Text style={{ color: BLACK, opacity: 0.5, fontFamily: 'GasoekOne' }}>
                                 No emotions tagged yet.
                             </Text>
                         )}
@@ -177,6 +179,7 @@ export const AnalyticsScreen: React.FC<NavProps> = ({ navigation }) => {
 const styles = StyleSheet.create({
     container: {
         flex: 1,
+        backgroundColor: WHITE,
     },
     header: {
         flexDirection: 'row',
@@ -185,7 +188,8 @@ const styles = StyleSheet.create({
     },
     title: {
         fontSize: 28,
-        fontFamily: 'Caveat-Bold',
+        fontFamily: 'GasoekOne',
+        color: BLACK,
     },
     content: {
         padding: 24,
@@ -201,30 +205,46 @@ const styles = StyleSheet.create({
         padding: 16,
         borderRadius: 16,
         alignItems: 'center',
+        backgroundColor: WHITE,
+        elevation: 6,
+        shadowColor: BLACK,
+        shadowOffset: { width: 0, height: 4 },
+        shadowOpacity: 0.1,
+        shadowRadius: 8,
     },
     statLabel: {
         fontSize: 12,
         fontWeight: 'bold',
         marginBottom: 8,
         letterSpacing: 1,
+        color: BLACK,
     },
     statValue: {
         fontSize: 32,
-        fontFamily: 'Caveat-Bold',
+        fontFamily: 'GasoekOne',
+        color: YELLOW,
     },
     statSub: {
         fontSize: 12,
         opacity: 0.6,
+        color: BLACK,
     },
     section: {
         padding: 20,
         borderRadius: 16,
         marginBottom: 24,
+        backgroundColor: WHITE,
+        elevation: 6,
+        shadowColor: BLACK,
+        shadowOffset: { width: 0, height: 4 },
+        shadowOpacity: 0.1,
+        shadowRadius: 8,
     },
     sectionTitle: {
         fontSize: 18,
-        fontFamily: 'Caveat-Bold',
+        fontFamily: 'GasoekOne',
         marginBottom: 16,
+        color: BLACK,
     },
     tagCloud: {
         flexDirection: 'row',
@@ -238,20 +258,23 @@ const styles = StyleSheet.create({
         borderRadius: 20,
         flexDirection: 'row',
         alignItems: 'center',
+        backgroundColor: '#F0F0F0',
     },
     cloudTagText: {
         fontSize: 14,
         marginRight: 8,
-        fontFamily: 'Carlito',
+        fontFamily: 'GasoekOne',
+        color: BLACK,
     },
     countBadge: {
         paddingHorizontal: 6,
         paddingVertical: 2,
         borderRadius: 10,
+        backgroundColor: YELLOW,
     },
     countText: {
         fontSize: 10,
-        color: 'white',
+        color: BLACK,
         fontWeight: 'bold',
     },
 });

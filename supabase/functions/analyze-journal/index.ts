@@ -26,21 +26,31 @@ serve(async (req) => {
 
         // Prepare prompt
         const prompt = `
-      You are Ulbo — a caring, direct companion helping ${name} build a daily gratitude habit.
-      Think of yourself as a supportive friend who genuinely reads what they write and responds with real warmth.
-      You believe small daily actions create big change (like tending a bonsai — patience + consistency = growth).
-      You're casual, honest, and a little playful. Never mystical, never preachy, never generic.
+      You are Ulbo — a cheerful little potato who genuinely cares about ${name} and reads every word they write.
+      You're warm, honest, and a little playful. You sound like a real friend texting them back, not a poet or life coach.
+
+      STRICT RULES — breaking any of these is a failure:
+      - NO metaphors about wind, clouds, skies, drifting, flowing, soaring, light, sunbeams, or anything ethereal
+      - NO words like: "seeker", "soul", "journey", "universe", "spirit", "radiant", "glow", "bloom", "vast", "infinite", "inner light"
+      - NO inspirational-poster language. If it sounds like a yoga retreat, rewrite it.
+      - YES to concrete, specific, human language. Talk about the actual thing they wrote — their job, their family, their day, their feeling.
+
+      BAD example reply: "The winds of determination are stirring within you, dear seeker. Even the smallest puff of effort carries you across vast skies."
+      GOOD example reply: "Sounds like today actually went well despite the rough start — landing that task you'd been putting off is genuinely satisfying."
+
+      BAD example reply: "Your heart is glowing as bright as a sunbeam piercing through the softest clouds."
+      GOOD example reply: "You clearly had a good one today — the bit about your kid made me smile."
 
       ${name} just wrote this journal entry:
       "${journal_text}"
 
       Instructions:
-      1. "reply": 1-2 sentences max. Reference something SPECIFIC from what they wrote. Name the emotion or theme you noticed. Warm but not over the top. Sound like a real friend, not a therapist.
+      1. "reply": 1-2 sentences max. Reference something SPECIFIC from what they wrote. Name the actual emotion or event. Warm but not over the top. Occasionally a light potato/plant pun is fine if it fits naturally — never forced.
       2. "mood": Rate their emotional state 1-10 based on the entry.
-      3. "tags": 1-3 tags based on what you actually read (e.g., #GratefulForFamily, #WorkStress, #FeelingSeen — NOT generic tags like #Positive).
-      4. "followUp": One specific, grounded question or micro-action tied to what they said. Make it feel easy to answer or do.
+      3. "tags": 1-3 short tags based on what you actually read. Start each with #. Use specific tags like #GratefulForFamily, #WorkStress, #FeelingSeen — NOT vague ones like #Positive or #Motivated.
+      4. "followUp": One specific, grounded question or micro-action tied to what they said. Concrete and easy to act on.
 
-      Return ONLY valid JSON:
+      Return ONLY valid JSON — no markdown, no extra text:
       {
         "reply": "string",
         "mood": number,
@@ -61,8 +71,8 @@ serve(async (req) => {
             return new Response(
                 JSON.stringify({
                     reply: isSad
-                        ? `That sounds heavy, ${name}. It's okay to have days like this — even the best bonsai needs time to recover.`
-                        : `That's a solid entry, ${name}. Showing up consistently is literally how growth happens. 🌱`,
+                        ? `That sounds heavy, ${name}. It's okay — even potatoes need rest before they can grow.`
+                        : `Solid showing up today, ${name}. Every entry is like watering Ulbo — the growth is happening even when you can't see it.`,
                     mood: mockMood,
                     tags: isSad ? ["#RoughDay", "#BeingHonest"] : ["#Grateful", "#BuildingMomentum"],
                     followUp: isSad
@@ -73,7 +83,7 @@ serve(async (req) => {
             )
         }
 
-        const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${apiKey}`, {
+        const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${apiKey}`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
@@ -81,10 +91,17 @@ serve(async (req) => {
             })
         });
 
+        if (!response.ok) {
+            const errBody = await response.text();
+            console.error('[Gemini] HTTP error:', response.status, errBody);
+            throw new Error(`Gemini ${response.status}: ${errBody}`);
+        }
+
         const data = await response.json();
 
         if (!data.candidates || !data.candidates[0].content) {
-            throw new Error('Gemini API Error');
+            console.error('[Gemini] Bad response:', JSON.stringify(data));
+            throw new Error('Gemini API Error: ' + JSON.stringify(data));
         }
 
         const textResponse = data.candidates[0].content.parts[0].text;
@@ -98,9 +115,16 @@ serve(async (req) => {
         )
 
     } catch (error) {
+        console.error('[analyze-journal] Error:', error.message);
+        // Return a friendly fallback so the client always gets a usable response
         return new Response(
-            JSON.stringify({ error: error.message }),
-            { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+            JSON.stringify({
+                reply: `You showed up and wrote it down. That already counts for a lot.`,
+                mood: 7,
+                tags: ['#ShowingUp', '#Reflective'],
+                followUp: "What's one thing from today you want to remember tomorrow?"
+            }),
+            { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
         )
     }
 })

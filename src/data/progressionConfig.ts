@@ -24,32 +24,32 @@ export const PAPER_TYPES = {
     parchment: { id: 'parchment', name: 'Ancient Scroll', levelRequired: 8, color: '#F0E6D2', textColor: '#5C4033' },
 };
 
-// Level tiers — 10 levels from Seedling to Cosmos
+// Level tiers — 10 levels from Raw Spud to God Potato
 export const LEVEL_TIERS: LevelTier[] = [
-    { level: 1, title: 'Seedling', xpRequired: 0, unlocks: 'Base app' },
-    { level: 2, title: 'Sprout', xpRequired: 100, unlocks: 'Warm Cream Paper' },
-    { level: 3, title: 'Sapling', xpRequired: 300, unlocks: 'Grid Paper' },
-    { level: 4, title: 'Bloom', xpRequired: 600, unlocks: 'Dot Grid' },
-    { level: 5, title: 'Oak', xpRequired: 1000, unlocks: 'Lined Paper' },
-    { level: 6, title: 'Sequoia', xpRequired: 1500, unlocks: 'Dark Mode Paper' },
-    { level: 7, title: 'Forest', xpRequired: 2500, unlocks: 'Starry Night Theme' },
-    { level: 8, title: 'Mountain', xpRequired: 4000, unlocks: 'Parchment' },
-    { level: 9, title: 'Sky', xpRequired: 6000, unlocks: 'Community' },
-    { level: 10, title: 'Cosmos', xpRequired: 10000, unlocks: 'Everything unlocked' },
+    { level: 1,  title: 'Raw Spud',        xpRequired: 0,     unlocks: 'Base app' },
+    { level: 2,  title: 'Muddy Potato',    xpRequired: 100,   unlocks: 'Warm Cream Paper' },
+    { level: 3,  title: 'Dumb Potato',     xpRequired: 300,   unlocks: 'Grid Paper' },
+    { level: 4,  title: 'Basic Spud',      xpRequired: 600,   unlocks: 'Dot Grid' },
+    { level: 5,  title: 'Aware Potato',    xpRequired: 1000,  unlocks: 'Lined Paper' },
+    { level: 6,  title: 'Wise Spud',       xpRequired: 1500,  unlocks: 'Dark Mode Paper' },
+    { level: 7,  title: 'Cool Potato',     xpRequired: 2500,  unlocks: 'Starry Night Theme' },
+    { level: 8,  title: 'Epic Tater',      xpRequired: 4000,  unlocks: 'Parchment' },
+    { level: 9,  title: 'Ancient Spud',    xpRequired: 6000,  unlocks: 'Community' },
+    { level: 10, title: 'God Potato',      xpRequired: 10000, unlocks: 'Everything unlocked' },
 ];
 
-// Level tier icons (used in UI) — plant/nature emoji for each level
+// Level tier icons (used in UI)
 export const LEVEL_ICONS: Record<number, string> = {
-    1: '🌱',
-    2: '🌿',
-    3: '🌳',
-    4: '🌸',
-    5: '🌲',
-    6: '🏔️',
-    7: '🌲',
-    8: '⛰️',
-    9: '☁️',
-    10: '✨',
+    1: '🥔',
+    2: '🥔',
+    3: '🥔',
+    4: '🥔',
+    5: '🥔',
+    6: '🥔',
+    7: '🥔',
+    8: '🥔',
+    9: '🥔',
+    10: '🥔',
 };
 
 // Get level tier for a given XP amount

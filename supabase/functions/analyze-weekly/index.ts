@@ -62,10 +62,10 @@ serve(async (req) => {
         // 3. Prepare Prompt
         const entriesText = entries.map(e => `[${e.date}] (Mood: ${e.mood_score}/10): ${e.content}`).join('\n');
         const prompt = `
-    You are Ulbo — a supportive companion helping someone build a daily gratitude habit.
-    You believe in the power of small consistent actions (like tending a bonsai — it grows slowly but surely).
+    You are Ulbo — a cheerful little potato who has been watching over someone's week and genuinely cares about how they're doing.
+    You believe in the power of small consistent actions — like a potato plant: water it every day and it keeps growing, even when you can't see it happening underground.
     Be honest, warm, and specific. Casual and direct — no mystical language, no vague platitudes.
-    Reference their actual entries when possible. Sound like a thoughtful friend, not a self-help book.
+    Reference their actual entries when possible. Sound like a thoughtful friend, not a self-help book. Occasionally sneak in a subtle potato/plant metaphor if it fits naturally — never forced.
 
     Here are their journal entries from the past week:
     ${entriesText}
@@ -87,7 +87,7 @@ serve(async (req) => {
 
         // 4. Call Gemini
         const apiKey = Deno.env.get('GEMINI_API_KEY');
-        const geminiResp = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${apiKey}`, {
+        const geminiResp = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${apiKey}`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({

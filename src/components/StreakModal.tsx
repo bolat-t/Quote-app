@@ -6,7 +6,6 @@ import {
     Modal,
     TouchableOpacity,
 } from 'react-native';
-import { useTheme } from '../context/ThemeContext';
 import Svg, { Path as SvgPath } from 'react-native-svg';
 import Animated, {
     useSharedValue,
@@ -19,6 +18,10 @@ import Animated, {
     FadeInDown,
 } from 'react-native-reanimated';
 import { getWeeklyHistory } from '../utils/journalStorage';
+
+const YELLOW = '#FFE600';
+const BLACK = '#000000';
+const WHITE = '#FFFFFF';
 
 // ─────────────────────────────────────────────
 // Icons
@@ -54,8 +57,8 @@ const CheckIcon = ({ color }: { color: string }) => (
 
 const getStreakMessage = (streak: number) => {
     if (streak === 0) return 'Start today — every great streak begins with one day.';
-    if (streak < 3)  return 'A great start. Show up again tomorrow.';
-    if (streak < 7)  return "You're building something real. Keep it going.";
+    if (streak < 3) return 'A great start. Show up again tomorrow.';
+    if (streak < 7) return "You're building something real. Keep it going.";
     if (streak < 30) return "Consistency is your superpower. Don't stop now.";
     return "You're in rare territory. This is who you are now.";
 };
@@ -71,8 +74,6 @@ interface StreakModalProps {
 }
 
 export const StreakModal: React.FC<StreakModalProps> = ({ visible, onClose, streak }) => {
-    const { theme } = useTheme();
-    const { colors } = theme;
     const [history, setHistory] = useState<{ day: string; date: string; completed: boolean; isToday: boolean }[]>([]);
 
     const scale = useSharedValue(1);
@@ -124,43 +125,42 @@ export const StreakModal: React.FC<StreakModalProps> = ({ visible, onClose, stre
             >
                 <Animated.View
                     entering={FadeInDown.springify().damping(18).stiffness(200)}
-                    style={[styles.card, { backgroundColor: colors.surface }]}
+                    style={[styles.card]}
                 >
                     {/* ── Hero: icon + number ── */}
                     <View style={styles.hero}>
                         <Animated.View
-                            style={[styles.iconRing, { backgroundColor: colors.primaryContainer }, pulseStyle]}
+                            style={[styles.iconRing, pulseStyle]}
                         >
-                            <ZapIcon color={colors.primary} size={26} />
+                            <ZapIcon color={BLACK} size={26} />
                         </Animated.View>
 
-                        <Text style={[styles.streakNumber, { color: colors.onSurface }]}>
+                        <Text style={[styles.streakNumber, { color: BLACK }]}>
                             {streak}
                         </Text>
-                        <Text style={[styles.streakLabel, { color: colors.onSurfaceVariant }]}>
+                        <Text style={[styles.streakLabel, { color: BLACK + '80' }]}>
                             {streak === 1 ? 'day streak' : 'day streak'}
                         </Text>
                     </View>
 
                     {/* ── Divider ── */}
-                    <View style={[styles.divider, { backgroundColor: colors.outline + '15' }]} />
+                    <View style={[styles.divider, { backgroundColor: BLACK + '15' }]} />
 
                     {/* ── Milestone progress ── */}
                     <View style={styles.milestoneSection}>
                         <View style={styles.milestoneRow}>
-                            <Text style={[styles.milestoneLabel, { color: colors.onSurfaceVariant }]}>
+                            <Text style={[styles.milestoneLabel, { color: BLACK + '70' }]}>
                                 Next milestone
                             </Text>
-                            <Text style={[styles.milestoneValue, { color: colors.primary }]}>
+                            <Text style={[styles.milestoneValue, { color: BLACK }]}>
                                 {nextGoal} days
                             </Text>
                         </View>
-                        <View style={[styles.progressTrack, { backgroundColor: colors.surfaceVariant }]}>
+                        <View style={styles.progressTrack}>
                             <View
                                 style={[
                                     styles.progressFill,
                                     {
-                                        backgroundColor: colors.primary,
                                         width: `${progress * 100}%`,
                                     },
                                 ]}
@@ -174,26 +174,25 @@ export const StreakModal: React.FC<StreakModalProps> = ({ visible, onClose, stre
                             <View key={i} style={styles.dayCol}>
                                 <View style={[
                                     styles.dayDot,
-                                    { backgroundColor: colors.surfaceVariant },
                                     day.completed && {
-                                        backgroundColor: colors.primaryContainer,
+                                        backgroundColor: YELLOW,
                                     },
                                     day.isToday && !day.completed && {
-                                        backgroundColor: colors.secondary + '20',
+                                        backgroundColor: WHITE,
                                         borderWidth: 2,
-                                        borderColor: colors.secondary,
+                                        borderColor: BLACK,
                                     },
                                 ]}>
-                                    {day.completed && <CheckIcon color={colors.primary} />}
+                                    {day.completed && <CheckIcon color={BLACK} />}
                                     {day.isToday && !day.completed && (
-                                        <View style={[styles.todayDot, { backgroundColor: colors.secondary }]} />
+                                        <View style={[styles.todayDot, { backgroundColor: BLACK }]} />
                                     )}
                                 </View>
                                 <Text style={[
                                     styles.dayLabel,
-                                    { color: colors.outline },
+                                    { color: BLACK + '60' },
                                     day.isToday && {
-                                        color: colors.secondary,
+                                        color: BLACK,
                                         fontWeight: '700' as const,
                                     },
                                 ]}>
@@ -204,17 +203,17 @@ export const StreakModal: React.FC<StreakModalProps> = ({ visible, onClose, stre
                     </View>
 
                     {/* ── Message ── */}
-                    <Text style={[styles.message, { color: colors.onSurfaceVariant }]}>
+                    <Text style={[styles.message, { color: BLACK + '70' }]}>
                         {getStreakMessage(streak)}
                     </Text>
 
                     {/* ── Action ── */}
                     <TouchableOpacity
-                        style={[styles.actionBtn, { backgroundColor: colors.primary }]}
+                        style={styles.actionBtn}
                         onPress={onClose}
                         activeOpacity={0.8}
                     >
-                        <Text style={[styles.actionBtnText, { color: colors.onPrimary }]}>
+                        <Text style={styles.actionBtnText}>
                             Keep it going
                         </Text>
                     </TouchableOpacity>
@@ -240,11 +239,12 @@ const styles = StyleSheet.create({
         maxWidth: 340,
         borderRadius: 24,
         padding: 28,
-        shadowColor: '#000',
-        shadowOffset: { width: 0, height: 8 },
-        shadowOpacity: 0.12,
-        shadowRadius: 24,
-        elevation: 12,
+        backgroundColor: WHITE,
+        elevation: 10,
+        shadowColor: BLACK,
+        shadowOffset: { width: 0, height: 4 },
+        shadowOpacity: 0.15,
+        shadowRadius: 16,
     },
 
     // ── Hero ──
@@ -261,15 +261,16 @@ const styles = StyleSheet.create({
         alignItems: 'center',
         justifyContent: 'center',
         marginBottom: 4,
+        backgroundColor: YELLOW + '30',
     },
     streakNumber: {
-        fontFamily: 'Caveat-Bold',
+        fontFamily: 'GasoekOne',
         fontSize: 64,
         lineHeight: 78,
         includeFontPadding: false,
     },
     streakLabel: {
-        fontFamily: 'Carlito',
+        fontFamily: 'GasoekOne',
         fontSize: 15,
     },
 
@@ -290,11 +291,11 @@ const styles = StyleSheet.create({
         alignItems: 'center',
     },
     milestoneLabel: {
-        fontFamily: 'Carlito',
+        fontFamily: 'GasoekOne',
         fontSize: 13,
     },
     milestoneValue: {
-        fontFamily: 'Carlito',
+        fontFamily: 'GasoekOne',
         fontSize: 13,
         fontWeight: '700',
     },
@@ -302,10 +303,12 @@ const styles = StyleSheet.create({
         height: 6,
         borderRadius: 3,
         overflow: 'hidden',
+        backgroundColor: BLACK + '10',
     },
     progressFill: {
         height: '100%',
         borderRadius: 3,
+        backgroundColor: YELLOW,
     },
 
     // ── Week grid ──
@@ -324,6 +327,7 @@ const styles = StyleSheet.create({
         borderRadius: 18,
         alignItems: 'center',
         justifyContent: 'center',
+        backgroundColor: '#F0F0F0',
     },
     todayDot: {
         width: 8,
@@ -331,13 +335,13 @@ const styles = StyleSheet.create({
         borderRadius: 4,
     },
     dayLabel: {
-        fontFamily: 'Carlito',
+        fontFamily: 'GasoekOne',
         fontSize: 11,
     },
 
     // ── Message ──
     message: {
-        fontFamily: 'Carlito',
+        fontFamily: 'GasoekOne',
         fontSize: 14,
         textAlign: 'center',
         lineHeight: 21,
@@ -349,10 +353,17 @@ const styles = StyleSheet.create({
         borderRadius: 16,
         paddingVertical: 14,
         alignItems: 'center',
+        backgroundColor: YELLOW,
+        elevation: 4,
+        shadowColor: BLACK,
+        shadowOffset: { width: 0, height: 4 },
+        shadowOpacity: 0.1,
+        shadowRadius: 8,
     },
     actionBtnText: {
-        fontFamily: 'Carlito',
+        fontFamily: 'GasoekOne',
         fontSize: 15,
         fontWeight: '600',
+        color: BLACK,
     },
 });

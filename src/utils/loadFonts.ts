@@ -10,10 +10,10 @@ import {
 
 export const useAppFonts = () => {
     const [fontsLoaded] = useFonts({
-        'Caveat-Regular': Caveat_400Regular,
-        'Caveat-Medium': Caveat_500Medium,
-        'Caveat-Bold': Caveat_700Bold,
-        'IndieFlower-Regular': IndieFlower_400Regular,
+        'GasoekOne': Caveat_400Regular,
+        'GasoekOne': Caveat_500Medium,
+        'GasoekOne': Caveat_700Bold,
+        'GasoekOne': IndieFlower_400Regular,
     });
 
     return fontsLoaded;

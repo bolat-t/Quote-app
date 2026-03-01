@@ -8,7 +8,6 @@ import {
     ScrollView,
 } from 'react-native';
 import Svg, { Path as SvgPath } from 'react-native-svg';
-import { useTheme } from '../context/ThemeContext';
 import { UserProgress } from '../types';
 import { LEVEL_TIERS, getXPProgress, XP_REWARDS } from '../data/progressionConfig';
 import { LevelIcon } from './LevelIcon';
@@ -37,6 +36,15 @@ const LockIcon = ({ color }: { color: string }) => (
 );
 
 // ─────────────────────────────────────────────
+// Constants
+// ─────────────────────────────────────────────
+
+const YELLOW = '#FFE600';
+const BLACK = '#000000';
+const WHITE = '#FFFFFF';
+const GREY = '#F0F0F0';
+
+// ─────────────────────────────────────────────
 // Modal
 // ─────────────────────────────────────────────
 
@@ -47,8 +55,6 @@ interface LevelModalProps {
 }
 
 export const LevelModal: React.FC<LevelModalProps> = ({ visible, onClose, progress }) => {
-    const { theme } = useTheme();
-    const { colors } = theme;
     const { currentLevel, nextLevel, xpInCurrentLevel, xpNeededForNext, percentage } = getXPProgress(progress.totalXP);
 
     const todayActions = [
@@ -65,78 +71,71 @@ export const LevelModal: React.FC<LevelModalProps> = ({ visible, onClose, progre
 
     return (
         <Modal visible={visible} animationType="slide" transparent onRequestClose={onClose}>
-            <View style={[styles.overlay, { backgroundColor: 'rgba(0,0,0,0.35)' }]}>
-                <View style={[styles.sheet, { backgroundColor: colors.background }]}>
+            <View style={[styles.overlay, { backgroundColor: 'rgba(0,0,0,0.45)' }]}>
+                <View style={styles.sheet}>
                     {/* Handle bar */}
                     <View style={styles.handleRow}>
-                        <View style={[styles.handle, { backgroundColor: colors.outline + '30' }]} />
+                        <View style={styles.handle} />
                     </View>
 
                     {/* Close */}
                     <TouchableOpacity
-                        style={[styles.closeBtn, { backgroundColor: colors.surfaceVariant }]}
+                        style={styles.closeBtn}
                         onPress={onClose}
                         activeOpacity={0.6}
                         hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
                     >
-                        <XIcon color={colors.onSurfaceVariant} />
+                        <XIcon color={BLACK} />
                     </TouchableOpacity>
 
                     <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.scrollContent}>
                         {/* ── Hero ── */}
                         <View style={styles.hero}>
-                            <View style={[styles.heroRing, { backgroundColor: colors.primaryContainer }]}>
-                                <LevelIcon level={currentLevel.level} color={colors.primary} size={32} />
+                            <View style={styles.heroRing}>
+                                <LevelIcon level={currentLevel.level} color={BLACK} size={32} />
                             </View>
-                            <Text style={[styles.heroTitle, { color: colors.onSurface }]}>
+                            <Text style={styles.heroTitle}>
                                 Level {currentLevel.level}
                             </Text>
-                            <Text style={[styles.heroSubtitle, { color: colors.primary }]}>
+                            <Text style={styles.heroSubtitle}>
                                 {currentLevel.title}
                             </Text>
-                            <Text style={[styles.heroXP, { color: colors.onSurfaceVariant }]}>
+                            <Text style={styles.heroXP}>
                                 {progress.totalXP} Total XP
                             </Text>
                         </View>
 
                         {/* ── Progress to Next ── */}
                         {nextLevel && (
-                            <View style={[styles.card, { backgroundColor: colors.surface, borderColor: colors.outline + '18' }]}>
+                            <View style={styles.card}>
                                 <View style={styles.cardRow}>
-                                    <Text style={[styles.cardLabel, { color: colors.onSurface }]}>
+                                    <Text style={styles.cardLabel}>
                                         Next: {nextLevel.title}
                                     </Text>
-                                    <Text style={[styles.cardValue, { color: colors.onSurfaceVariant }]}>
+                                    <Text style={styles.cardValue}>
                                         {xpInCurrentLevel}/{xpNeededForNext} XP
                                     </Text>
                                 </View>
-                                <View style={[styles.progressTrack, { backgroundColor: colors.surfaceVariant }]}>
+                                <View style={styles.progressTrack}>
                                     <View
                                         style={[
                                             styles.progressFill,
-                                            {
-                                                backgroundColor: colors.primary,
-                                                width: `${Math.min(percentage * 100, 100)}%`,
-                                            },
+                                            { width: `${Math.min(percentage * 100, 100)}%` },
                                         ]}
                                     />
                                 </View>
-                                <Text style={[styles.unlockHint, { color: colors.primary }]}>
+                                <Text style={styles.unlockHint}>
                                     Unlocks: {nextLevel.unlocks}
                                 </Text>
                             </View>
                         )}
 
                         {/* ── Today's Actions ── */}
-                        <View style={[styles.card, { backgroundColor: colors.surface, borderColor: colors.outline + '18' }]}>
+                        <View style={styles.card}>
                             <View style={styles.cardRow}>
-                                <Text style={[styles.cardLabel, { color: colors.onSurface }]}>
-                                    Today's XP
-                                </Text>
-                                <View style={[styles.xpChip, { backgroundColor: colors.primaryContainer }]}>
-                                    <Text style={[styles.xpChipText, { color: colors.onPrimaryContainer }]}>
-                                        +{todayXP}
-                                    </Text>
+                                <Text style={styles.cardLabel}>Today's XP</Text>
+                                <View style={styles.xpChip}>
+                                    <Text style={styles.xpChipText}>+{todayXP}</Text>
                                 </View>
                             </View>
                             {todayActions.map((action, i) => (
@@ -144,33 +143,24 @@ export const LevelModal: React.FC<LevelModalProps> = ({ visible, onClose, progre
                                     key={i}
                                     style={[
                                         styles.actionRow,
-                                        i < todayActions.length - 1 && {
-                                            borderBottomWidth: 1,
-                                            borderBottomColor: colors.outline + '10',
-                                        },
+                                        i < todayActions.length - 1 && styles.actionRowBorder,
                                     ]}
                                 >
                                     <View style={[
                                         styles.actionCheck,
-                                        { borderColor: colors.outline + '40' },
-                                        action.done && {
-                                            backgroundColor: colors.primaryContainer,
-                                            borderColor: colors.primary,
-                                        },
+                                        action.done && styles.actionCheckDone,
                                     ]}>
-                                        {action.done && <CheckIcon color={colors.primary} />}
+                                        {action.done && <CheckIcon color={BLACK} />}
                                     </View>
                                     <Text style={[
                                         styles.actionLabel,
-                                        { color: colors.onSurfaceVariant },
-                                        action.done && { color: colors.onSurface },
+                                        action.done && styles.actionLabelDone,
                                     ]}>
                                         {action.label}
                                     </Text>
                                     <Text style={[
                                         styles.actionXP,
-                                        { color: colors.outline + '60' },
-                                        action.done && { color: colors.primary },
+                                        action.done && styles.actionXPDone,
                                     ]}>
                                         +{action.xp}
                                     </Text>
@@ -179,9 +169,7 @@ export const LevelModal: React.FC<LevelModalProps> = ({ visible, onClose, progre
                         </View>
 
                         {/* ── Level Roadmap ── */}
-                        <Text style={[styles.sectionTitle, { color: colors.onSurface }]}>
-                            Level Roadmap
-                        </Text>
+                        <Text style={styles.sectionTitle}>Level Roadmap</Text>
 
                         {LEVEL_TIERS.map((tier) => {
                             const isUnlocked = progress.totalXP >= tier.xpRequired;
@@ -190,54 +178,31 @@ export const LevelModal: React.FC<LevelModalProps> = ({ visible, onClose, progre
                             return (
                                 <View
                                     key={tier.level}
-                                    style={[
-                                        styles.tierRow,
-                                        { borderColor: 'transparent' },
-                                        isCurrent && {
-                                            backgroundColor: colors.primaryContainer + '40',
-                                            borderColor: colors.primary + '30',
-                                        },
-                                    ]}
+                                    style={[styles.tierRow, isCurrent && styles.tierRowCurrent]}
                                 >
-                                    <View style={[
-                                        styles.tierBadge,
-                                        { backgroundColor: colors.surfaceVariant },
-                                        isUnlocked && { backgroundColor: colors.primaryContainer },
-                                    ]}>
+                                    <View style={[styles.tierBadge, isUnlocked && styles.tierBadgeUnlocked]}>
                                         <LevelIcon
                                             level={tier.level}
-                                            color={isUnlocked ? colors.primary : colors.outline}
+                                            color={isUnlocked ? BLACK : '#AAAAAA'}
                                             size={18}
                                         />
                                     </View>
                                     <View style={styles.tierInfo}>
-                                        <Text style={[
-                                            styles.tierTitle,
-                                            { color: colors.onSurface },
-                                            !isUnlocked && { color: colors.outline },
-                                        ]}>
+                                        <Text style={[styles.tierTitle, !isUnlocked && styles.tierTitleLocked]}>
                                             {tier.level}. {tier.title}
                                         </Text>
                                         <View style={styles.tierUnlockRow}>
                                             {isUnlocked ? (
-                                                <CheckIcon color={colors.primary} />
+                                                <CheckIcon color={BLACK} />
                                             ) : (
-                                                <LockIcon color={colors.outline} />
+                                                <LockIcon color="#AAAAAA" />
                                             )}
-                                            <Text style={[
-                                                styles.tierUnlock,
-                                                { color: colors.onSurfaceVariant },
-                                                !isUnlocked && { color: colors.outline },
-                                            ]}>
+                                            <Text style={[styles.tierUnlock, !isUnlocked && styles.tierUnlockLocked]}>
                                                 {tier.unlocks}
                                             </Text>
                                         </View>
                                     </View>
-                                    <Text style={[
-                                        styles.tierXP,
-                                        { color: colors.onSurfaceVariant },
-                                        !isUnlocked && { color: colors.outline },
-                                    ]}>
+                                    <Text style={[styles.tierXP, !isUnlocked && styles.tierXPLocked]}>
                                         {tier.xpRequired}
                                     </Text>
                                 </View>
@@ -265,6 +230,12 @@ const styles = StyleSheet.create({
         borderTopLeftRadius: 28,
         borderTopRightRadius: 28,
         maxHeight: '85%',
+        backgroundColor: WHITE,
+        elevation: 20,
+        shadowColor: BLACK,
+        shadowOffset: { width: 0, height: -6 },
+        shadowOpacity: 0.1,
+        shadowRadius: 16,
     },
     handleRow: {
         alignItems: 'center',
@@ -275,6 +246,7 @@ const styles = StyleSheet.create({
         width: 36,
         height: 4,
         borderRadius: 2,
+        backgroundColor: BLACK + '30',
     },
     closeBtn: {
         position: 'absolute',
@@ -286,6 +258,7 @@ const styles = StyleSheet.create({
         borderRadius: 18,
         alignItems: 'center',
         justifyContent: 'center',
+        backgroundColor: '#F0F0F0',
     },
     scrollContent: {
         paddingHorizontal: 24,
@@ -306,20 +279,29 @@ const styles = StyleSheet.create({
         alignItems: 'center',
         justifyContent: 'center',
         marginBottom: 8,
+        backgroundColor: YELLOW,
+        elevation: 4,
+        shadowColor: BLACK,
+        shadowOffset: { width: 0, height: 4 },
+        shadowOpacity: 0.15,
+        shadowRadius: 8,
     },
     heroTitle: {
-        fontFamily: 'Caveat-Bold',
+        fontFamily: 'GasoekOne',
         fontSize: 32,
+        color: BLACK,
     },
     heroSubtitle: {
-        fontFamily: 'Caveat-Bold',
+        fontFamily: 'GasoekOne',
         fontSize: 20,
         marginTop: -2,
+        color: BLACK,
     },
     heroXP: {
-        fontFamily: 'Carlito',
+        fontFamily: 'GasoekOne',
         fontSize: 13,
         marginTop: 4,
+        color: '#777',
     },
 
     // ── Card ──
@@ -327,7 +309,12 @@ const styles = StyleSheet.create({
         borderRadius: 18,
         padding: 16,
         marginBottom: 14,
-        borderWidth: 1,
+        backgroundColor: WHITE,
+        elevation: 4,
+        shadowColor: BLACK,
+        shadowOffset: { width: 0, height: 4 },
+        shadowOpacity: 0.08,
+        shadowRadius: 12,
     },
     cardRow: {
         flexDirection: 'row',
@@ -336,38 +323,45 @@ const styles = StyleSheet.create({
         marginBottom: 10,
     },
     cardLabel: {
-        fontFamily: 'Caveat-Bold',
+        fontFamily: 'GasoekOne',
         fontSize: 18,
+        color: BLACK,
     },
     cardValue: {
-        fontFamily: 'Carlito',
+        fontFamily: 'GasoekOne',
         fontSize: 13,
+        color: '#666',
     },
     xpChip: {
         borderRadius: 10,
         paddingHorizontal: 10,
         paddingVertical: 3,
+        backgroundColor: YELLOW,
     },
     xpChipText: {
-        fontFamily: 'Carlito',
+        fontFamily: 'GasoekOne',
         fontSize: 12,
         fontWeight: '700',
+        color: BLACK,
     },
 
     // ── Progress ──
     progressTrack: {
-        height: 6,
-        borderRadius: 3,
+        height: 8,
+        borderRadius: 4,
         overflow: 'hidden',
+        backgroundColor: '#F0F0F0',
     },
     progressFill: {
         height: '100%',
-        borderRadius: 3,
+        borderRadius: 4,
+        backgroundColor: YELLOW,
     },
     unlockHint: {
-        fontFamily: 'Carlito',
+        fontFamily: 'GasoekOne',
         fontSize: 12,
         marginTop: 8,
+        color: '#555',
     },
 
     // ── Actions ──
@@ -377,30 +371,49 @@ const styles = StyleSheet.create({
         paddingVertical: 9,
         gap: 10,
     },
+    actionRowBorder: {
+        borderBottomWidth: 1,
+        borderBottomColor: BLACK + '10',
+    },
     actionCheck: {
         width: 22,
         height: 22,
         borderRadius: 11,
-        borderWidth: 1.5,
+        borderWidth: 2,
+        borderColor: BLACK + '15',
         alignItems: 'center',
         justifyContent: 'center',
+        backgroundColor: 'transparent',
+    },
+    actionCheckDone: {
+        backgroundColor: YELLOW,
+        borderColor: 'transparent',
     },
     actionLabel: {
         flex: 1,
-        fontFamily: 'Carlito',
+        fontFamily: 'GasoekOne',
         fontSize: 14,
+        color: '#888',
+    },
+    actionLabelDone: {
+        color: BLACK,
     },
     actionXP: {
-        fontFamily: 'Carlito',
+        fontFamily: 'GasoekOne',
         fontSize: 13,
         fontWeight: '600',
+        color: '#BBBBBB',
+    },
+    actionXPDone: {
+        color: BLACK,
     },
 
     // ── Roadmap ──
     sectionTitle: {
-        fontFamily: 'Caveat-Bold',
+        fontFamily: 'GasoekOne',
         fontSize: 18,
         marginBottom: 10,
+        color: BLACK,
     },
     tierRow: {
         flexDirection: 'row',
@@ -409,7 +422,10 @@ const styles = StyleSheet.create({
         paddingHorizontal: 12,
         borderRadius: 14,
         marginBottom: 4,
-        borderWidth: 1,
+        backgroundColor: 'transparent',
+    },
+    tierRowCurrent: {
+        backgroundColor: YELLOW + '40',
     },
     tierBadge: {
         width: 34,
@@ -418,15 +434,28 @@ const styles = StyleSheet.create({
         alignItems: 'center',
         justifyContent: 'center',
         marginRight: 12,
+        backgroundColor: '#F0F0F0',
+    },
+    tierBadgeUnlocked: {
+        backgroundColor: WHITE,
+        elevation: 2,
+        shadowColor: BLACK,
+        shadowOffset: { width: 0, height: 2 },
+        shadowOpacity: 0.1,
+        shadowRadius: 4,
     },
     tierInfo: {
         flex: 1,
         gap: 2,
     },
     tierTitle: {
-        fontFamily: 'Carlito',
+        fontFamily: 'GasoekOne',
         fontSize: 14,
         fontWeight: '600',
+        color: BLACK,
+    },
+    tierTitleLocked: {
+        color: '#BBBBBB',
     },
     tierUnlockRow: {
         flexDirection: 'row',
@@ -434,11 +463,19 @@ const styles = StyleSheet.create({
         gap: 4,
     },
     tierUnlock: {
-        fontFamily: 'Carlito',
+        fontFamily: 'GasoekOne',
         fontSize: 12,
+        color: '#555',
+    },
+    tierUnlockLocked: {
+        color: '#BBBBBB',
     },
     tierXP: {
-        fontFamily: 'Carlito',
+        fontFamily: 'GasoekOne',
         fontSize: 12,
+        color: '#555',
+    },
+    tierXPLocked: {
+        color: '#CCCCCC',
     },
 });

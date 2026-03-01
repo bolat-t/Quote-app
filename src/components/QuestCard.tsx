@@ -1,13 +1,13 @@
 import React, { useState, useCallback } from 'react';
 import {
     View,
+    Text,
     StyleSheet,
     TouchableOpacity,
     LayoutAnimation,
     Platform,
     UIManager,
 } from 'react-native';
-import { Text, useTheme } from 'react-native-paper';
 import Animated, { FadeIn, FadeInDown } from 'react-native-reanimated';
 import Svg, { Path, Circle } from 'react-native-svg';
 
@@ -15,6 +15,11 @@ import Svg, { Path, Circle } from 'react-native-svg';
 if (Platform.OS === 'android' && UIManager.setLayoutAnimationEnabledExperimental) {
     UIManager.setLayoutAnimationEnabledExperimental(true);
 }
+
+const YELLOW = '#FFE600';
+const BLACK  = '#000000';
+const WHITE  = '#FFFFFF';
+const GREY   = '#F0F0F0';
 
 export type QuestStatus = 'todo' | 'in-progress' | 'done';
 
@@ -94,7 +99,6 @@ export const QuestCard: React.FC<QuestCardProps> = ({
     children,
     defaultExpanded = true,
 }) => {
-    const theme = useTheme();
     const [expanded, setExpanded] = useState(defaultExpanded);
     const isDone = status === 'done';
 
@@ -109,20 +113,11 @@ export const QuestCard: React.FC<QuestCardProps> = ({
         setExpanded(prev => !prev);
     }, []);
 
-    const iconColor = isDone ? theme.colors.primary : theme.colors.onSurface + 'AA';
-
     return (
         <Animated.View
             entering={FadeInDown.delay(index * 120 + 300).duration(500).springify().damping(18)}
         >
-            <View style={[
-                styles.card,
-                {
-                    backgroundColor: theme.colors.surface,
-                    shadowColor: isDone ? theme.colors.primary : '#000',
-                    shadowOpacity: isDone ? 0.08 : 0.04,
-                }
-            ]}>
+            <View style={[styles.card, isDone && styles.cardDone]}>
                 {/* ── Tappable Header ── */}
                 <TouchableOpacity
                     activeOpacity={0.6}
@@ -130,42 +125,22 @@ export const QuestCard: React.FC<QuestCardProps> = ({
                     style={styles.header}
                 >
                     {/* Icon */}
-                    <View style={[
-                        styles.iconWrap,
-                        {
-                            backgroundColor: isDone
-                                ? theme.colors.primary + '12'
-                                : theme.colors.surfaceVariant,
-                        }
-                    ]}>
+                    <View style={[styles.iconWrap, isDone && styles.iconWrapDone]}>
                         {isDone
-                            ? <CheckIcon color={theme.colors.primary} size={20} />
-                            : renderIcon(iconColor, 20)
+                            ? <CheckIcon color={BLACK} size={20} />
+                            : renderIcon(BLACK + '88', 20)
                         }
                     </View>
 
                     {/* Title */}
                     <View style={styles.titleBlock}>
-                        <Text style={[
-                            styles.title,
-                            {
-                                color: isDone
-                                    ? theme.colors.primary
-                                    : theme.colors.onSurface,
-                            }
-                        ]}>
-                            {title}
-                        </Text>
-                        {subtitle && (
-                            <Text style={[styles.subtitle, { color: theme.colors.outline }]}>
-                                {subtitle}
-                            </Text>
-                        )}
+                        <Text style={styles.title}>{title}</Text>
+                        {subtitle && <Text style={styles.subtitle}>{subtitle}</Text>}
                     </View>
 
                     {/* Chevron */}
                     <View style={{ transform: [{ rotate: expanded ? '180deg' : '0deg' }] }}>
-                        <ChevronDownIcon color={theme.colors.outline + '80'} size={18} />
+                        <ChevronDownIcon color={BLACK + '55'} size={18} />
                     </View>
                 </TouchableOpacity>
 
@@ -185,10 +160,13 @@ const styles = StyleSheet.create({
         borderRadius: 20,
         marginHorizontal: 20,
         marginBottom: 16,
-        shadowOffset: { width: 0, height: 6 },
-        shadowRadius: 16,
-        elevation: 3,
+        backgroundColor: WHITE,
+        borderWidth: 2.5,
+        borderColor: BLACK,
         overflow: 'hidden',
+    },
+    cardDone: {
+        backgroundColor: YELLOW,
     },
     header: {
         flexDirection: 'row',
@@ -203,20 +181,26 @@ const styles = StyleSheet.create({
         alignItems: 'center',
         justifyContent: 'center',
         marginRight: 14,
+        backgroundColor: GREY,
+    },
+    iconWrapDone: {
+        backgroundColor: WHITE,
     },
     titleBlock: {
         flex: 1,
     },
     title: {
         fontFamily: 'Caveat-Bold',
-        fontSize: 21,
-        lineHeight: 25,
+        fontSize: 23,
+        lineHeight: 27,
+        color: BLACK,
     },
     subtitle: {
         fontFamily: 'Carlito',
         fontSize: 13,
         marginTop: 1,
-        lineHeight: 17,
+        lineHeight: 18,
+        color: BLACK + '77',
     },
     body: {
         paddingHorizontal: 18,

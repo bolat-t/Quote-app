@@ -1,8 +1,11 @@
 import React from 'react';
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Image } from 'react-native';
 import { Modal, Portal, Button } from 'react-native-paper';
-import { useTheme } from '../context/ThemeContext';
 import { PAPER_TYPES, LEVEL_TIERS, getLevelForXP } from '../data/progressionConfig';
+
+const YELLOW = '#FFE600';
+const BLACK  = '#000000';
+const WHITE  = '#FFFFFF';
 
 interface PaperSelectorProps {
     visible: boolean;
@@ -19,17 +22,15 @@ export const PaperSelector: React.FC<PaperSelectorProps> = ({
     onSelectPaper,
     userXP,
 }) => {
-    const { theme } = useTheme();
-    const colors = theme.colors;
     const currentLevel = getLevelForXP(userXP);
 
     const papers = Object.values(PAPER_TYPES).sort((a, b) => a.levelRequired - b.levelRequired);
 
     return (
         <Portal>
-            <Modal visible={visible} onDismiss={onDismiss} contentContainerStyle={[styles.modalContent, { backgroundColor: colors.surface }]}>
-                <Text style={[styles.title, { color: colors.text }]}>Choose Your Paper</Text>
-                <Text style={[styles.subtitle, { color: colors.text }]}>Unlock new styles as you level up!</Text>
+            <Modal visible={visible} onDismiss={onDismiss} contentContainerStyle={styles.modalContent}>
+                <Text style={styles.title}>Choose Your Paper</Text>
+                <Text style={styles.subtitle}>Unlock new styles as you level up!</Text>
 
                 <ScrollView contentContainerStyle={styles.scrollContent} horizontal={true} showsHorizontalScrollIndicator={false}>
                     {papers.map((paper) => {
@@ -42,10 +43,8 @@ export const PaperSelector: React.FC<PaperSelectorProps> = ({
                                 onPress={() => !isLocked && onSelectPaper(paper.id)}
                                 style={[
                                     styles.paperOption,
-                                    {
-                                        borderColor: isSelected ? colors.primary : (isLocked ? colors.outline : colors.border),
-                                        opacity: isLocked ? 0.6 : 1,
-                                    }
+                                    { borderColor: isSelected ? BLACK : BLACK + '25', opacity: isLocked ? 0.6 : 1 },
+                                    isSelected && { backgroundColor: YELLOW },
                                 ]}
                             >
                                 <View style={[styles.previewInfo, { backgroundColor: (paper as any).color || '#FFF' }]}>
@@ -59,7 +58,7 @@ export const PaperSelector: React.FC<PaperSelectorProps> = ({
                                     {(paper as any).pattern === 'lines' && <View style={styles.linesPattern} />}
                                     {(paper as any).pattern === 'stars' && <View style={styles.starsPattern} />}
                                 </View>
-                                <Text style={[styles.paperName, { color: colors.text }]}>{paper.name}</Text>
+                                <Text style={styles.paperName}>{paper.name}</Text>
                             </TouchableOpacity>
                         );
                     })}
@@ -79,17 +78,22 @@ const styles = StyleSheet.create({
         padding: 24,
         borderRadius: 16,
         alignItems: 'center',
+        backgroundColor: WHITE,
+        borderWidth: 2.5,
+        borderColor: BLACK,
     },
     title: {
-        fontFamily: 'Caveat-Bold',
+        fontFamily: 'GasoekOne',
         fontSize: 28,
         marginBottom: 8,
+        color: BLACK,
     },
     subtitle: {
-        fontFamily: 'Carlito',
+        fontFamily: 'GasoekOne',
         fontSize: 16,
         marginBottom: 24,
         opacity: 0.7,
+        color: BLACK,
     },
     scrollContent: {
         paddingVertical: 10,
@@ -115,9 +119,10 @@ const styles = StyleSheet.create({
         alignItems: 'center',
     },
     paperName: {
-        fontFamily: 'Carlito',
+        fontFamily: 'GasoekOne',
         fontSize: 14,
         textAlign: 'center',
+        color: BLACK,
     },
     lockOverlay: {
         ...StyleSheet.absoluteFillObject,

@@ -11,8 +11,11 @@ import {
     Dimensions
 } from 'react-native';
 import { BlurView } from 'expo-blur';
-import { useTheme } from '../context/ThemeContext';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+
+const YELLOW = '#FFE600';
+const BLACK = '#000000';
+const WHITE = '#FFFFFF';
 
 /*
   Expected Data Shape from Edge Function:
@@ -55,7 +58,6 @@ export const InsightModal: React.FC<InsightModalProps> = ({
     data,
     error
 }) => {
-    const { theme } = useTheme();
     const insets = useSafeAreaInsets();
 
     if (!visible) return null;
@@ -69,17 +71,17 @@ export const InsightModal: React.FC<InsightModalProps> = ({
         >
             <BlurView intensity={20} tint="dark" style={styles.blurContainer}>
                 <View style={[styles.container, {
-                    backgroundColor: theme.colors.paper,
+                    backgroundColor: WHITE,
                     marginTop: insets.top + 20,
                     marginBottom: insets.bottom + 20
                 }]}>
                     {/* Header */}
                     <View style={styles.header}>
-                        <Text style={[styles.title, { color: theme.colors.primary }]}>
+                        <Text style={[styles.title, { color: BLACK }]}>
                             Weekly Wisdom
                         </Text>
                         <TouchableOpacity onPress={onClose} style={styles.closeButton}>
-                            <Text style={[styles.closeText, { color: theme.colors.text }]}>✕</Text>
+                            <Text style={[styles.closeText, { color: BLACK }]}>✕</Text>
                         </TouchableOpacity>
                     </View>
 
@@ -87,47 +89,47 @@ export const InsightModal: React.FC<InsightModalProps> = ({
                     <ScrollView contentContainerStyle={styles.content}>
                         {loading ? (
                             <View style={styles.centerBox}>
-                                <ActivityIndicator size="large" color={theme.colors.primary} />
-                                <Text style={[styles.loadingText, { color: theme.colors.text }]}>
+                                <ActivityIndicator size="large" color={BLACK} />
+                                <Text style={[styles.loadingText, { color: BLACK }]}>
                                     Consulting with the spirits...
                                 </Text>
                             </View>
                         ) : error ? (
                             <View style={styles.centerBox}>
-                                <Text style={[styles.errorText, { color: theme.colors.error }]}>
+                                <Text style={[styles.errorText, { color: '#D32F2F' }]}>
                                     {error}
                                 </Text>
                             </View>
                         ) : data?.not_enough_data ? (
                             <View style={styles.centerBox}>
-                                <Text style={[styles.emptyTitle, { color: theme.colors.text }]}>
+                                <Text style={[styles.emptyTitle, { color: BLACK }]}>
                                     Not Enough Ink
                                 </Text>
-                                <Text style={[styles.emptyText, { color: theme.colors.text }]}>
+                                <Text style={[styles.emptyText, { color: BLACK }]}>
                                     {data.message || "Write at least 3 journal entries this week to unlock insights!"}
                                 </Text>
                             </View>
                         ) : data ? (
                             <>
-                                <View style={[styles.section, { borderColor: theme.colors.border }]}>
-                                    <Text style={[styles.sectionTitle, { color: theme.colors.tertiary }]}>The Week In Review</Text>
-                                    <Text style={[styles.bodyText, { color: theme.colors.text }]}>{data.summary}</Text>
+                                <View style={[styles.section, { borderColor: BLACK + '25' }]}>
+                                    <Text style={[styles.sectionTitle, { color: BLACK }]}>The Week In Review</Text>
+                                    <Text style={[styles.bodyText, { color: BLACK }]}>{data.summary}</Text>
                                 </View>
 
                                 <View style={styles.row}>
-                                    <View style={[styles.card, { backgroundColor: theme.colors.secondaryContainer, flex: 1, marginRight: 8 }]}>
-                                        <Text style={[styles.cardTitle, { color: theme.colors.onSecondaryContainer }]}>Key Theme</Text>
-                                        <Text style={[styles.cardBody, { color: theme.colors.onSecondaryContainer }]}>{data.key_theme}</Text>
+                                    <View style={[styles.card, { backgroundColor: '#F0F0F0', borderWidth: 2, borderColor: BLACK, flex: 1, marginRight: 8 }]}>
+                                        <Text style={[styles.cardTitle, { color: BLACK }]}>Key Theme</Text>
+                                        <Text style={[styles.cardBody, { color: BLACK }]}>{data.key_theme}</Text>
                                     </View>
-                                    <View style={[styles.card, { backgroundColor: theme.colors.tertiaryContainer, flex: 1, marginLeft: 8 }]}>
-                                        <Text style={[styles.cardTitle, { color: theme.colors.onTertiaryContainer }]}>Strength</Text>
-                                        <Text style={[styles.cardBody, { color: theme.colors.onTertiaryContainer }]}>{data.strength}</Text>
+                                    <View style={[styles.card, { backgroundColor: YELLOW, borderWidth: 2, borderColor: BLACK, flex: 1, marginLeft: 8 }]}>
+                                        <Text style={[styles.cardTitle, { color: BLACK }]}>Strength</Text>
+                                        <Text style={[styles.cardBody, { color: BLACK }]}>{data.strength}</Text>
                                     </View>
                                 </View>
 
-                                <View style={[styles.suggestionBox, { backgroundColor: theme.colors.primaryContainer }]}>
-                                    <Text style={[styles.suggestionTitle, { color: theme.colors.onPrimaryContainer }]}>✨ Spirit Suggestion</Text>
-                                    <Text style={[styles.suggestionBody, { color: theme.colors.onPrimaryContainer }]}>{data.suggestion}</Text>
+                                <View style={[styles.suggestionBox, { backgroundColor: YELLOW, borderWidth: 2, borderColor: BLACK }]}>
+                                    <Text style={[styles.suggestionTitle, { color: BLACK }]}>Spirit Suggestion</Text>
+                                    <Text style={[styles.suggestionBody, { color: BLACK }]}>{data.suggestion}</Text>
                                 </View>
                             </>
                         ) : null}
@@ -149,11 +151,9 @@ const styles = StyleSheet.create({
         width: '100%',
         maxHeight: '80%',
         borderRadius: 24,
-        shadowColor: "#000",
-        shadowOffset: { width: 0, height: 10 },
-        shadowOpacity: 0.2,
-        shadowRadius: 20,
-        elevation: 10,
+        borderWidth: 2,
+        borderColor: BLACK,
+        elevation: 0,
         overflow: 'hidden',
     },
     header: {
@@ -165,7 +165,7 @@ const styles = StyleSheet.create({
         borderBottomColor: 'rgba(0,0,0,0.05)',
     },
     title: {
-        fontFamily: 'Caveat-Bold',
+        fontFamily: 'GasoekOne',
         fontSize: 28,
     },
     closeButton: {
@@ -185,11 +185,11 @@ const styles = StyleSheet.create({
     },
     loadingText: {
         marginTop: 16,
-        fontFamily: 'Carlito',
+        fontFamily: 'GasoekOne',
         fontSize: 18,
     },
     errorText: {
-        fontFamily: 'Carlito',
+        fontFamily: 'GasoekOne',
         fontSize: 16,
         textAlign: 'center',
     },
@@ -200,12 +200,12 @@ const styles = StyleSheet.create({
         borderStyle: 'dashed',
     },
     sectionTitle: {
-        fontFamily: 'Caveat-Bold',
+        fontFamily: 'GasoekOne',
         fontSize: 22,
         marginBottom: 8,
     },
     bodyText: {
-        fontFamily: 'Carlito',
+        fontFamily: 'GasoekOne',
         fontSize: 18,
         lineHeight: 26,
     },
@@ -218,13 +218,13 @@ const styles = StyleSheet.create({
         borderRadius: 16,
     },
     cardTitle: {
-        fontFamily: 'Caveat-Bold',
+        fontFamily: 'GasoekOne',
         fontSize: 18,
         marginBottom: 4,
         opacity: 0.8,
     },
     cardBody: {
-        fontFamily: 'Carlito',
+        fontFamily: 'GasoekOne',
         fontSize: 16,
         lineHeight: 22,
     },
@@ -234,23 +234,23 @@ const styles = StyleSheet.create({
         alignItems: 'center',
     },
     suggestionTitle: {
-        fontFamily: 'Caveat-Bold',
+        fontFamily: 'GasoekOne',
         fontSize: 24,
         marginBottom: 8,
     },
     suggestionBody: {
-        fontFamily: 'Carlito',
+        fontFamily: 'GasoekOne',
         fontSize: 18,
         textAlign: 'center',
         lineHeight: 26,
     },
     emptyTitle: {
-        fontFamily: 'Caveat-Bold',
+        fontFamily: 'GasoekOne',
         fontSize: 24,
         marginBottom: 12,
     },
     emptyText: {
-        fontFamily: 'Carlito',
+        fontFamily: 'GasoekOne',
         fontSize: 16,
         textAlign: 'center',
         opacity: 0.8,

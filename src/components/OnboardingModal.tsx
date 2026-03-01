@@ -15,12 +15,14 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Svg, Path } from 'react-native-svg';
-import { useTheme } from '../context/ThemeContext';
-
 const ULBO = require('../../assets/mascot/ulbos_coloured.png');
 const COACH = require('../../assets/mascot/coach_bunny.png');
 
 const { width } = Dimensions.get('window');
+
+const YELLOW = '#FFE600';
+const BLACK = '#000000';
+const WHITE = '#FFFFFF';
 
 const MINT = '#4ECCA3';
 
@@ -92,8 +94,6 @@ const CHIPS = [
 ];
 
 export const OnboardingModal: React.FC<OnboardingModalProps> = ({ visible, onComplete }) => {
-    const { theme, isDark } = useTheme();
-    const { colors } = theme;
     const [currentIndex, setCurrentIndex] = useState(0);
     const [name, setName] = useState('');
     const flatListRef = useRef<FlatList>(null);
@@ -163,8 +163,8 @@ export const OnboardingModal: React.FC<OnboardingModalProps> = ({ visible, onCom
         (currentIndex === 3 && !name.trim()) ||
         (currentIndex === 4 && signaturePath.length < 20);
 
-    const btnBg = isDark ? '#FFFFFF' : '#1A1D23';
-    const btnText = isDark ? '#1A1D23' : '#FFFFFF';
+    const btnBg = YELLOW;
+    const btnText = BLACK;
 
     const renderWidget = (slide: Slide) => {
         if (slide.id === '2') {
@@ -191,8 +191,8 @@ export const OnboardingModal: React.FC<OnboardingModalProps> = ({ visible, onCom
                                 <View style={[styles.featureIconDot, { backgroundColor: f.color }]} />
                             </View>
                             <View style={styles.featureTextBlock}>
-                                <Text style={[styles.featureLabel, { color: colors.onSurface }]}>{f.label}</Text>
-                                <Text style={[styles.featureSublabel, { color: colors.onSurface + '60' }]}>{f.sublabel}</Text>
+                                <Text style={[styles.featureLabel, { color: BLACK }]}>{f.label}</Text>
+                                <Text style={[styles.featureSublabel, { color: BLACK + '60' }]}>{f.sublabel}</Text>
                             </View>
                         </View>
                     ))}
@@ -203,9 +203,9 @@ export const OnboardingModal: React.FC<OnboardingModalProps> = ({ visible, onCom
         if (slide.id === '4') {
             return (
                 <TextInput
-                    style={[styles.nameInput, { color: colors.onSurface, borderBottomColor: MINT }]}
+                    style={[styles.nameInput, { color: BLACK, borderBottomColor: MINT }]}
                     placeholder="Your name..."
-                    placeholderTextColor={colors.onSurface + '40'}
+                    placeholderTextColor={BLACK + '40'}
                     value={name}
                     onChangeText={setName}
                     autoCorrect={false}
@@ -219,11 +219,11 @@ export const OnboardingModal: React.FC<OnboardingModalProps> = ({ visible, onCom
             const displayName = name.trim() || 'I';
             return (
                 <View style={styles.contractBlock}>
-                    <Text style={[styles.contractText, { color: colors.onSurface + '80' }]}>
+                    <Text style={[styles.contractText, { color: BLACK + '80' }]}>
                         {`"${displayName}, I promise to show up for myself.\nEven just 5 minutes a day.\nI'll tend to my bonsai, and\nin return, Ulbo will take care of me."`}
                     </Text>
                     <View
-                        style={[styles.signatureBox, { borderColor: colors.onSurface + '30' }]}
+                        style={[styles.signatureBox, { borderColor: BLACK + '30' }]}
                         onTouchStart={handleSignatureStart}
                         onTouchMove={handleSignatureMove}
                         onTouchEnd={handleSignatureEnd}
@@ -240,14 +240,14 @@ export const OnboardingModal: React.FC<OnboardingModalProps> = ({ visible, onCom
                             />
                         </Svg>
                         {signaturePath.length === 0 && (
-                            <Text style={[styles.signaturePlaceholder, { color: colors.onSurface + '30' }]}>
+                            <Text style={[styles.signaturePlaceholder, { color: BLACK + '30' }]}>
                                 Sign here
                             </Text>
                         )}
                     </View>
                     {signaturePath.length > 0 && (
                         <TouchableOpacity onPress={clearSignature} style={styles.clearBtn}>
-                            <Text style={[styles.clearBtnText, { color: colors.onSurface + '50' }]}>Clear</Text>
+                            <Text style={[styles.clearBtnText, { color: BLACK + '50' }]}>Clear</Text>
                         </TouchableOpacity>
                     )}
                 </View>
@@ -258,9 +258,7 @@ export const OnboardingModal: React.FC<OnboardingModalProps> = ({ visible, onCom
     };
 
     const renderItem = ({ item }: { item: Slide }) => {
-        const slideBg = item.mintBg
-            ? (isDark ? '#0D2420' : '#EBF9F4')
-            : colors.background;
+        const slideBg = item.mintBg ? '#EBF9F4' : WHITE;
 
         return (
             <View style={[styles.slide, { width, backgroundColor: slideBg }]}>
@@ -275,8 +273,8 @@ export const OnboardingModal: React.FC<OnboardingModalProps> = ({ visible, onCom
 
                 {/* Text + Widget */}
                 <View style={styles.textBlock}>
-                    <Text style={[styles.title, { color: colors.onSurface }]}>{item.title}</Text>
-                    <Text style={[styles.description, { color: colors.onSurface + '70' }]}>{item.description}</Text>
+                    <Text style={[styles.title, { color: BLACK }]}>{item.title}</Text>
+                    <Text style={[styles.description, { color: BLACK + '70' }]}>{item.description}</Text>
                     {renderWidget(item)}
                 </View>
             </View>
@@ -285,13 +283,13 @@ export const OnboardingModal: React.FC<OnboardingModalProps> = ({ visible, onCom
 
     return (
         <Modal visible={visible} animationType="fade" transparent={false} statusBarTranslucent>
-            <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]}>
+            <SafeAreaView style={[styles.container, { backgroundColor: WHITE }]}>
 
                 {/* Header: Skip + Dots */}
                 <View style={styles.header}>
                     {currentIndex < 3 ? (
                         <TouchableOpacity onPress={handleSkip} style={styles.skipBtn}>
-                            <Text style={[styles.skipText, { color: colors.onSurface + '50' }]}>Skip</Text>
+                            <Text style={[styles.skipText, { color: BLACK + '50' }]}>Skip</Text>
                         </TouchableOpacity>
                     ) : (
                         <View style={styles.skipBtn} />
@@ -375,7 +373,7 @@ const styles = StyleSheet.create({
         minWidth: 40,
     },
     skipText: {
-        fontFamily: 'Carlito',
+        fontFamily: 'GasoekOne',
         fontSize: 15,
     },
     dotsRow: {
@@ -413,13 +411,13 @@ const styles = StyleSheet.create({
     },
     title: {
         fontSize: 36,
-        fontFamily: 'Caveat-Bold',
+        fontFamily: 'GasoekOne',
         marginBottom: 10,
         lineHeight: 42,
     },
     description: {
         fontSize: 17,
-        fontFamily: 'Carlito',
+        fontFamily: 'GasoekOne',
         lineHeight: 26,
         marginBottom: 28,
     },
@@ -443,7 +441,7 @@ const styles = StyleSheet.create({
         borderRadius: 4,
     },
     chipLabel: {
-        fontFamily: 'Carlito-Bold',
+        fontFamily: 'GasoekOne',
         fontSize: 14,
     },
     // Feature rows (slide 3)
@@ -471,18 +469,18 @@ const styles = StyleSheet.create({
         flex: 1,
     },
     featureLabel: {
-        fontFamily: 'Carlito-Bold',
+        fontFamily: 'GasoekOne',
         fontSize: 16,
         marginBottom: 2,
     },
     featureSublabel: {
-        fontFamily: 'Carlito',
+        fontFamily: 'GasoekOne',
         fontSize: 13,
     },
     // Name input (slide 4)
     nameInput: {
         fontSize: 30,
-        fontFamily: 'Caveat-Bold',
+        fontFamily: 'GasoekOne',
         borderBottomWidth: 2,
         paddingBottom: 8,
         width: '100%',
@@ -493,7 +491,7 @@ const styles = StyleSheet.create({
         gap: 16,
     },
     contractText: {
-        fontFamily: 'Carlito',
+        fontFamily: 'GasoekOne',
         fontSize: 16,
         lineHeight: 26,
         fontStyle: 'italic',
@@ -502,14 +500,14 @@ const styles = StyleSheet.create({
         width: '100%',
         height: 130,
         borderWidth: 1.5,
-        borderStyle: 'dashed',
+        borderStyle: 'solid',
         borderRadius: 12,
         justifyContent: 'center',
         alignItems: 'center',
         overflow: 'hidden',
     },
     signaturePlaceholder: {
-        fontFamily: 'Caveat-Bold',
+        fontFamily: 'GasoekOne',
         fontSize: 18,
     },
     clearBtn: {
@@ -517,7 +515,7 @@ const styles = StyleSheet.create({
         paddingVertical: 4,
     },
     clearBtnText: {
-        fontFamily: 'Carlito',
+        fontFamily: 'GasoekOne',
         fontSize: 13,
         textDecorationLine: 'underline',
     },
@@ -532,12 +530,17 @@ const styles = StyleSheet.create({
         borderRadius: 16,
         justifyContent: 'center',
         alignItems: 'center',
+        elevation: 4,
+        shadowColor: BLACK,
+        shadowOffset: { width: 0, height: 4 },
+        shadowOpacity: 0.1,
+        shadowRadius: 8,
     },
     ctaBtnDisabled: {
         opacity: 0.45,
     },
     ctaBtnText: {
-        fontFamily: 'Carlito-Bold',
+        fontFamily: 'GasoekOne',
         fontSize: 17,
         letterSpacing: 0.3,
     },

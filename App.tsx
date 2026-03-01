@@ -9,8 +9,8 @@ import { ThemeProvider, useTheme } from './src/context/ThemeContext';
 import {
     TabHomeIcon,
     TabCanvasIcon,
-    TabHuntIcon,
     TabJournalIcon,
+    TabHistoryIcon,
     TabVisionIcon,
 } from './src/components/TabBarIcons';
 import { AuthProvider } from './src/context/AuthContext';
@@ -23,9 +23,8 @@ import { JournalScreen } from './src/screens/JournalScreen';
 import { VisionBoardScreen } from './src/screens/VisionBoardScreen';
 import { PaywallScreen } from './src/screens/PaywallScreen';
 import { AnalyticsScreen } from './src/screens/AnalyticsScreen';
-import { useFonts, Caveat_400Regular, Caveat_700Bold } from '@expo-google-fonts/caveat';
-import { IndieFlower_400Regular } from '@expo-google-fonts/indie-flower';
-import { Carlito_400Regular, Carlito_700Bold, Carlito_400Regular_Italic } from '@expo-google-fonts/carlito';
+import { WalkingScreen } from './src/screens/WalkingScreen';
+import { useFonts } from 'expo-font';
 
 const Tab = createBottomTabNavigator<RootTabParamList>();
 const Stack = createNativeStackNavigator<RootStackParamList>();
@@ -54,7 +53,7 @@ const BottomTabs = () => {
                 tabBarActiveTintColor: colors.primary,
                 tabBarInactiveTintColor: colors.text + '45',
                 tabBarLabelStyle: {
-                    fontFamily: 'Caveat-Bold',
+                    fontFamily: 'GasoekOne',
                     fontSize: 13,
                     marginTop: 1,
                 },
@@ -66,13 +65,6 @@ const BottomTabs = () => {
             }}
         >
             <Tab.Screen
-                name="Home"
-                component={HubScreen}
-                options={{
-                    tabBarIcon: ({ color, size }) => <TabHomeIcon color={color} size={size} />,
-                }}
-            />
-            <Tab.Screen
                 name="Canvas"
                 component={CanvasScreen}
                 options={{
@@ -80,17 +72,24 @@ const BottomTabs = () => {
                 }}
             />
             <Tab.Screen
-                name="Hunt"
+                name="Journal"
                 component={HuntScreen}
                 options={{
-                    tabBarIcon: ({ color, size }) => <TabHuntIcon color={color} size={size} />,
+                    tabBarIcon: ({ color, size }) => <TabJournalIcon color={color} size={size} />,
                 }}
             />
             <Tab.Screen
-                name="Journal"
+                name="Home"
+                component={HubScreen}
+                options={{
+                    tabBarIcon: ({ color, size }) => <TabHomeIcon color={color} size={size} />,
+                }}
+            />
+            <Tab.Screen
+                name="History"
                 component={JournalScreen}
                 options={{
-                    tabBarIcon: ({ color, size }) => <TabJournalIcon color={color} size={size} />,
+                    tabBarIcon: ({ color, size }) => <TabHistoryIcon color={color} size={size} />,
                 }}
             />
             <Tab.Screen
@@ -107,15 +106,13 @@ const BottomTabs = () => {
 
 export default function App() {
     const [fontsLoaded] = useFonts({
-        'Caveat': Caveat_400Regular,
-        'Caveat-Bold': Caveat_700Bold,
-        'Caveat-Medium': Caveat_400Regular,
-        'Caveat-Regular': Caveat_400Regular,
-        'IndieFlower': IndieFlower_400Regular,
-        'IndieFlower-Regular': IndieFlower_400Regular,
-        'Carlito': Carlito_400Regular,
-        'Carlito-Bold': Carlito_700Bold,
-        'Carlito-Italic': Carlito_400Regular_Italic,
+        'GasoekOne': require('./assets/fonts/GasoekOne_400Regular.ttf'),
+        'GasoekOne-Regular': require('./assets/fonts/GasoekOne_400Regular.ttf'),
+        'Caveat-Bold':         require('@expo-google-fonts/caveat/700Bold/Caveat_700Bold.ttf'),
+        'IndieFlower-Regular': require('@expo-google-fonts/indie-flower/400Regular/IndieFlower_400Regular.ttf'),
+        'Carlito':             require('@expo-google-fonts/carlito/400Regular/Carlito_400Regular.ttf'),
+        'Carlito-Bold':        require('@expo-google-fonts/carlito/700Bold/Carlito_700Bold.ttf'),
+        'Carlito-Italic':      require('@expo-google-fonts/carlito/400Regular_Italic/Carlito_400Regular_Italic.ttf'),
     });
 
     if (!fontsLoaded) {
@@ -144,6 +141,11 @@ export default function App() {
                                     <Stack.Screen
                                         name="VisionBoard"
                                         component={VisionBoardScreen}
+                                        options={{ presentation: 'card' }}
+                                    />
+                                    <Stack.Screen
+                                        name="Walking"
+                                        component={WalkingScreen}
                                         options={{ presentation: 'card' }}
                                     />
                                 </Stack.Navigator>

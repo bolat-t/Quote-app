@@ -47,27 +47,7 @@ export const TabCanvasIcon: React.FC<TabIconProps> = ({ color, size: s = 24 }) =
     </Svg>
 );
 
-/** Hunt — compass (discover) */
-export const TabHuntIcon: React.FC<TabIconProps> = ({ color, size: s = 24 }) => (
-    <Svg width={s} height={s} viewBox={viewBox} fill="none">
-        <Circle
-            cx="12"
-            cy="12"
-            r="9"
-            stroke={color}
-            strokeWidth={1.8}
-        />
-        <Path
-            d="M16.24 7.76l-2.12 6.36-6.36 2.12 2.12-6.36 6.36-2.12z"
-            stroke={color}
-            strokeWidth={1.8}
-            strokeLinecap="round"
-            strokeLinejoin="round"
-        />
-    </Svg>
-);
-
-/** Journal — clean open book */
+/** Journal — pen + paper icon */
 export const TabJournalIcon: React.FC<TabIconProps> = ({ color, size: s = 24 }) => (
     <Svg width={s} height={s} viewBox={viewBox} fill="none">
         <Path
@@ -79,6 +59,26 @@ export const TabJournalIcon: React.FC<TabIconProps> = ({ color, size: s = 24 }) 
         />
         <Path
             d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7V3z"
+            stroke={color}
+            strokeWidth={1.8}
+            strokeLinecap="round"
+            strokeLinejoin="round"
+        />
+    </Svg>
+);
+
+/** History — clock icon */
+export const TabHistoryIcon: React.FC<TabIconProps> = ({ color, size: s = 24 }) => (
+    <Svg width={s} height={s} viewBox={viewBox} fill="none">
+        <Circle
+            cx="12"
+            cy="12"
+            r="9"
+            stroke={color}
+            strokeWidth={1.8}
+        />
+        <Path
+            d="M12 7v5l3 3"
             stroke={color}
             strokeWidth={1.8}
             strokeLinecap="round"

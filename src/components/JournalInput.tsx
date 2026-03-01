@@ -11,7 +11,6 @@ import {
     Dimensions,
 } from 'react-native';
 import Svg, { Path } from 'react-native-svg';
-import { useTheme } from '../context/ThemeContext';
 import {
     saveJournalEntry,
     getJournalEntryByDate,
@@ -21,6 +20,10 @@ import {
 } from '../utils/journalStorage';
 
 const { height: screenHeight } = Dimensions.get('window');
+
+const YELLOW = '#FFE600';
+const BLACK  = '#000000';
+const WHITE  = '#FFFFFF';
 
 interface JournalInputProps {
     quoteId: number;
@@ -43,7 +46,6 @@ export const JournalInput: React.FC<JournalInputProps> = ({
     autoFocus = false,
     prompt,
 }) => {
-    const { theme } = useTheme();
     const [response, setResponse] = useState('');
     const [isExpanded, setIsExpanded] = useState(autoFocus);
     const [existingEntry, setExistingEntry] = useState<JournalEntry | null>(null);
@@ -142,10 +144,10 @@ export const JournalInput: React.FC<JournalInputProps> = ({
             <View style={styles.container}>
                 <TouchableOpacity
                     onPress={handleExpand}
-                    style={[styles.promptButton, { borderColor: theme.colors.accent }]}
+                    style={styles.promptButton}
                     activeOpacity={0.7}
                 >
-                    <Text style={[styles.promptText, { color: theme.colors.accent }]}>
+                    <Text style={styles.promptText}>
                         {prompt || "What does this mean to you?"}
                     </Text>
                 </TouchableOpacity>
@@ -159,15 +161,11 @@ export const JournalInput: React.FC<JournalInputProps> = ({
             style={[
                 styles.expandedWrapper,
                 keyboardVisible ? styles.expandedTop : styles.expandedBottom,
-                {
-                    backgroundColor: theme.colors.background,
-                    borderColor: theme.colors.accent,
-                }
             ]}
         >
             {/* Header with close button */}
             <View style={styles.header}>
-                <Text style={[styles.headerText, { color: theme.colors.accent }]}>
+                <Text style={styles.headerText}>
                     {prompt ? "Daily Prompt" : "Your reflection"}
                 </Text>
                 <TouchableOpacity
@@ -178,7 +176,7 @@ export const JournalInput: React.FC<JournalInputProps> = ({
                     <Svg width={20} height={20} viewBox="0 0 24 24">
                         <Path
                             d="M18 6L6 18M6 6l12 12"
-                            stroke={theme.colors.text}
+                            stroke={BLACK + '80'}
                             strokeWidth={2}
                             strokeLinecap="round"
                         />
@@ -189,10 +187,10 @@ export const JournalInput: React.FC<JournalInputProps> = ({
             {/* Display Prompt in Expanded View */}
             {prompt && (
                 <Text style={{
-                    fontFamily: 'Caveat-Bold',
+                    fontFamily: 'GasoekOne',
                     fontSize: 18,
                     marginBottom: 16,
-                    color: theme.colors.text,
+                    color: BLACK,
                     textAlign: 'center',
                     lineHeight: 24
                 }}>
@@ -203,16 +201,9 @@ export const JournalInput: React.FC<JournalInputProps> = ({
             {/* Text Input */}
             <TextInput
                 ref={inputRef}
-                style={[
-                    styles.input,
-                    {
-                        color: theme.colors.text,
-                        borderColor: theme.colors.accent,
-                        backgroundColor: theme.colors.background,
-                    },
-                ]}
+                style={styles.input}
                 placeholder="Write your thoughts..."
-                placeholderTextColor={theme.colors.accent}
+                placeholderTextColor={BLACK + '40'}
                 value={response}
                 onChangeText={setResponse}
                 multiline
@@ -222,13 +213,11 @@ export const JournalInput: React.FC<JournalInputProps> = ({
 
             {/* Save button */}
             <TouchableOpacity
-                style={[styles.saveButton, { backgroundColor: theme.colors.text }]}
+                style={styles.saveButton}
                 onPress={handleSave}
                 activeOpacity={0.7}
             >
-                <Text style={[styles.buttonText, { color: theme.colors.background }]}>
-                    Save to Canvas
-                </Text>
+                <Text style={styles.buttonText}>Save to Canvas</Text>
             </TouchableOpacity>
         </View>
     );
@@ -240,32 +229,30 @@ const styles = StyleSheet.create({
         paddingBottom: 24,
     },
     promptButton: {
-        borderWidth: 1,
-        borderRadius: 20, // Keep this pillow shape for the button
+        borderWidth: 2,
+        borderRadius: 20,
         paddingVertical: 12,
         paddingHorizontal: 24,
         alignSelf: 'center',
-        backgroundColor: 'rgba(255,255,255,0.4)', // Slightly filled
-        borderColor: 'rgba(0,0,0,0.1)',
+        backgroundColor: YELLOW,
+        borderColor: BLACK,
     },
     promptText: {
         fontSize: 16,
-        fontFamily: 'Carlito',
+        fontFamily: 'GasoekOne',
         textAlign: 'center',
+        color: BLACK,
     },
     expandedWrapper: {
         position: 'absolute',
-        top: 100, // Fixed top position for better stability
+        top: 100,
         left: 20,
         right: 20,
-        borderRadius: 4, // Paper-like corner
-        borderWidth: 0,
+        borderRadius: 16,
+        borderWidth: 2.5,
+        borderColor: BLACK,
+        backgroundColor: WHITE,
         padding: 24,
-        shadowColor: '#000',
-        shadowOffset: { width: 0, height: 4 },
-        shadowOpacity: 0.15,
-        shadowRadius: 12,
-        elevation: 10,
         zIndex: 300,
     },
     expandedTop: {
@@ -282,13 +269,14 @@ const styles = StyleSheet.create({
     },
     headerText: {
         fontSize: 14,
-        fontFamily: 'Carlito',
+        fontFamily: 'GasoekOne',
         textTransform: 'uppercase',
         letterSpacing: 1,
         opacity: 0.7,
+        color: BLACK,
     },
     quoteText: {
-        fontFamily: 'Caveat',
+        fontFamily: 'GasoekOne',
         fontSize: 16,
         paddingHorizontal: 20,
         marginBottom: 12,
@@ -296,17 +284,19 @@ const styles = StyleSheet.create({
         textAlign: 'center',
     },
     input: {
-        borderWidth: 0, // No border, like writing on the paper
-        borderBottomWidth: 1, // Lined paper style? Or just blank.
+        borderWidth: 0,
+        borderBottomWidth: 1,
+        borderBottomColor: BLACK + '20',
         borderRadius: 0,
         padding: 0,
         paddingBottom: 8,
         fontSize: 22,
         lineHeight: 30,
-        fontFamily: 'Caveat-Regular',
+        fontFamily: 'GasoekOne',
         minHeight: 80,
-        maxHeight: 200, // Allow growing
+        maxHeight: 200,
         textAlignVertical: 'top',
+        color: BLACK,
     },
     saveButton: {
         paddingVertical: 12,
@@ -314,11 +304,9 @@ const styles = StyleSheet.create({
         borderRadius: 30,
         alignSelf: 'center',
         marginTop: 24,
-        shadowColor: '#000',
-        shadowOffset: { width: 0, height: 2 },
-        shadowOpacity: 0.1,
-        shadowRadius: 4,
-        elevation: 2,
+        backgroundColor: YELLOW,
+        borderWidth: 2,
+        borderColor: BLACK,
     },
     closeButton: {
         padding: 4,
@@ -326,7 +314,7 @@ const styles = StyleSheet.create({
     },
     buttonText: {
         fontSize: 16,
-        fontFamily: 'Carlito',
-        fontWeight: 'bold',
+        fontFamily: 'GasoekOne',
+        color: BLACK,
     },
 });

@@ -2,8 +2,11 @@
 import React, { useState } from 'react';
 import { View, Text, StyleSheet, Modal, TouchableOpacity, TextInput, ActivityIndicator, Alert, KeyboardAvoidingView, Platform } from 'react-native';
 import { Svg, Path } from 'react-native-svg';
-import { useTheme } from '../context/ThemeContext';
 import { useAuth } from '../context/AuthContext';
+
+const YELLOW = '#FFE600';
+const BLACK = '#000000';
+const WHITE = '#FFFFFF';
 
 interface AuthModalProps {
     visible: boolean;
@@ -11,15 +14,11 @@ interface AuthModalProps {
 }
 
 export const AuthModal: React.FC<AuthModalProps> = ({ visible, onClose }) => {
-    const { theme } = useTheme();
     const { signIn, signUp, isLoading: isAuthLoading } = useAuth();
     const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
     const [isSignUp, setIsSignUp] = useState(false);
     const [loading, setLoading] = useState(false);
-
-    // Use theme colors
-    const colors = theme.colors;
 
     const handleAuth = async () => {
         if (!email || !password) {
@@ -56,20 +55,20 @@ export const AuthModal: React.FC<AuthModalProps> = ({ visible, onClose }) => {
 
                 <KeyboardAvoidingView
                     behavior={Platform.OS === "ios" ? "padding" : "height"}
-                    style={[styles.modalView, { backgroundColor: colors.surface, borderColor: colors.outline + '30' }]}
+                    style={styles.modalView}
                 >
                     <View style={styles.header}>
-                        <Text style={[styles.modalTitle, { color: colors.onSurface }]}>
+                        <Text style={styles.modalTitle}>
                             {isSignUp ? 'Join Ulbo' : 'Welcome Back'}
                         </Text>
                         <TouchableOpacity onPress={onClose} style={styles.closeButton}>
                             <Svg width={24} height={24} viewBox="0 0 24 24" fill="none">
-                                <Path d="M18 6L6 18M6 6L18 18" stroke={colors.onSurface} strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" />
+                                <Path d="M18 6L6 18M6 6L18 18" stroke={BLACK} strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" />
                             </Svg>
                         </TouchableOpacity>
                     </View>
 
-                    <Text style={[styles.subtitle, { color: colors.onSurface + '80' }]}>
+                    <Text style={styles.subtitle}>
                         {isSignUp
                             ? 'Create an account to backup your journal to the cloud.'
                             : 'Sign in to sync your reflections across devices.'}
@@ -77,18 +76,18 @@ export const AuthModal: React.FC<AuthModalProps> = ({ visible, onClose }) => {
 
                     <View style={styles.inputContainer}>
                         <TextInput
-                            style={[styles.input, { color: colors.onSurface, borderColor: colors.outline + '40', backgroundColor: colors.onSurface + '05' }]}
+                            style={styles.input}
                             placeholder="Email"
-                            placeholderTextColor={colors.onSurface + '50'}
+                            placeholderTextColor={BLACK + '50'}
                             value={email}
                             onChangeText={setEmail}
                             autoCapitalize="none"
                             keyboardType="email-address"
                         />
                         <TextInput
-                            style={[styles.input, { color: colors.onSurface, borderColor: colors.outline + '40', backgroundColor: colors.onSurface + '05' }]}
+                            style={styles.input}
                             placeholder="Password"
-                            placeholderTextColor={colors.onSurface + '50'}
+                            placeholderTextColor={BLACK + '50'}
                             value={password}
                             onChangeText={setPassword}
                             secureTextEntry
@@ -96,14 +95,14 @@ export const AuthModal: React.FC<AuthModalProps> = ({ visible, onClose }) => {
                     </View>
 
                     <TouchableOpacity
-                        style={[styles.authButton, { backgroundColor: colors.primary }]}
+                        style={[styles.authButton, loading && styles.authButtonDisabled]}
                         onPress={handleAuth}
                         disabled={loading}
                     >
                         {loading ? (
-                            <ActivityIndicator color={colors.onPrimary} />
+                            <ActivityIndicator color={BLACK} />
                         ) : (
-                            <Text style={[styles.authButtonText, { color: colors.onPrimary }]}>
+                            <Text style={styles.authButtonText}>
                                 {isSignUp ? 'Create Account' : 'Sign In'}
                             </Text>
                         )}
@@ -113,7 +112,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({ visible, onClose }) => {
                         style={styles.switchButton}
                         onPress={() => setIsSignUp(!isSignUp)}
                     >
-                        <Text style={[styles.switchText, { color: colors.onSurface }]}>
+                        <Text style={styles.switchText}>
                             {isSignUp ? 'Already have an account? Sign In' : "Don't have an account? Sign Up"}
                         </Text>
                     </TouchableOpacity>
@@ -138,12 +137,12 @@ const styles = StyleSheet.create({
         maxWidth: 400,
         borderRadius: 20,
         padding: 24,
-        borderWidth: 1,
-        shadowColor: '#000',
-        shadowOffset: { width: 0, height: 2 },
-        shadowOpacity: 0.25,
-        shadowRadius: 4,
-        elevation: 5,
+        backgroundColor: WHITE,
+        elevation: 10,
+        shadowColor: BLACK,
+        shadowOffset: { width: 0, height: 4 },
+        shadowOpacity: 0.15,
+        shadowRadius: 16,
     },
     header: {
         flexDirection: 'row',
@@ -153,15 +152,17 @@ const styles = StyleSheet.create({
     },
     modalTitle: {
         fontSize: 28,
-        fontFamily: 'Caveat-Bold',
+        fontFamily: 'GasoekOne',
+        color: BLACK,
     },
     closeButton: {
         padding: 4,
     },
     subtitle: {
-        fontFamily: 'Carlito',
+        fontFamily: 'GasoekOne',
         fontSize: 16,
         marginBottom: 24,
+        color: BLACK + '80',
     },
     inputContainer: {
         gap: 16,
@@ -169,30 +170,42 @@ const styles = StyleSheet.create({
     },
     input: {
         height: 50,
-        borderWidth: 1,
         borderRadius: 12,
         paddingHorizontal: 16,
-        fontFamily: 'Carlito',
+        fontFamily: 'GasoekOne',
         fontSize: 18,
+        color: BLACK,
+        backgroundColor: '#F0F4F8',
     },
     authButton: {
         height: 50,
         borderRadius: 12,
+        backgroundColor: YELLOW,
         justifyContent: 'center',
         alignItems: 'center',
         marginBottom: 16,
+        elevation: 4,
+        shadowColor: BLACK,
+        shadowOffset: { width: 0, height: 4 },
+        shadowOpacity: 0.1,
+        shadowRadius: 8,
+    },
+    authButtonDisabled: {
+        opacity: 0.7,
     },
     authButtonText: {
-        fontFamily: 'Caveat-Bold',
+        fontFamily: 'GasoekOne',
         fontSize: 22,
+        color: BLACK,
     },
     switchButton: {
         alignItems: 'center',
         padding: 8,
     },
     switchText: {
-        fontFamily: 'Carlito',
+        fontFamily: 'GasoekOne',
         fontSize: 16,
         textDecorationLine: 'underline',
+        color: BLACK,
     },
 });

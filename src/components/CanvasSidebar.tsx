@@ -1,9 +1,12 @@
 import React, { useState } from 'react';
-import { View, StyleSheet, TouchableOpacity, Animated } from 'react-native';
+import { View, StyleSheet, TouchableOpacity } from 'react-native';
 import Svg, { Path as SvgPath } from 'react-native-svg';
-import { useTheme } from '../context/ThemeContext';
 
 const PALETTE_COLORS = ['#5E4B3C', '#8B4513', '#2F4F4F', '#191970', '#4A0404', '#1C1C1C'];
+
+const YELLOW = '#FFE600';
+const BLACK = '#000000';
+const WHITE = '#FFFFFF';
 
 interface CanvasSidebarProps {
     isDrawing: boolean;
@@ -16,6 +19,10 @@ interface CanvasSidebarProps {
     onColorChange: (color: string) => void;
     isPremium: boolean;
     onShowPaywall: () => void;
+    onRegenerate: () => void;
+    onAddImage: () => void;
+    onPaper: () => void;
+    onClear: () => void;
 }
 
 export const CanvasSidebar: React.FC<CanvasSidebarProps> = ({
@@ -29,28 +36,26 @@ export const CanvasSidebar: React.FC<CanvasSidebarProps> = ({
     onColorChange,
     isPremium,
     onShowPaywall,
+    onRegenerate,
+    onAddImage,
+    onPaper,
+    onClear,
 }) => {
-    const { theme } = useTheme();
     const [showColors, setShowColors] = useState(false);
-    const colors = theme.colors;
-    const iconColor = colors.text;
-    const mutedColor = iconColor + '40';
+    const mutedColor = BLACK + '40';
 
     return (
-        <View style={[styles.container, { backgroundColor: colors.paper, borderColor: colors.border + '30' }]}>
+        <View style={styles.container}>
             {/* Draw Toggle */}
             <TouchableOpacity
-                style={[
-                    styles.toolButton,
-                    isDrawing && { backgroundColor: colors.primary },
-                ]}
+                style={[styles.toolButton, isDrawing && styles.toolButtonActive]}
                 onPress={onDrawToggle}
                 activeOpacity={0.7}
             >
                 <Svg width={20} height={20} viewBox="0 0 24 24" fill="none">
                     <SvgPath
                         d="M12 20h9M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"
-                        stroke={isDrawing ? '#FFF' : iconColor}
+                        stroke={BLACK}
                         strokeWidth={2}
                         strokeLinecap="round"
                         strokeLinejoin="round"
@@ -58,19 +63,19 @@ export const CanvasSidebar: React.FC<CanvasSidebarProps> = ({
                 </Svg>
             </TouchableOpacity>
 
-            {/* Eraser / Clear */}
+            {/* Undo */}
             <TouchableOpacity style={styles.toolButton} onPress={onUndo} disabled={historyLength === 0} activeOpacity={0.7}>
                 <Svg width={20} height={20} viewBox="0 0 24 24" fill="none">
                     <SvgPath
                         d="M3 10H14C16.21 10 18 11.79 18 14C18 16.21 16.21 18 14 18H13"
-                        stroke={historyLength > 0 ? iconColor : mutedColor}
+                        stroke={historyLength > 0 ? BLACK : mutedColor}
                         strokeWidth={2}
                         strokeLinecap="round"
                         strokeLinejoin="round"
                     />
                     <SvgPath
                         d="M7 6L3 10L7 14"
-                        stroke={historyLength > 0 ? iconColor : mutedColor}
+                        stroke={historyLength > 0 ? BLACK : mutedColor}
                         strokeWidth={2}
                         strokeLinecap="round"
                         strokeLinejoin="round"
@@ -83,14 +88,14 @@ export const CanvasSidebar: React.FC<CanvasSidebarProps> = ({
                 <Svg width={20} height={20} viewBox="0 0 24 24" fill="none">
                     <SvgPath
                         d="M21 10H10C7.79 10 6 11.79 6 14C6 16.21 7.79 18 10 18H11"
-                        stroke={redoLength > 0 ? iconColor : mutedColor}
+                        stroke={redoLength > 0 ? BLACK : mutedColor}
                         strokeWidth={2}
                         strokeLinecap="round"
                         strokeLinejoin="round"
                     />
                     <SvgPath
                         d="M17 6L21 10L17 14"
-                        stroke={redoLength > 0 ? iconColor : mutedColor}
+                        stroke={redoLength > 0 ? BLACK : mutedColor}
                         strokeWidth={2}
                         strokeLinecap="round"
                         strokeLinejoin="round"
@@ -99,7 +104,7 @@ export const CanvasSidebar: React.FC<CanvasSidebarProps> = ({
             </TouchableOpacity>
 
             {/* Divider */}
-            <View style={[styles.divider, { backgroundColor: colors.primary + '15' }]} />
+            <View style={styles.divider} />
 
             {/* Color Swatches */}
             {showColors ? (
@@ -112,14 +117,7 @@ export const CanvasSidebar: React.FC<CanvasSidebarProps> = ({
                                 style={[
                                     styles.colorSwatch,
                                     { backgroundColor: color },
-                                    selectedColor === color && {
-                                        borderWidth: 2,
-                                        borderColor: colors.primary,
-                                        shadowColor: colors.primary,
-                                        shadowOpacity: 0.4,
-                                        shadowRadius: 4,
-                                        elevation: 3,
-                                    },
+                                    selectedColor === color && styles.colorSwatchSelected,
                                     isLocked && { opacity: 0.35 },
                                 ]}
                                 onPress={() => {
@@ -137,14 +135,66 @@ export const CanvasSidebar: React.FC<CanvasSidebarProps> = ({
                 </View>
             ) : (
                 <TouchableOpacity
-                    style={[
-                        styles.colorSwatch,
-                        { backgroundColor: selectedColor, alignSelf: 'center' },
-                    ]}
+                    style={[styles.colorSwatch, { backgroundColor: selectedColor, alignSelf: 'center' }]}
                     onPress={() => setShowColors(true)}
                     activeOpacity={0.7}
                 />
             )}
+
+            {/* Divider */}
+            <View style={styles.divider} />
+
+            {/* New Quote */}
+            <TouchableOpacity style={styles.toolButton} onPress={onRegenerate} activeOpacity={0.7}>
+                <Svg width={20} height={20} viewBox="0 0 24 24" fill="none">
+                    <SvgPath
+                        d="M22 12C22 17.52 17.52 22 12 22C6.48 22 3.11 16.44 3.11 16.44M3.11 16.44H7.63M3.11 16.44V21.44M2 12C2 6.48 6.44 2 12 2C18.67 2 22 7.56 22 7.56M22 7.56V2.56M22 7.56H17.56"
+                        stroke={BLACK}
+                        strokeWidth={2}
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                    />
+                </Svg>
+            </TouchableOpacity>
+
+            {/* Add Image */}
+            <TouchableOpacity style={styles.toolButton} onPress={onAddImage} activeOpacity={0.7}>
+                <Svg width={20} height={20} viewBox="0 0 24 24" fill="none">
+                    <SvgPath
+                        d="M19 3H5a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V5a2 2 0 0 0-2-2zM8.5 10a1.5 1.5 0 1 0 0-3 1.5 1.5 0 0 0 0 3zM21 15l-5-5L5 21"
+                        stroke={BLACK}
+                        strokeWidth={1.5}
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                    />
+                </Svg>
+            </TouchableOpacity>
+
+            {/* Change Paper */}
+            <TouchableOpacity style={styles.toolButton} onPress={onPaper} activeOpacity={0.7}>
+                <Svg width={20} height={20} viewBox="0 0 24 24" fill="none">
+                    <SvgPath
+                        d="M4 6H20M4 12H20M4 18H20"
+                        stroke={BLACK}
+                        strokeWidth={2}
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                    />
+                </Svg>
+            </TouchableOpacity>
+
+            {/* Clear Canvas */}
+            <TouchableOpacity style={styles.toolButton} onPress={onClear} activeOpacity={0.7}>
+                <Svg width={20} height={20} viewBox="0 0 24 24" fill="none">
+                    <SvgPath
+                        d="M21 5.98C17.67 5.65 14.32 5.48 10.98 5.48C9 5.48 7.02 5.58 5.04 5.78L3 5.98M8.5 4.97L8.72 3.66C8.88 2.71 9 2 10.69 2H13.31C15 2 15.13 2.75 15.28 3.67L15.5 4.97M18.85 9.14L18.2 19.21C18.09 20.78 18 22 15.21 22H8.79C6 22 5.91 20.78 5.8 19.21L5.15 9.14"
+                        stroke="#D32F2F"
+                        strokeWidth={1.5}
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                    />
+                </Svg>
+            </TouchableOpacity>
         </View>
     );
 };
@@ -157,14 +207,9 @@ const styles = StyleSheet.create({
         zIndex: 50,
         padding: 6,
         borderRadius: 20,
-        borderWidth: 1,
+        backgroundColor: WHITE,
         gap: 4,
         alignItems: 'center',
-        shadowColor: '#000',
-        shadowOffset: { width: 0, height: 4 },
-        shadowOpacity: 0.08,
-        shadowRadius: 12,
-        elevation: 5,
     },
     toolButton: {
         width: 40,
@@ -173,10 +218,14 @@ const styles = StyleSheet.create({
         alignItems: 'center',
         justifyContent: 'center',
     },
+    toolButtonActive: {
+        backgroundColor: YELLOW + '40',
+    },
     divider: {
         width: '80%',
         height: 1,
         marginVertical: 4,
+        backgroundColor: BLACK + '10',
     },
     colorColumn: {
         gap: 6,
@@ -187,5 +236,9 @@ const styles = StyleSheet.create({
         width: 24,
         height: 24,
         borderRadius: 12,
+    },
+    colorSwatchSelected: {
+        borderWidth: 2,
+        borderColor: WHITE,
     },
 });

@@ -16,13 +16,15 @@ import * as Haptics from 'expo-haptics';
 import { useFocusEffect } from '@react-navigation/native';
 import { fetchCommunityFeed, toggleLikeReflection, SharedReflection } from '../utils/communityStorage';
 import { useAuth } from '../context/AuthContext';
-import { useTheme } from '../context/ThemeContext';
 
 const { width } = Dimensions.get('window');
 
+const YELLOW = '#FFE600';
+const BLACK  = '#000000';
+const WHITE  = '#FFFFFF';
+
 export const CommunityScreen: React.FC = () => {
     const { user } = useAuth();
-    const { theme } = useTheme();
     const [reflections, setReflections] = useState<SharedReflection[]>([]);
     const [loading, setLoading] = useState(true);
     const [refreshing, setRefreshing] = useState(false);
@@ -69,18 +71,18 @@ export const CommunityScreen: React.FC = () => {
     };
 
     const renderItem = ({ item }: { item: SharedReflection }) => (
-        <View style={[styles.card, { borderColor: theme.colors.onSurface + '05' }]}>
+        <View style={styles.card}>
             {/* Header/Date */}
-            <Text style={[styles.date, { color: theme.colors.onSurface + '60' }]}>
+            <Text style={styles.date}>
                 {new Date(item.created_at).toLocaleDateString()}
             </Text>
 
             {/* Quote ID */}
-            <Text style={[styles.quoteId, { color: theme.colors.onSurface + '40' }]}>Quote #{item.quote_id.slice(0, 8)}</Text>
+            <Text style={styles.quoteId}>Quote #{item.quote_id.slice(0, 8)}</Text>
 
             {/* Reflection Text */}
             {item.reflection_text && (
-                <Text style={[styles.reflectionText, { color: theme.colors.onSurface }]}>{item.reflection_text}</Text>
+                <Text style={styles.reflectionText}>{item.reflection_text}</Text>
             )}
 
             {/* Canvas Image */}
@@ -93,19 +95,19 @@ export const CommunityScreen: React.FC = () => {
             )}
 
             {/* Footer with Like Button */}
-            <View style={[styles.cardFooter, { borderTopColor: theme.colors.onSurface + '05' }]}>
+            <View style={styles.cardFooter}>
                 <TouchableOpacity
                     style={styles.likeButton}
                     onPress={() => handleLike(item.id, item.likes_count, !!item.is_liked_by_user)}
                 >
-                    <Svg width={24} height={24} viewBox="0 0 24 24" fill={item.is_liked_by_user ? theme.colors.primary : "none"}>
+                    <Svg width={24} height={24} viewBox="0 0 24 24" fill={item.is_liked_by_user ? YELLOW : 'none'}>
                         <Path
                             d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"
-                            stroke={item.is_liked_by_user ? theme.colors.primary : theme.colors.onSurface}
+                            stroke={item.is_liked_by_user ? BLACK : BLACK}
                             strokeWidth={1.5}
                         />
                     </Svg>
-                    <Text style={[styles.likeCount, { color: item.is_liked_by_user ? theme.colors.primary : theme.colors.onSurface }]}>
+                    <Text style={[styles.likeCount, { color: item.is_liked_by_user ? BLACK : BLACK + '70' }]}>
                         {item.likes_count}
                     </Text>
                 </TouchableOpacity>
@@ -114,13 +116,13 @@ export const CommunityScreen: React.FC = () => {
     );
 
     return (
-        <SafeAreaView style={[styles.container, { backgroundColor: theme.colors.background }]} edges={['top']}>
+        <SafeAreaView style={styles.container} edges={['top']}>
             <View style={styles.header}>
                 <Text style={styles.title}>Community Wall</Text>
             </View>
 
             {loading ? (
-                <ActivityIndicator style={{ marginTop: 20 }} color={theme.colors.primary} />
+                <ActivityIndicator style={{ marginTop: 20 }} color={YELLOW} />
             ) : (
                 <FlatList
                     data={reflections}
@@ -128,7 +130,7 @@ export const CommunityScreen: React.FC = () => {
                     keyExtractor={item => item.id}
                     contentContainerStyle={styles.listContent}
                     refreshControl={
-                        <RefreshControl refreshing={refreshing} onRefresh={handleRefresh} tintColor={theme.colors.primary} />
+                        <RefreshControl refreshing={refreshing} onRefresh={handleRefresh} tintColor={YELLOW} />
                     }
                     ListEmptyComponent={
                         <View style={styles.emptyContainer}>
@@ -144,49 +146,49 @@ export const CommunityScreen: React.FC = () => {
 const styles = StyleSheet.create({
     container: {
         flex: 1,
+        backgroundColor: WHITE,
     },
     header: {
         paddingHorizontal: 24,
         paddingBottom: 16,
         paddingTop: 8,
-        borderBottomWidth: 1,
-        borderBottomColor: '#1A1D2310',
+        borderBottomWidth: 2,
+        borderBottomColor: BLACK,
     },
     title: {
-        fontFamily: 'Caveat-Bold',
+        fontFamily: 'GasoekOne',
         fontSize: 32,
-        color: '#1A1D23',
+        color: BLACK,
     },
     listContent: {
         padding: 16,
         gap: 24,
     },
     card: {
-        backgroundColor: '#FFF',
+        backgroundColor: WHITE,
         borderRadius: 16,
         padding: 16,
-        shadowColor: '#000',
-        shadowOffset: { width: 0, height: 2 },
-        shadowOpacity: 0.05,
-        shadowRadius: 8,
-        elevation: 2,
-        borderWidth: 1,
+        borderWidth: 2,
+        borderColor: BLACK,
     },
     date: {
-        fontFamily: 'Carlito',
+        fontFamily: 'GasoekOne',
         fontSize: 12,
         marginBottom: 4,
+        color: BLACK + '60',
     },
     quoteId: {
-        fontFamily: 'Carlito',
+        fontFamily: 'GasoekOne',
         fontSize: 12,
         marginBottom: 12,
+        color: BLACK + '40',
     },
     reflectionText: {
-        fontFamily: 'Carlito',
+        fontFamily: 'GasoekOne',
         fontSize: 18,
         lineHeight: 26,
         marginBottom: 12,
+        color: BLACK,
     },
     canvasImage: {
         width: '100%',
@@ -201,6 +203,7 @@ const styles = StyleSheet.create({
         alignItems: 'center',
         paddingTop: 12,
         borderTopWidth: 1,
+        borderTopColor: BLACK + '15',
     },
     likeButton: {
         flexDirection: 'row',
@@ -209,7 +212,7 @@ const styles = StyleSheet.create({
         padding: 4,
     },
     likeCount: {
-        fontFamily: 'Caveat-Bold',
+        fontFamily: 'GasoekOne',
         fontSize: 16,
     },
     emptyContainer: {
@@ -218,8 +221,8 @@ const styles = StyleSheet.create({
         paddingTop: 60,
     },
     emptyText: {
-        fontFamily: 'Carlito',
+        fontFamily: 'GasoekOne',
         fontSize: 18,
-        color: '#94A3B860',
+        color: BLACK + '60',
     },
 });
