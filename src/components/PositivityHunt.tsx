@@ -180,7 +180,7 @@ export const PositivityHunt: React.FC<PositivityHuntProps> = ({
         return (
             <View style={styles.lockedContainer}>
                 <Text style={{ fontSize: 20, opacity: 0.5 }}>🔒 Hunt Locked</Text>
-                <Text style={{ opacity: 0.7, marginTop: 4, fontFamily: 'GasoekOne', fontSize: 15 }}>Unlocks at Level 3</Text>
+                <Text style={{ opacity: 0.7, marginTop: 4, fontFamily: 'MontserratAlternates-ExtraBoldItalic', fontSize: 15 }}>Unlocks at Level 3</Text>
             </View>
         );
     }
@@ -278,12 +278,12 @@ const styles = StyleSheet.create({
         gap: 4,
     },
     headerTitle: {
-        fontFamily: 'GasoekOne',
+        fontFamily: 'MontserratAlternates-ExtraBoldItalic',
         fontSize: 28,
         color: BLACK,
     },
     headerSub: {
-        fontFamily: 'GasoekOne',
+        fontFamily: 'MontserratAlternates-ExtraBoldItalic',
         fontSize: 16,
         color: BLACK + '70',
     },
@@ -305,13 +305,13 @@ const styles = StyleSheet.create({
         justifyContent: 'center',
     },
     ringCount: {
-        fontFamily: 'GasoekOne',
+        fontFamily: 'MontserratAlternates-ExtraBoldItalic',
         fontSize: 48,
         lineHeight: 52,
         color: BLACK,
     },
     ringLabel: {
-        fontFamily: 'GasoekOne',
+        fontFamily: 'MontserratAlternates-ExtraBoldItalic',
         fontSize: 16,
         marginTop: -4,
         color: BLACK + '70',
@@ -322,7 +322,7 @@ const styles = StyleSheet.create({
         maxWidth: 300,
     },
     quoteText: {
-        fontFamily: 'GasoekOne',
+        fontFamily: 'MontserratAlternates-ExtraBoldItalic',
         fontStyle: 'italic',
         textAlign: 'center',
         opacity: 0.5,
@@ -352,7 +352,7 @@ const styles = StyleSheet.create({
         backgroundColor: YELLOW,
     },
     entryText: {
-        fontFamily: 'GasoekOne',
+        fontFamily: 'MontserratAlternates-ExtraBoldItalic',
         fontSize: 17,
         flex: 1,
         color: BLACK,
@@ -367,7 +367,7 @@ const styles = StyleSheet.create({
         borderTopColor: BLACK,
     },
     inputPrompt: {
-        fontFamily: 'GasoekOne',
+        fontFamily: 'MontserratAlternates-ExtraBoldItalic',
         marginBottom: 12,
         fontSize: 18,
         color: BLACK,
@@ -386,7 +386,7 @@ const styles = StyleSheet.create({
         height: 52,
         fontSize: 16,
         paddingHorizontal: 14,
-        fontFamily: 'GasoekOne',
+        fontFamily: 'MontserratAlternates-ExtraBoldItalic',
         color: BLACK,
     },
     submitBtn: {
@@ -425,13 +425,13 @@ const styles = StyleSheet.create({
         borderColor: BLACK,
     },
     celebrateTitle: {
-        fontFamily: 'GasoekOne',
+        fontFamily: 'MontserratAlternates-ExtraBoldItalic',
         fontSize: 20,
         color: BLACK,
         textAlign: 'center',
     },
     celebrateSub: {
-        fontFamily: 'GasoekOne',
+        fontFamily: 'MontserratAlternates-ExtraBoldItalic',
         fontSize: 14,
         color: BLACK + 'AA',
         marginTop: 4,

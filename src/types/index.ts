@@ -38,6 +38,7 @@ export interface Stroke {
   points: Point[];
   color: string;
   width: number;
+  opacity?: number;
 }
 
 export interface Drawing {
@@ -57,7 +58,8 @@ export type RootStackParamList = {
   Paywall: undefined;
   Analytics: undefined;
   VisionBoard: undefined;
-  Walking: undefined;
+  FocusTimerPicker: undefined;
+  ReminderSettings: undefined;
 };
 
 export type RootTabParamList = {
@@ -90,7 +92,6 @@ export interface LevelTier {
   level: number;
   title: string;
   xpRequired: number;
-  unlocks: string;
 }
 
 export interface DailyActions {
@@ -125,8 +126,8 @@ export interface DailyHunt {
   xpAwarded: boolean;
 }
 
-// Bonsai types
-export interface BonsaiState {
+// Plant (potato mascot) types
+export interface PlantState {
   health: number;          // 0-100
   growthStage: number;     // 1-10, synced from progression level
   lastTendedDate: string;  // YYYY-MM-DD
@@ -135,7 +136,7 @@ export interface BonsaiState {
   wateredToday: boolean;
 }
 
-export type BonsaiAnimationTrigger =
+export type PlantAnimationTrigger =
   | 'water'
   | 'tend'
   | 'journal'
@@ -144,3 +145,4 @@ export type BonsaiAnimationTrigger =
   | 'quote'
   | 'levelUp'
   | null;
+

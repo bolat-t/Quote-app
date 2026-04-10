@@ -2,248 +2,674 @@ import React, { useState, useEffect, useCallback, useRef } from 'react';
 import {
     View,
     Text,
+    Image,
     StyleSheet,
     ScrollView,
     TouchableOpacity,
+    TouchableWithoutFeedback,
+    Pressable,
     Dimensions,
-    Share,
-    Alert,
     Animated,
-    PanResponder,
-    StyleSheet as RNStyleSheet,
+    Easing,
 } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
-import Svg, { Path as SvgPath, Circle as SvgCircle } from 'react-native-svg';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import Svg, { Path as SvgPath } from 'react-native-svg';
+
+const POTATO_IMAGES = {
+    1: require('../../assets/mascot/potato_levels/level_1_potato.png'),
+    2: require('../../assets/mascot/potato_levels/level_2_potato.png'),
+    3: require('../../assets/mascot/potato_levels/level_3_potato.png'),
+    4: require('../../assets/mascot/potato_levels/level_4_potato.png'),
+    5: require('../../assets/mascot/potato_levels/level_5_potato.png'),
+    6: require('../../assets/mascot/potato_levels/level_6_potato.png'),
+    7: require('../../assets/mascot/potato_levels/level_7_potato.png'),
+    8: require('../../assets/mascot/potato_levels/level_8_potato.png'),
+    9: require('../../assets/mascot/potato_levels/level_9_potato.png'),
+} as const;
 import * as Haptics from 'expo-haptics';
 import { useNavigation } from '@react-navigation/native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
 import { UserProgress, TabScreenNavigationProp } from '../types';
 import { loadProgress, awardXP, loadDailyHunt } from '../utils/progressionStorage';
+import { useIsFocused } from '@react-navigation/native';
+import { useCommitmentMins } from '../context/CommitmentContext';
+import { useHeaderHeight } from '../context/HeaderHeightContext';
 import { calculateStreak } from '../utils/journalStorage';
-import { clearMemory } from '../memory/MemorySystem';
 import { getUserName } from '../utils/storage';
 import { getXPProgress, LEVEL_TIERS, XP_REWARDS } from '../data/progressionConfig';
 import { XPToast } from '../components/XPToast';
 import { LevelModal } from '../components/LevelModal';
-import { SettingsModal } from '../components/SettingsModal';
 import { StreakModal } from '../components/StreakModal';
-import { FeedbackModal } from '../components/FeedbackModal';
-import { requestNotificationPermissions, scheduleDailyReminder } from '../utils/notifications';
 import { OnboardingModal } from '../components/OnboardingModal';
 import { isOnboardingCompleted, completeOnboarding } from '../utils/storage';
-import { exportJournalData } from '../utils/journalStorage';
 import { trackEvent, setUserProperties } from '../lib/analytics';
-import { usePurchase } from '../context/PurchaseContext';
 import { useDailyQuote } from '../hooks/useDailyQuote';
-import { PotatoPlant } from '../components/PotatoPlant';
-import { useBonsaiState } from '../hooks/useBonsaiState';
-import { WateringCanOverlay } from '../components/WateringCanOverlay';
 
 const YELLOW = '#FFE600';
-const BLACK = '#000000';
-const WHITE = '#FFFFFF';
+const BLACK  = '#000000';
+const WHITE  = '#FFFFFF';
+const GRAY   = '#F2F2F2';
+
+const { width: SCREEN_W } = Dimensions.get('window');
+const BASE_JUMP_H = 80;
+
 
 // ─────────────────────────────────────────────
-// Inline SVG Icons
+// SVG Icons
 // ─────────────────────────────────────────────
 
-const HamburgerIcon = () => (
-    <Svg width={26} height={26} viewBox="0 0 24 24" fill="none">
-        <SvgPath d="M3 6h18M3 12h18M3 18h18" stroke={BLACK} strokeWidth={2.5} strokeLinecap="round" />
-    </Svg>
-);
-
-const WaterDropIcon = () => (
-    <Svg width={24} height={24} viewBox="0 0 24 24" fill="none">
-        <SvgPath
-            d="M12 3C12 3 5 11 5 16a7 7 0 0014 0C19 11 12 3 12 3z"
-            stroke={BLACK}
-            strokeWidth={2.2}
-            strokeLinecap="round"
-            strokeLinejoin="round"
-        />
-    </Svg>
-);
-
-const WalkIcon = () => (
-    <Svg width={24} height={24} viewBox="0 0 24 24" fill="none">
-        <SvgCircle cx="13" cy="3.5" r="2" fill={BLACK} />
-        <SvgPath
-            d="M11 7l-3 4 2 1M11 7l2 4 3-1M10 11l-1 5h3l1-4M13 11l1 5h2"
-            stroke={BLACK}
-            strokeWidth={2}
-            strokeLinecap="round"
-            strokeLinejoin="round"
-        />
-    </Svg>
-);
-
-const SparkleIcon = () => (
-    <Svg width={24} height={24} viewBox="0 0 24 24" fill="none">
-        <SvgPath
-            d="M12 4l1.6 4.8a1 1 0 00.6.6L19 11l-4.8 1.6a1 1 0 00-.6.6L12 19l-1.6-4.8a1 1 0 00-.6-.6L5 12l4.8-1.6a1 1 0 00.6-.6L12 4z"
-            stroke={BLACK}
-            strokeWidth={2}
-            strokeLinecap="round"
-            strokeLinejoin="round"
-        />
+const ArrowIcon = () => (
+    <Svg width={16} height={16} viewBox="0 0 24 24" fill="none">
+        <SvgPath d="M5 12h14M13 6l6 6-6 6" stroke={BLACK} strokeWidth={2.2} strokeLinecap="round" strokeLinejoin="round" />
     </Svg>
 );
 
 const CheckIcon = () => (
-    <Svg width={13} height={13} viewBox="0 0 24 24" fill="none">
+    <Svg width={12} height={12} viewBox="0 0 24 24" fill="none">
         <SvgPath d="M5 12l5 5L20 7" stroke={BLACK} strokeWidth={2.8} strokeLinecap="round" strokeLinejoin="round" />
     </Svg>
 );
+
+// ─────────────────────────────────────────────
+// Week Strip
+// ─────────────────────────────────────────────
+
+const WeekStrip: React.FC = () => {
+    const today = new Date();
+    const days = Array.from({ length: 7 }, (_, i) => {
+        const d = new Date(today);
+        d.setDate(today.getDate() - 3 + i);
+        return {
+            dayNum: d.getDate(),
+            dayLabel: d.toLocaleDateString('en-US', { weekday: 'short' }).slice(0, 1).toUpperCase(),
+            isToday: i === 3,
+        };
+    });
+
+    return (
+        <View style={weekStyles.card}>
+            {days.map((d, i) => (
+                <View key={i} style={[weekStyles.dayPill, d.isToday && weekStyles.dayPillActive]}>
+                    <Text style={[weekStyles.dayNum, d.isToday && weekStyles.dayNumActive]}>
+                        {d.dayNum}
+                    </Text>
+                    <Text style={[weekStyles.dayLabel, d.isToday && weekStyles.dayLabelActive]}>
+                        {d.dayLabel}
+                    </Text>
+                </View>
+            ))}
+        </View>
+    );
+};
+
+const weekStyles = StyleSheet.create({
+    card: {
+        flexDirection: 'row',
+        justifyContent: 'space-between',
+        alignItems: 'center',
+        backgroundColor: WHITE,
+        borderWidth: 2,
+        borderColor: BLACK,
+        borderRadius: 20,
+        paddingHorizontal: 12,
+        paddingVertical: 10,
+        marginBottom: 16,
+    },
+    dayPill: {
+        alignItems: 'center',
+        justifyContent: 'center',
+        width: 36,
+        height: 44,
+        borderRadius: 18,
+    },
+    dayPillActive: {
+        backgroundColor: YELLOW,
+    },
+    dayNum: {
+        fontFamily: 'Inter-Bold',
+        fontSize: 15,
+        color: BLACK,
+    },
+    dayNumActive: {
+        color: BLACK,
+    },
+    dayLabel: {
+        fontFamily: 'Inter-Medium',
+        fontSize: 10,
+        color: '#999999',
+        marginTop: 1,
+    },
+    dayLabelActive: {
+        color: BLACK,
+    },
+});
+
+// ─────────────────────────────────────────────
+// Main Card — mascot + actions combined
+// ─────────────────────────────────────────────
+
+interface MainCardProps {
+    level: number;
+    currentTitle: string;
+    onPressLevel: () => void;
+    getJumpHeight?: () => number;
+    onPeak?: () => void;
+    actions: (typeof ALL_ACTIONS)[number][];
+    dailyActions: DailyActions;
+    brokenTasks: Set<TaskKey>;
+    breakAnims: Record<TaskKey, BreakAnim>;
+    cardLayouts: React.MutableRefObject<Partial<Record<TaskKey, { y: number; height: number }>>>;
+    onNavigate: (nav: string) => void;
+    completedCount: number;
+}
+
+const MainCard: React.FC<MainCardProps> = ({
+    level, currentTitle,
+    onPressLevel, getJumpHeight, onPeak,
+    actions, dailyActions, brokenTasks, breakAnims,
+    cardLayouts, onNavigate, completedCount,
+}) => {
+
+    return (
+        <View style={mainCardStyles.card}>
+            {/* ── Level info row ── */}
+            <TouchableOpacity onPress={onPressLevel} activeOpacity={0.7} style={mainCardStyles.levelRow}>
+                <Text style={mainCardStyles.levelTitle}>POTATO</Text>
+                <Text style={mainCardStyles.levelSubtitle}>{currentTitle.toUpperCase().replace(/ /g, '\n')}</Text>
+            </TouchableOpacity>
+
+
+            {/* ── Mascot ── */}
+            <View style={mainCardStyles.mascotArea}>
+                <PotatoMascot
+                    level={level}
+                    getJumpHeight={getJumpHeight}
+                    onPeak={onPeak}
+                />
+            </View>
+
+            {/* ── TODAY'S ACTIONS header (hidden when all done) ── */}
+            {completedCount < actions.length && (
+                <View style={mainCardStyles.actionsHeader}>
+                    <Text style={mainCardStyles.actionsHeaderLabel}>TODAY'S  ACTIONS</Text>
+                    <Text style={mainCardStyles.actionsHeaderCount}>
+                        <Text style={mainCardStyles.actionsHeaderCountBold}>{completedCount}</Text>
+                        <Text style={mainCardStyles.actionsHeaderCountMax}>/{actions.length}</Text>
+                    </Text>
+                </View>
+            )}
+
+            {/* ── All done: potato speech ── */}
+            {completedCount === actions.length && (
+                <View style={mainCardStyles.speechBox}>
+                    <Text style={mainCardStyles.speechText}>
+                        {"HOW WAS YOUR DAY?\nI'M SO PROUD OF YOU!\n\nCOMPLETE TODAY'S MISSION!\nI'M SPEAKING POTATO.\nI'M STILL LEARNING AND GROWING"}
+                    </Text>
+                </View>
+            )}
+
+            {/* ── Action rows ── */}
+            {actions.map((action, idx) => {
+                if (brokenTasks.has(action.key as TaskKey)) return null;
+                const isDone = dailyActions[action.key as keyof DailyActions];
+                const anims  = breakAnims[action.key as TaskKey];
+                const isLast = idx === actions.length - 1;
+
+                return (
+                    <Animated.View
+                        key={action.key}
+                        onLayout={e => {
+                            cardLayouts.current[action.key as TaskKey] = {
+                                y:      e.nativeEvent.layout.y,
+                                height: e.nativeEvent.layout.height,
+                            };
+                        }}
+                        style={{
+                            opacity:   anims.opacity,
+                            transform: [
+                                { translateX: anims.translateX },
+                                { scale: anims.scale },
+                            ],
+                        }}
+                    >
+                        <Pressable
+                            style={({ pressed }) => [
+                                mainCardStyles.actionRow,
+                                pressed && !isDone && { backgroundColor: YELLOW },
+                            ]}
+                            disabled={isDone || !action.nav}
+                            onPress={() => {
+                                if (action.nav) {
+                                    Haptics.selectionAsync();
+                                    onNavigate(action.nav);
+                                }
+                            }}
+                        >
+                            <View style={[mainCardStyles.actionIcon, isDone && mainCardStyles.actionIconDone]}>
+                                {isDone ? <CheckIcon /> : <ArrowIcon />}
+                            </View>
+                            <Text style={[mainCardStyles.actionLabel, isDone && mainCardStyles.actionLabelDone]}>
+                                {action.label}
+                            </Text>
+                            <View style={[mainCardStyles.xpBadge, isDone && mainCardStyles.xpBadgeDone]}>
+                                <Text style={[mainCardStyles.xpBadgeText, isDone && mainCardStyles.xpBadgeTextDone]}>
+                                    +{action.xp}
+                                </Text>
+                            </View>
+                        </Pressable>
+                        {!isLast && <View style={mainCardStyles.rowDivider} />}
+                    </Animated.View>
+                );
+            })}
+        </View>
+    );
+};
+
+const mainCardStyles = StyleSheet.create({
+    card: {
+        backgroundColor: WHITE,
+        borderWidth: 2,
+        borderColor: BLACK,
+        borderRadius: 20,
+        paddingTop: 12,
+        marginBottom: 16,
+        overflow: 'hidden',
+    },
+    levelRow: {
+        flexDirection: 'row',
+        justifyContent: 'space-between',
+        alignItems: 'flex-start',
+        marginBottom: 4,
+        paddingHorizontal: 20,
+    },
+    levelTitle: {
+        fontFamily: 'Inter-Bold',
+        fontSize: 20,
+        color: BLACK,
+        letterSpacing: 0.5,
+    },
+    levelSubtitle: {
+        fontFamily: 'Inter-Bold',
+        fontSize: 20,
+        color: '#4B5563',
+        letterSpacing: 0.3,
+        textAlign: 'right',
+    },
+    barRow: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: 10,
+        paddingHorizontal: 20,
+        marginBottom: 2,
+    },
+    progressTrack: {
+        flex: 1,
+        height: 20,
+        backgroundColor: 'transparent',
+        borderRadius: 10,
+        overflow: 'hidden',
+    },
+    progressFill: {
+        height: 20,
+        backgroundColor: YELLOW,
+        borderRadius: 10,
+        borderWidth: 2,
+        borderColor: BLACK,
+    },
+    xpLabel: { flexShrink: 0 },
+    xpCurrent: { fontFamily: 'Inter-Bold', fontSize: 20, color: BLACK },
+    xpMax:     { fontFamily: 'Inter-Medium', fontSize: 20, color: '#4B5563' },
+    mascotArea: {
+        alignItems: 'center',
+        height: 180,
+        justifyContent: 'flex-end',
+        overflow: 'hidden',
+        marginTop: 10,
+        marginBottom: 10,
+    },
+    // TODAY'S ACTIONS banner
+    actionsHeader: {
+        flexDirection: 'row',
+        justifyContent: 'space-between',
+        alignItems: 'center',
+        backgroundColor: WHITE,
+        paddingHorizontal: 20,
+        paddingTop: 2,
+        paddingBottom: 6,
+    },
+    actionsHeaderLabel: {
+        fontFamily: 'Inter-Bold',
+        fontSize: 16,
+        color: BLACK,
+        letterSpacing: 0.8,
+    },
+    actionsHeaderCount: {},
+    actionsHeaderCountBold: { fontFamily: 'Inter-Bold',   fontSize: 14, color: BLACK },
+    actionsHeaderCountMax:  { fontFamily: 'Inter-Medium', fontSize: 14, color: '#4B5563' },
+    // rows
+    actionRow: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        paddingHorizontal: 16,
+        paddingVertical: 8,
+        gap: 12,
+    },
+    actionIcon: {
+        width: 28,
+        height: 28,
+        borderRadius: 8,
+        alignItems: 'center',
+        justifyContent: 'center',
+    },
+    actionIconDone: { backgroundColor: YELLOW },
+    actionLabel: {
+        fontFamily: 'Inter-Bold',
+        fontSize: 16,
+        color: BLACK,
+        flex: 1,
+    },
+    actionLabelDone: { color: '#AAAAAA', textDecorationLine: 'line-through' },
+    xpBadge: {
+        borderWidth: 1.5,
+        borderColor: BLACK,
+        borderRadius: 20,
+        paddingHorizontal: 10,
+        paddingVertical: 3,
+    },
+    xpBadgeDone: { borderColor: '#CCCCCC' },
+    xpBadgeText: { fontFamily: 'Inter-Bold', fontSize: 14, color: BLACK },
+    xpBadgeTextDone: { color: '#CCCCCC' },
+    rowDivider: {
+        height: 1.5,
+        backgroundColor: '#CCCCCC',
+        marginHorizontal: 16,
+    },
+    speechBox: {
+        paddingHorizontal: 20,
+        paddingVertical: 16,
+    },
+    speechText: {
+        fontFamily: 'Gaegu-Bold',
+        fontSize: 20,
+        color: BLACK,
+        lineHeight: 28,
+    },
+});
+
+// ─────────────────────────────────────────────
+// Potato Mascot — fast, interruptible jumps
+// ─────────────────────────────────────────────
+
+interface PotatoMascotProps {
+    level: number;
+    getJumpHeight?: () => number;
+    onPeak?: () => void;
+}
+
+const PotatoMascot: React.FC<PotatoMascotProps> = ({ level, getJumpHeight, onPeak }) => {
+    const jumpAnim    = useRef(new Animated.Value(0)).current;
+    const swayAnim    = useRef(new Animated.Value(0)).current;
+    const squishX     = useRef(new Animated.Value(1)).current;
+    const squishY     = useRef(new Animated.Value(1)).current;
+    const getJumpHeightRef = useRef(getJumpHeight);
+    const onPeakRef        = useRef(onPeak);
+    const phaseAAnim       = useRef<Animated.CompositeAnimation | null>(null);
+    const phaseBAAnim      = useRef<Animated.CompositeAnimation | null>(null);
+
+    useEffect(() => { getJumpHeightRef.current = getJumpHeight; }, [getJumpHeight]);
+    useEffect(() => { onPeakRef.current = onPeak; }, [onPeak]);
+
+    // Idle sway
+    useEffect(() => {
+        const loop = Animated.loop(
+            Animated.sequence([
+                Animated.timing(swayAnim, { toValue:  1.5, duration: 2800, useNativeDriver: true }),
+                Animated.timing(swayAnim, { toValue: -1.5, duration: 2800, useNativeDriver: true }),
+                Animated.timing(swayAnim, { toValue:  0,   duration: 2000, useNativeDriver: true }),
+            ])
+        );
+        loop.start();
+        return () => loop.stop();
+    }, [swayAnim]);
+
+    const handleTap = () => {
+        phaseAAnim.current?.stop();
+        phaseBAAnim.current?.stop();
+        phaseAAnim.current = null;
+        phaseBAAnim.current = null;
+        jumpAnim.setValue(0);
+        squishX.setValue(1);
+        squishY.setValue(1);
+
+        const targetH = getJumpHeightRef.current?.() ?? BASE_JUMP_H;
+        Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+
+        const phaseA = Animated.sequence([
+            Animated.parallel([
+                Animated.timing(squishY, { toValue: 0.72, duration: 55, useNativeDriver: true }),
+                Animated.timing(squishX, { toValue: 1.28, duration: 55, useNativeDriver: true }),
+            ]),
+            Animated.parallel([
+                Animated.timing(jumpAnim, { toValue: -targetH, duration: 165, easing: Easing.out(Easing.quad), useNativeDriver: true }),
+                Animated.timing(squishY,  { toValue: 1.06, duration: 120, useNativeDriver: true }),
+                Animated.timing(squishX,  { toValue: 0.94, duration: 120, useNativeDriver: true }),
+            ]),
+        ]);
+        phaseAAnim.current = phaseA;
+
+        phaseA.start(({ finished }) => {
+            phaseAAnim.current = null;
+            if (!finished) return;
+            onPeakRef.current?.();
+
+            const phaseB = Animated.sequence([
+                Animated.spring(jumpAnim, { toValue: 0, tension: 220, friction: 7, useNativeDriver: true }),
+                Animated.parallel([
+                    Animated.timing(squishY, { toValue: 0.76, duration: 50, useNativeDriver: true }),
+                    Animated.timing(squishX, { toValue: 1.24, duration: 50, useNativeDriver: true }),
+                ]),
+                Animated.parallel([
+                    Animated.spring(squishY, { toValue: 1, tension: 220, friction: 8, useNativeDriver: true }),
+                    Animated.spring(squishX, { toValue: 1, tension: 220, friction: 8, useNativeDriver: true }),
+                ]),
+            ]);
+            phaseBAAnim.current = phaseB;
+            phaseB.start(() => { phaseBAAnim.current = null; });
+        });
+    };
+
+    const rotate     = swayAnim.interpolate({ inputRange: [-1.5, 1.5], outputRange: ['-3deg', '3deg'] });
+    const clampedLv  = Math.min(Math.max(1, level), 9) as keyof typeof POTATO_IMAGES;
+    const mascotSize = 80 + (clampedLv - 1) * 10; // 80px at lv1 → 160px at lv9
+
+    return (
+        <Animated.View style={{ transform: [{ translateY: jumpAnim }], alignItems: 'center' }}>
+            <Animated.View style={{ transform: [{ rotate }, { scaleX: squishX }, { scaleY: squishY }] }}>
+                <TouchableWithoutFeedback onPress={handleTap}>
+                    <Image
+                        source={POTATO_IMAGES[clampedLv]}
+                        style={{ width: mascotSize, height: mascotSize }}
+                        resizeMode="contain"
+                    />
+                </TouchableWithoutFeedback>
+            </Animated.View>
+        </Animated.View>
+    );
+};
+
+
+// ─────────────────────────────────────────────
+// Todo action definitions
+// ─────────────────────────────────────────────
+
+const ALL_ACTIONS = [
+    { key: 'openedApp',       label: 'Open the app',             xp: XP_REWARDS.openApp,         nav: undefined  },
+    { key: 'readQuote',       label: 'Read a new quote',         xp: XP_REWARDS.readQuote,       nav: 'Canvas'   },
+    { key: 'wroteReflection', label: 'Write a reflection',       xp: XP_REWARDS.writeReflection, nav: 'Canvas'   },
+    { key: 'savedCanvas',     label: 'Save your canvas',         xp: XP_REWARDS.saveCanvas,      nav: 'Canvas'   },
+    { key: 'completedHunt',   label: 'Complete Positivity Hunt', xp: XP_REWARDS.completeHunt,    nav: 'Journal'  },
+] as const;
+
+// Keys active per commitment level (driven by @ulbo_commitment_minutes)
+const COMMITMENT_KEYS: Record<number, readonly string[]> = {
+    5:  ['readQuote', 'wroteReflection'],
+    10: ['readQuote', 'wroteReflection', 'completedHunt'],
+    20: ['openedApp', 'readQuote', 'wroteReflection', 'savedCanvas', 'completedHunt'],
+};
+
+const getActionsForCommitment = (mins: number) => {
+    const keys = COMMITMENT_KEYS[mins] ?? COMMITMENT_KEYS[20];
+    return ALL_ACTIONS.filter(a => keys.includes(a.key));
+};
+
+// Keep TODO_ACTIONS as alias so breakAnims & types stay valid
+const TODO_ACTIONS = ALL_ACTIONS;
+type TaskKey = (typeof ALL_ACTIONS)[number]['key'];
+type DailyActions = { openedApp: boolean; readQuote: boolean; wroteReflection: boolean; savedCanvas: boolean; completedHunt: boolean };
+
+interface BreakAnim {
+    translateX: Animated.Value;
+    opacity:    Animated.Value;
+    scale:      Animated.Value;
+}
+
 
 // ─────────────────────────────────────────────
 // Main Screen
 // ─────────────────────────────────────────────
 
 export const HubScreen: React.FC = () => {
-    const navigation = useNavigation<TabScreenNavigationProp<'Home'>>();
+    const navigation    = useNavigation<TabScreenNavigationProp<'Home'>>();
+    const isFocused     = useIsFocused();
+    const insets        = useSafeAreaInsets();
+    const headerHeight  = useHeaderHeight();
+    const commitmentMins = useCommitmentMins();
     useDailyQuote();
-    const screenWidth = Dimensions.get('window').width;
 
-    const [progress, setProgress] = useState<UserProgress | null>(null);
-    const {
-        bonsaiState,
-        isLoading: bonsaiLoading,
-        waterTree: handleWaterTree,
-        tendTree: handleTendTree,
-        recordAction: recordBonsaiAction,
-        syncGrowthStage,
-        animationTrigger,
-        clearTrigger,
-    } = useBonsaiState();
-
-    const [streak, setStreak] = useState(0);
-    const [userName, setUserName] = useState<string | null>(null);
-    const [dailyActions, setDailyActions] = useState({
-        openedApp: false,
-        readQuote: false,
-        wroteReflection: false,
-        savedCanvas: false,
-        completedHunt: false,
+    const [progress,     setProgress]     = useState<UserProgress | null>(null);
+    const [streak,       setStreak]       = useState(0);
+    const [dailyActions, setDailyActions] = useState<DailyActions>({
+        openedApp: false, readQuote: false, wroteReflection: false,
+        savedCanvas: false, completedHunt: false,
     });
 
-    const [isSettingsVisible, setIsSettingsVisible] = useState(false);
-    const [isLevelModalVisible, setIsLevelModalVisible] = useState(false);
-    const [isStreakModalVisible, setIsStreakModalVisible] = useState(false);
-    const [areNotificationsEnabled, setAreNotificationsEnabled] = useState(false);
-    const [isExporting, setIsExporting] = useState(false);
-    const [isFeedbackVisible, setIsFeedbackVisible] = useState(false);
+    const [todoActions, setTodoActions] = useState(() => getActionsForCommitment(20));
+    const [isLevelModalVisible,  setIsLevelModalVisible]  = useState(false);
+    const [isStreakModalVisible,  setIsStreakModalVisible] = useState(false);
     const [xpToast, setXpToast] = useState<{
         amount: number; label?: string; leveledUp?: boolean; newLevelTitle?: string;
     } | null>(null);
-    usePurchase();
     const [isOnboardingVisible, setIsOnboardingVisible] = useState(false);
 
-    // ── Watering-can interaction ──────────────────────────────────────────
-    const [showWateringCan, setShowWateringCan] = useState(false);
-    const [isPouring, setIsPouring] = useState(false);
-    const canX = useRef(new Animated.Value(0)).current;
-    const canY = useRef(new Animated.Value(0)).current;
+    // ── Task-break state ──────────────────────────────────────────────────
 
-    const isWateringRef = useRef(false);
-    const isOverPotatoRef = useRef(false);
-    const potatoRegion = useRef({ x: 0, y: 0, width: 0, height: 0 });
-    const potatoWrapRef = useRef<View>(null);
-    const longPressTimer = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
-    // Keep handleWaterTree current in closures
-    const handleWaterRef = useRef(handleWaterTree);
-    handleWaterRef.current = handleWaterTree;
-
-    const waterPanResponder = useRef(
-        PanResponder.create({
-            onStartShouldSetPanResponder: () => true,
-
-            onPanResponderGrant: (evt) => {
-                // Snapshot the potato's on-screen rect
-                potatoWrapRef.current?.measureInWindow((x, y, w, h) => {
-                    potatoRegion.current = { x, y, width: w, height: h };
-                });
-
-                const { pageX, pageY } = evt.nativeEvent;
-                // Position can so the handle is under the finger
-                canX.setValue(pageX - 85);
-                canY.setValue(pageY - 27);
-
-                // Activate watering mode after 350 ms hold
-                longPressTimer.current = setTimeout(() => {
-                    isWateringRef.current = true;
-                    setShowWateringCan(true);
-                    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
-                }, 350);
-            },
-
-            onPanResponderMove: (evt) => {
-                if (!isWateringRef.current) return;
-
-                const { pageX, pageY } = evt.nativeEvent;
-                canX.setValue(pageX - 85);
-                canY.setValue(pageY - 27);
-
-                const r = potatoRegion.current;
-                const over = (
-                    pageX > r.x && pageX < r.x + r.width &&
-                    pageY > r.y && pageY < r.y + r.height
-                );
-                if (over !== isOverPotatoRef.current) {
-                    isOverPotatoRef.current = over;
-                    setIsPouring(over);
-                    if (over) Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-                }
-            },
-
-            onPanResponderRelease: () => {
-                clearTimeout(longPressTimer.current);
-                if (isWateringRef.current && isOverPotatoRef.current) {
-                    handleWaterRef.current();
-                    Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-                }
-                isWateringRef.current = false;
-                isOverPotatoRef.current = false;
-                setShowWateringCan(false);
-                setIsPouring(false);
-            },
-
-            onPanResponderTerminate: () => {
-                clearTimeout(longPressTimer.current);
-                isWateringRef.current = false;
-                isOverPotatoRef.current = false;
-                setShowWateringCan(false);
-                setIsPouring(false);
-            },
-        })
+    const breakAnims = useRef<Record<TaskKey, BreakAnim>>(
+        Object.fromEntries(
+            TODO_ACTIONS.map(a => [a.key, {
+                translateX: new Animated.Value(0),
+                opacity:    new Animated.Value(1),
+                scale:      new Animated.Value(1),
+            }])
+        ) as Record<TaskKey, BreakAnim>
     ).current;
+
+    const [brokenTasks,     setBrokenTasks]     = useState<Set<TaskKey>>(new Set());
+    const breakingInFlight  = useRef<Set<TaskKey>>(new Set());
+    const currentJumpTarget = useRef<TaskKey | null>(null);
+
+    const dailyActionsRef = useRef(dailyActions);
+    const brokenTasksRef  = useRef(brokenTasks);
+    useEffect(() => { dailyActionsRef.current = dailyActions; }, [dailyActions]);
+    useEffect(() => { brokenTasksRef.current  = brokenTasks;  }, [brokenTasks]);
+
+    const cardLayouts   = useRef<Partial<Record<TaskKey, { y: number; height: number }>>>({});
+    const maxJumpHeight = useRef(BASE_JUMP_H);
+
+    // ── Break animation ───────────────────────────────────────────────────
+
+    const animateBreakTask = useCallback((key: TaskKey) => {
+        const anims = breakAnims[key];
+        Animated.sequence([
+            Animated.sequence([
+                Animated.timing(anims.translateX, { toValue:  14, duration: 32, useNativeDriver: true }),
+                Animated.timing(anims.translateX, { toValue: -14, duration: 32, useNativeDriver: true }),
+                Animated.timing(anims.translateX, { toValue:  10, duration: 26, useNativeDriver: true }),
+                Animated.timing(anims.translateX, { toValue:  -8, duration: 22, useNativeDriver: true }),
+                Animated.timing(anims.translateX, { toValue:   0, duration: 18, useNativeDriver: true }),
+            ]),
+            Animated.parallel([
+                Animated.timing(anims.translateX, { toValue: SCREEN_W + 60, duration: 210, easing: Easing.in(Easing.quad), useNativeDriver: true }),
+                Animated.timing(anims.opacity,    { toValue: 0,             duration: 190, useNativeDriver: true }),
+                Animated.timing(anims.scale,      { toValue: 0.75,          duration: 210, useNativeDriver: true }),
+            ]),
+        ]).start(() => {
+            breakingInFlight.current.delete(key);
+            setBrokenTasks(prev => new Set([...prev, key]));
+            Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+        });
+    }, [breakAnims]);
+
+    // ── Jump height ───────────────────────────────────────────────────────
+
+    const getJumpHeight = useCallback((): number => {
+        const target = [...TODO_ACTIONS].reverse().find(a =>
+            dailyActionsRef.current[a.key as keyof DailyActions] &&
+            !brokenTasksRef.current.has(a.key as TaskKey) &&
+            !breakingInFlight.current.has(a.key as TaskKey)
+        );
+
+        currentJumpTarget.current = target ? (target.key as TaskKey) : null;
+
+        if (!target) return maxJumpHeight.current;
+
+        const cardLayout = cardLayouts.current[target.key as TaskKey];
+        if (!cardLayout) return maxJumpHeight.current;
+
+        const h = Math.max(80, BASE_JUMP_H);
+        maxJumpHeight.current = Math.max(maxJumpHeight.current, h);
+        return h;
+    }, []);
+
+    // ── Peak callback ─────────────────────────────────────────────────────
+
+    const handlePotatoPeak = useCallback(() => {
+        const key = currentJumpTarget.current;
+        if (!key) return;
+        if (brokenTasksRef.current.has(key) || breakingInFlight.current.has(key)) return;
+
+        breakingInFlight.current.add(key);
+        currentJumpTarget.current = null;
+        animateBreakTask(key);
+    }, [animateBreakTask]);
 
     // ── Data loading ──────────────────────────────────────────────────────
 
     const loadData = useCallback(async () => {
-        const p = await loadProgress();
+        const [p, s, hunt, commitVal] = await Promise.all([
+            loadProgress(),
+            calculateStreak(),
+            loadDailyHunt(),
+            AsyncStorage.getItem('@ulbo_commitment_minutes'),
+        ]);
+
         setProgress(p);
-
-        const s = await calculateStreak();
         setStreak(s);
-
-        const name = await getUserName();
-        setUserName(name);
-
-        const hunt = await loadDailyHunt();
         setDailyActions({
-            openedApp: p.dailyActions.openApp || false,
-            readQuote: p.dailyActions.readQuote || false,
+            openedApp:       p.dailyActions.openApp         || false,
+            readQuote:       p.dailyActions.readQuote       || false,
             wroteReflection: p.dailyActions.wroteReflection || false,
-            savedCanvas: p.dailyActions.savedCanvas || false,
-            completedHunt: hunt?.xpAwarded || false,
+            savedCanvas:     p.dailyActions.savedCanvas     || false,
+            completedHunt:   hunt?.xpAwarded                || false,
         });
+
+        const mins  = commitVal ? parseInt(commitVal, 10) : 20;
+        const valid = [5, 10, 20].includes(mins) ? mins : 20;
+        setTodoActions(getActionsForCommitment(valid));
 
         const result = await awardXP('openApp', p);
         if (result.xpGained > 0) {
             setProgress(result.progress);
-            await recordBonsaiAction('openApp');
             setXpToast({
                 amount: result.xpGained,
                 label: 'Daily login',
@@ -254,11 +680,9 @@ export const HubScreen: React.FC = () => {
             });
             if (result.leveledUp) {
                 trackEvent('level_up', { new_level: result.progress.level, total_xp: result.progress.totalXP });
-                await syncGrowthStage(result.progress.level);
             }
-            setUserProperties({ level: result.progress.level, total_xp: result.progress.totalXP, streak });
+            setUserProperties({ level: result.progress.level, total_xp: result.progress.totalXP, streak: s });
         }
-        await syncGrowthStage(p.level);
     }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
     const checkOnboarding = async () => {
@@ -269,7 +693,6 @@ export const HubScreen: React.FC = () => {
     const handleOnboardingComplete = async (name: string) => {
         await completeOnboarding(name);
         setIsOnboardingVisible(false);
-        if (name) setUserName(name);
         trackEvent('onboarding_completed');
         setTimeout(() => navigation.navigate('Paywall'), 500);
     };
@@ -279,10 +702,17 @@ export const HubScreen: React.FC = () => {
         checkOnboarding();
     }, [loadData]);
 
+    // isFocused → true fires on BOTH tab switches AND returning from any stack screen
     useEffect(() => {
-        const unsubscribe = navigation.addListener('focus', () => loadData());
-        return unsubscribe;
-    }, [navigation, loadData]);
+        if (isFocused) loadData();
+    }, [isFocused]); // eslint-disable-line react-hooks/exhaustive-deps
+
+    // commitmentMins from context updates immediately when AppHeader's inline pill is pressed,
+    // without any navigation (isFocused stays true), so handle it separately here.
+    useEffect(() => {
+        const valid = [5, 10, 20].includes(commitmentMins) ? commitmentMins : 20;
+        setTodoActions(getActionsForCommitment(valid));
+    }, [commitmentMins]);
 
     useEffect(() => {
         const checkFeedbackPrompt = async () => {
@@ -292,10 +722,7 @@ export const HubScreen: React.FC = () => {
                 const now = Date.now();
                 const sevenDays = 7 * 24 * 60 * 60 * 1000;
                 if (!lastPrompt || (now - parseInt(lastPrompt, 10)) > sevenDays) {
-                    setTimeout(async () => {
-                        setIsFeedbackVisible(true);
-                        await AsyncStorage.setItem('@ulbo_last_feedback_prompt', now.toString());
-                    }, 2000);
+                    await AsyncStorage.setItem('@ulbo_last_feedback_prompt', now.toString());
                 }
             } catch (e) {
                 console.error('Error checking feedback prompt', e);
@@ -304,214 +731,62 @@ export const HubScreen: React.FC = () => {
         checkFeedbackPrompt();
     }, [progress?.level]);
 
-    const xpProgress = progress ? getXPProgress(progress.totalXP) : null;
+    const xpProgress  = progress ? getXPProgress(progress.totalXP) : null;
     const currentTier = progress ? LEVEL_TIERS.find(t => t.level === progress.level) : null;
-    const nextTier = progress ? LEVEL_TIERS.find(t => t.level === progress.level + 1) : null;
-    const completedCount = Object.values(dailyActions).filter(Boolean).length;
-
-    const handleNotificationToggle = async () => {
-        if (areNotificationsEnabled) {
-            setAreNotificationsEnabled(false);
-            Alert.alert('Notifications Disabled', 'Daily reminders turned off.');
-        } else {
-            const granted = await requestNotificationPermissions();
-            if (granted) {
-                await scheduleDailyReminder();
-                Alert.alert('Reminder Set', "You'll be notified daily at 8:00 AM to reflect.");
-                setAreNotificationsEnabled(true);
-            }
-        }
-    };
+    const completedCount = todoActions.filter(a => dailyActions[a.key as keyof DailyActions]).length;
 
     if (!progress) return null;
 
     return (
-        <SafeAreaView style={styles.container} edges={['top']}>
+        <View style={styles.container}>
             <ScrollView
                 style={styles.scrollView}
                 showsVerticalScrollIndicator={false}
-                contentContainerStyle={styles.scrollContent}
+                contentContainerStyle={[styles.scrollContent, { paddingTop: headerHeight || 12 }]}
             >
-                {/* ── Header ── */}
-                <View style={styles.header}>
-                    <Text style={styles.greeting}>
-                        {userName ? `Hey ${userName}!` : 'Hey there!'}
-                    </Text>
-                    <TouchableOpacity
-                        style={styles.hamburgerBtn}
-                        onPress={() => setIsSettingsVisible(true)}
-                        hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
-                    >
-                        <HamburgerIcon />
-                    </TouchableOpacity>
-                </View>
+                {/* ── Week Strip ── */}
+                <WeekStrip />
 
-                {/* ── Level Card ── */}
-                <TouchableOpacity
-                    onPress={() => setIsLevelModalVisible(true)}
-                    activeOpacity={0.85}
-                    style={styles.levelCard}
-                >
-                    <View style={styles.levelRow}>
-                        <View style={styles.levelBadge}>
-                            <Text style={styles.levelBadgeText}>LV.{progress.level}</Text>
-                        </View>
-                        <Text style={styles.levelTitle}>{currentTier?.title ?? 'Raw Spud'}</Text>
-                    </View>
-                    <View style={styles.xpRow}>
-                        <View style={styles.xpTrack}>
-                            <View
-                                style={[
-                                    styles.xpFill,
-                                    { width: `${(xpProgress?.percentage ?? 0) * 100}%` },
-                                ]}
-                            />
-                        </View>
-                        <Text style={styles.xpDot}>•</Text>
-                    </View>
-                    {nextTier && (
-                        <Text style={styles.xpNext}>
-                            {xpProgress?.xpInCurrentLevel ?? 0} / {xpProgress?.xpNeededForNext ?? 100} XP → {nextTier.title}
-                        </Text>
-                    )}
-                </TouchableOpacity>
-
-                {/* ── Potato + Action Circles ── */}
-                {!bonsaiLoading && (
-                    <View style={styles.potatoSection}>
-                        {/* Potato — ref lets us measure its screen position for hover detection */}
-                        <View ref={potatoWrapRef} style={styles.potatoWrap}>
-                            <PotatoPlant
-                                health={bonsaiState.health}
-                                animationTrigger={animationTrigger}
-                                onClearTrigger={clearTrigger}
-                                onWater={handleWaterTree}
-                                onTend={handleTendTree}
-                                width={screenWidth - 112}
-                                height={220}
-                            />
-                        </View>
-
-                        {/* Action circles */}
-                        <View style={styles.actionCircles}>
-                            {/* ── Water button — PanResponder for drag-to-water ── */}
-                            <View
-                                {...waterPanResponder.panHandlers}
-                                style={[
-                                    styles.circleBtn,
-                                    showWateringCan && styles.circleBtnActive,
-                                ]}
-                            >
-                                <WaterDropIcon />
-                            </View>
-
-                            {/* Walk */}
-                            <TouchableOpacity
-                                style={styles.circleBtn}
-                                onPress={() => navigation.navigate('Walking')}
-                                activeOpacity={0.7}
-                            >
-                                <WalkIcon />
-                            </TouchableOpacity>
-
-                            {/* Tend */}
-                            <TouchableOpacity
-                                style={styles.circleBtn}
-                                onPress={handleTendTree}
-                                activeOpacity={0.7}
-                            >
-                                <SparkleIcon />
-                            </TouchableOpacity>
-                        </View>
-                    </View>
+                {/* ── Main Card (mascot + actions combined) ── */}
+                {xpProgress && currentTier && (
+                    <MainCard
+                        level={progress.level}
+                        currentTitle={currentTier.title}
+                        onPressLevel={() => setIsLevelModalVisible(true)}
+                        getJumpHeight={getJumpHeight}
+                        onPeak={handlePotatoPeak}
+                        actions={todoActions}
+                        dailyActions={dailyActions}
+                        brokenTasks={brokenTasks}
+                        breakAnims={breakAnims}
+                        cardLayouts={cardLayouts}
+                        onNavigate={nav => navigation.navigate(nav as any)}
+                        completedCount={completedCount}
+                    />
                 )}
 
-                {/* ── Todo List ── */}
-                <View style={styles.todoCard}>
-                    <View style={styles.todoHeader}>
-                        <Text style={styles.cardTitle}>Todo list</Text>
-                        {completedCount > 0 && (
-                            <View style={styles.xpChip}>
-                                <Text style={styles.xpChipText}>+{completedCount * 10} XP</Text>
-                            </View>
-                        )}
-                    </View>
-                    {[
-                        { key: 'openedApp', label: 'Open the app', xp: XP_REWARDS.openApp, done: dailyActions.openedApp, nav: undefined },
-                        { key: 'readQuote', label: 'Read a new quote', xp: XP_REWARDS.readQuote, done: dailyActions.readQuote, nav: 'Canvas' },
-                        { key: 'wroteReflection', label: 'Write a reflection', xp: XP_REWARDS.writeReflection, done: dailyActions.wroteReflection, nav: 'Canvas' },
-                        { key: 'savedCanvas', label: 'Save your canvas', xp: XP_REWARDS.saveCanvas, done: dailyActions.savedCanvas, nav: 'Canvas' },
-                        { key: 'completedHunt', label: 'Complete Positivity Hunt', xp: XP_REWARDS.completeHunt, done: dailyActions.completedHunt, nav: 'Journal' },
-                    ].map((action, idx) => (
-                        <TouchableOpacity
-                            key={action.key}
-                            style={[styles.todoRow, idx < 4 && styles.todoRowBorder]}
-                            disabled={action.done || !action.nav}
-                            onPress={() => action.nav && navigation.navigate(action.nav as any)}
-                            activeOpacity={0.7}
-                        >
-                            <View style={[styles.todoBullet, action.done && styles.todoBulletDone]}>
-                                {action.done && <CheckIcon />}
-                            </View>
-                            <Text style={[styles.todoLabel, action.done && styles.todoLabelDone]}>
-                                {action.label}
-                            </Text>
-                            <Text style={[styles.todoXP, action.done && styles.todoXPDone]}>
-                                +{action.xp}
-                            </Text>
-                        </TouchableOpacity>
-                    ))}
-                </View>
+                {/* ── Today's Reflection card ── */}
+                <Pressable
+                    style={({ pressed }) => [
+                        styles.reflectionCard,
+                        pressed && { backgroundColor: '#E6E500', borderWidth: 2.5 },
+                    ]}
+                    onPress={() => navigation.navigate('Journal' as any)}
+                >
+                    <Text style={styles.reflectionLabel}>TODAY'S  REFLECTION</Text>
+                    {false && (
+                        <Text style={styles.reflectionSub}>You wrote today — tap to revisit</Text>
+                    )}
+                </Pressable>
 
-                <View style={{ height: 100 }} />
+                <View style={{ height: 62 + insets.bottom + 16 }} />
             </ScrollView>
 
             {/* ── Modals ── */}
-            <SettingsModal
-                visible={isSettingsVisible}
-                onClose={() => setIsSettingsVisible(false)}
-                onNotificationToggle={handleNotificationToggle}
-                areNotificationsEnabled={areNotificationsEnabled}
-                onExportData={async () => {
-                    setIsExporting(true);
-                    try {
-                        const result = await exportJournalData();
-                        if (result.success && result.data) {
-                            Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-                            await Share.share({ message: result.data, title: result.filename });
-                        } else {
-                            Alert.alert('Export Failed', 'Could not generate export data.');
-                        }
-                    } catch {
-                        Alert.alert('Error', 'An error occurred during export.');
-                    } finally {
-                        setIsExporting(false);
-                    }
-                }}
-                isExporting={isExporting}
-                onFeedback={() => {
-                    setIsSettingsVisible(false);
-                    setTimeout(() => setIsFeedbackVisible(true), 400);
-                }}
-                onShowOnboarding={() => {
-                    setIsSettingsVisible(false);
-                    setTimeout(() => setIsOnboardingVisible(true), 400);
-                }}
-                onClearMemory={async () => {
-                    await clearMemory();
-                    setIsSettingsVisible(false);
-                }}
-            />
-
             <StreakModal
                 visible={isStreakModalVisible}
                 onClose={() => setIsStreakModalVisible(false)}
                 streak={streak}
-            />
-
-            <FeedbackModal
-                visible={isFeedbackVisible}
-                onClose={() => setIsFeedbackVisible(false)}
             />
 
             {progress && (
@@ -532,17 +807,7 @@ export const HubScreen: React.FC = () => {
             />
 
             <OnboardingModal visible={isOnboardingVisible} onComplete={handleOnboardingComplete} />
-
-            {/* ── Watering-can overlay (above everything, non-touch-intercepting) ── */}
-            {showWateringCan && (
-                <View
-                    style={RNStyleSheet.absoluteFillObject}
-                    pointerEvents="none"
-                >
-                    <WateringCanOverlay canX={canX} canY={canY} isPouring={isPouring} />
-                </View>
-            )}
-        </SafeAreaView>
+        </View>
     );
 };
 
@@ -553,219 +818,128 @@ export const HubScreen: React.FC = () => {
 const styles = StyleSheet.create({
     container: {
         flex: 1,
-        backgroundColor: WHITE,
+        backgroundColor: BLACK,
     },
     scrollView: {
         flex: 1,
     },
     scrollContent: {
         paddingHorizontal: 16,
+        paddingBottom: 16,
     },
-
-    // ── Header ──
-    header: {
+    headerCard: {
+        backgroundColor: WHITE,
+        borderWidth: 2,
+        borderColor: BLACK,
+        borderRadius: 20,
+        paddingHorizontal: 16,
+        paddingTop: 14,
+        paddingBottom: 14,
+        marginBottom: 12,
+    },
+    headerTop: {
         flexDirection: 'row',
         alignItems: 'center',
-        justifyContent: 'center',
-        paddingTop: 14,
-        paddingBottom: 18,
-        position: 'relative',
+        justifyContent: 'space-between',
     },
-    greeting: {
-        fontFamily: 'GasoekOne', // → 'Gaseok' once Gaseok.ttf is in assets/fonts/
-        fontSize: 44,
+    greetingLine1: {
+        fontFamily: 'Inter-Bold',
+        fontSize: 24,
         color: BLACK,
-        textAlign: 'center',
-        flex: 1,
+        lineHeight: 28,
+    },
+    greetingLine2: {
+        fontFamily: 'Inter-Bold',
+        fontSize: 24,
+        color: BLACK,
+        lineHeight: 30,
     },
     hamburgerBtn: {
-        position: 'absolute',
-        right: 0,
-        top: 10,
         width: 44,
         height: 44,
         alignItems: 'center',
         justifyContent: 'center',
     },
-
-    // ── Level Card ──
-    levelCard: {
-        borderRadius: 16,
-        padding: 16,
-        marginBottom: 12,
-        backgroundColor: WHITE,
-        elevation: 8,
-        shadowColor: BLACK,
-        shadowOffset: { width: 0, height: 4 },
-        shadowOpacity: 0.1,
-        shadowRadius: 12,
+    settingsPanel: {
+        marginTop: 4,
     },
-    levelRow: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        gap: 10,
-        marginBottom: 12,
+    settingsDivider: {
+        height: 1.5,
+        backgroundColor: '#E0E0E0',
+        marginVertical: 10,
     },
-    levelBadge: {
-        backgroundColor: YELLOW,
-        borderRadius: 10,
-        paddingHorizontal: 10,
-        paddingVertical: 3,
-        elevation: 2,
-        shadowColor: BLACK,
-        shadowOffset: { width: 0, height: 2 },
-        shadowOpacity: 0.1,
-        shadowRadius: 4,
-    },
-    levelBadgeText: {
-        fontFamily: 'GasoekOne',
-        fontSize: 16,
-        color: BLACK,
-    },
-    levelTitle: {
-        fontFamily: 'Caveat-Bold',
-        fontSize: 24,
-        color: BLACK,
-        flex: 1,
-    },
-    xpRow: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        gap: 6,
-    },
-    xpTrack: {
-        flex: 1,
-        height: 8,
-        borderRadius: 4,
-        backgroundColor: '#F0F0F0',
-        overflow: 'hidden',
-    },
-    xpFill: {
-        height: '100%',
-        borderRadius: 4,
-        backgroundColor: YELLOW,
-    },
-    xpDot: {
-        fontSize: 14,
-        color: '#AAAAAA',
-        lineHeight: 14,
-    },
-    xpNext: {
-        fontFamily: 'Carlito',
-        fontSize: 13,
-        color: '#888',
-        marginTop: 6,
-    },
-
-    // ── Potato Section ──
-    potatoSection: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        marginBottom: 12,
-        paddingHorizontal: 4,
-    },
-    potatoWrap: {
-        flex: 1,
-    },
-    actionCircles: {
-        justifyContent: 'center',
-        gap: 14,
-        paddingLeft: 8,
-    },
-    circleBtn: {
-        width: 58,
-        height: 58,
-        borderRadius: 29,
-        backgroundColor: WHITE,
-        alignItems: 'center',
-        justifyContent: 'center',
-        elevation: 4,
-        shadowColor: BLACK,
-        shadowOffset: { width: 0, height: 2 },
-        shadowOpacity: 0.1,
-        shadowRadius: 6,
-    },
-    circleBtnActive: {
-        backgroundColor: '#E8F4FF',  // light blue tint while watering can is out
-    },
-
-    // ── Todo Card ──
-    todoCard: {
-        borderRadius: 16,
-        padding: 16,
-        marginBottom: 12,
-        backgroundColor: WHITE,
-        elevation: 8,
-        shadowColor: BLACK,
-        shadowOffset: { width: 0, height: 4 },
-        shadowOpacity: 0.1,
-        shadowRadius: 12,
-    },
-    todoHeader: {
+    settingsRow: {
         flexDirection: 'row',
         alignItems: 'center',
         justifyContent: 'space-between',
-        marginBottom: 6,
-    },
-    cardTitle: {
-        fontFamily: 'Caveat-Bold',
-        fontSize: 24,
-        color: BLACK,
-    },
-    xpChip: {
-        backgroundColor: YELLOW,
-        borderRadius: 10,
-        paddingHorizontal: 10,
-        paddingVertical: 3,
-        elevation: 2,
-        shadowColor: BLACK,
-        shadowOffset: { width: 0, height: 2 },
-        shadowOpacity: 0.1,
-        shadowRadius: 4,
-    },
-    xpChipText: {
-        fontFamily: 'Carlito-Bold',
-        fontSize: 13,
-        color: BLACK,
-    },
-    todoRow: {
-        flexDirection: 'row',
-        alignItems: 'center',
         paddingVertical: 10,
-        gap: 12,
     },
-    todoRowBorder: {
-        borderBottomWidth: 1,
-        borderBottomColor: '#00000012',
+    settingsRowLabel: {
+        fontFamily: 'Inter-Medium',
+        fontSize: 15,
+        color: BLACK,
     },
-    todoBullet: {
-        width: 26,
-        height: 26,
-        borderRadius: 13,
-        backgroundColor: YELLOW + '40',
-        alignItems: 'center',
-        justifyContent: 'center',
+    settingsRowDivider: {
+        height: 1,
+        backgroundColor: '#EEEEEE',
     },
-    todoBulletDone: {
+    settingsToggle: {
+        paddingHorizontal: 10,
+        paddingVertical: 4,
+        borderRadius: 20,
+        borderWidth: 1.5,
+        borderColor: '#CCCCCC',
+    },
+    settingsToggleOn: {
         backgroundColor: YELLOW,
+        borderColor: BLACK,
     },
-    todoLabel: {
-        fontFamily: 'Carlito',
+    settingsToggleText: {
+        fontFamily: 'Inter-Bold',
+        fontSize: 11,
+        color: '#AAAAAA',
+        letterSpacing: 0.5,
+    },
+    settingsToggleTextOn: {
+        color: BLACK,
+    },
+    settingsRowSub: {
+        fontFamily: 'Inter-Medium',
+        fontSize: 12,
+        color: '#4B5563',
+        marginTop: 1,
+    },
+    settingsBadge: {
+        fontFamily: 'Inter-Bold',
+        fontSize: 12,
+        color: BLACK,
+        backgroundColor: GRAY,
+        paddingHorizontal: 10,
+        paddingVertical: 4,
+        borderRadius: 8,
+    },
+    reflectionCard: {
+        backgroundColor: YELLOW,
+        borderWidth: 2,
+        borderColor: BLACK,
+        borderRadius: 20,
+        paddingHorizontal: 20,
+        paddingVertical: 28,
+        alignItems: 'flex-start',
+    },
+    reflectionLabel: {
+        fontFamily: 'Inter-Bold',
         fontSize: 16,
         color: BLACK,
-        flex: 1,
+        letterSpacing: 0.8,
+        marginBottom: 4,
+        textAlign: 'left',
     },
-    todoLabelDone: {
-        textDecorationLine: 'line-through',
-        color: '#999',
-    },
-    todoXP: {
-        fontFamily: 'Carlito-Bold',
-        fontSize: 13,
-        color: '#666',
-    },
-    todoXPDone: {
-        color: '#BBBBBB',
+    reflectionSub: {
+        fontFamily: 'Inter-Medium',
+        fontSize: 14,
+        color: BLACK,
+        opacity: 0.7,
     },
 });
 

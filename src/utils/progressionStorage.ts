@@ -1,16 +1,11 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { UserProgress, DailyActions, XPAction, DailyHunt, PositivityHuntEntry } from '../types';
 import { XP_REWARDS, getLevelForXP } from '../data/progressionConfig';
+import { getTodayDateString } from './dateHelpers';
+import { supabase } from '../lib/supabase';
 
 const PROGRESS_KEY = '@ulbo_user_progress';
 const HUNT_KEY_PREFIX = '@ulbo_hunt_';
-
-// ---------- Date helpers ----------
-
-const getTodayString = (): string => {
-    const d = new Date();
-    return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
-};
 
 const createFreshDailyActions = (date: string): DailyActions => ({
     date,
@@ -28,21 +23,98 @@ const createFreshDailyActions = (date: string): DailyActions => ({
 const createDefaultProgress = (): UserProgress => ({
     totalXP: 0,
     level: 1,
-    dailyActions: createFreshDailyActions(getTodayString()),
+    dailyActions: createFreshDailyActions(getTodayDateString()),
     lastUpdated: new Date().toISOString(),
 });
+
+// ---------- Supabase Sync Helpers ----------
+
+/** Fire-and-forget: push XP + level to cloud. Fails silently if offline or unauthenticated. */
+const syncProgressionToSupabase = async (progress: UserProgress): Promise<void> => {
+    try {
+        const { data: { user } } = await supabase.auth.getUser();
+        if (!user) return;
+
+        await supabase
+            .from('user_progression')
+            .upsert({
+                user_id: user.id,
+                total_xp: progress.totalXP,
+                level: progress.level,
+                updated_at: new Date().toISOString(),
+            }, { onConflict: 'user_id' });
+    } catch {
+        // Silently ignore — local progress is the source of truth
+    }
+};
+
+/**
+ * Pull progression from Supabase. Used on fresh install / new device to restore
+ * a user's XP and level without requiring them to re-earn it.
+ */
+const syncProgressionFromSupabase = async (): Promise<UserProgress | null> => {
+    try {
+        const { data: { user } } = await supabase.auth.getUser();
+        if (!user) return null;
+
+        const { data, error } = await supabase
+            .from('user_progression')
+            .select('total_xp, level')
+            .eq('user_id', user.id)
+            .single();
+
+        if (error || !data) return null;
+
+        return {
+            totalXP: data.total_xp,
+            level: data.level,
+            dailyActions: createFreshDailyActions(getTodayDateString()),
+            lastUpdated: new Date().toISOString(),
+        };
+    } catch {
+        return null;
+    }
+};
+
+/** Explicit sync export — call after sign-in to restore cross-device progression. */
+export const syncProgressionWithSupabase = async (): Promise<void> => {
+    try {
+        const raw = await AsyncStorage.getItem(PROGRESS_KEY);
+        const localProgress: UserProgress | null = raw ? JSON.parse(raw) : null;
+        const cloudProgress = await syncProgressionFromSupabase();
+
+        if (!cloudProgress) return;
+
+        // Cloud wins only if it has MORE XP (prevents downgrade on new device)
+        if (!localProgress || cloudProgress.totalXP > localProgress.totalXP) {
+            const today = getTodayDateString();
+            cloudProgress.dailyActions = localProgress?.dailyActions.date === today
+                ? localProgress.dailyActions
+                : createFreshDailyActions(today);
+            await AsyncStorage.setItem(PROGRESS_KEY, JSON.stringify(cloudProgress));
+        }
+    } catch (error) {
+        console.error('[Progression] syncProgressionWithSupabase error:', error);
+    }
+};
 
 // ---------- Load / Save ----------
 
 export const loadProgress = async (): Promise<UserProgress> => {
     try {
         const raw = await AsyncStorage.getItem(PROGRESS_KEY);
-        if (!raw) return createDefaultProgress();
+
+        // Fresh install: try to restore from cloud before starting at 0
+        if (!raw) {
+            const cloudProgress = await syncProgressionFromSupabase();
+            if (cloudProgress) return cloudProgress;
+            return createDefaultProgress();
+        }
 
         const progress: UserProgress = JSON.parse(raw);
 
         // If it's a new day, reset daily actions but keep XP
-        const today = getTodayString();
+        const today = getTodayDateString();
         if (progress.dailyActions.date !== today) {
             progress.dailyActions = createFreshDailyActions(today);
         }
@@ -58,6 +130,8 @@ export const saveProgress = async (progress: UserProgress): Promise<void> => {
     try {
         progress.lastUpdated = new Date().toISOString();
         await AsyncStorage.setItem(PROGRESS_KEY, JSON.stringify(progress));
+        // Background cloud sync — non-blocking
+        syncProgressionToSupabase(progress).catch(() => {});
     } catch (error) {
         console.error('[Progression] Error saving progress:', error);
     }
@@ -79,7 +153,7 @@ export const awardXP = async (
     previousLevel: number;
 }> => {
     const progress = currentProgress ? { ...currentProgress } : await loadProgress();
-    const today = getTodayString();
+    const today = getTodayDateString();
 
     // Ensure daily actions are fresh
     if (progress.dailyActions.date !== today) {
@@ -130,7 +204,7 @@ export const awardXP = async (
 // ---------- Positivity Hunt ----------
 
 export const loadDailyHunt = async (date?: string): Promise<DailyHunt> => {
-    const day = date || getTodayString();
+    const day = date || getTodayDateString();
     try {
         const raw = await AsyncStorage.getItem(HUNT_KEY_PREFIX + day);
         if (raw) {

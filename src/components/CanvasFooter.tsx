@@ -72,7 +72,7 @@ const styles = StyleSheet.create({
         gap: 10,
     },
     deleteText: {
-        fontFamily: 'GasoekOne',
+        fontFamily: 'MontserratAlternates-ExtraBoldItalic',
         fontSize: 18,
     },
 });

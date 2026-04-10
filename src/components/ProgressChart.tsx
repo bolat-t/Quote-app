@@ -39,13 +39,13 @@ export const ProgressChart: React.FC<ProgressChartProps> = ({ data }) => {
                 <Line
                     x1={paddingLeft} y1={chartHeight - 10}
                     x2={chartWidth - paddingRight} y2={chartHeight - 10}
-                    stroke={BLACK + '10'}
-                    strokeWidth={1}
+                    stroke="#D8D8D8"
+                    strokeWidth={1.5}
                 />
                 <Line
                     x1={paddingLeft} y1={15}
                     x2={chartWidth - paddingRight} y2={15}
-                    stroke={BLACK + '10'}
+                    stroke="#D8D8D8"
                     strokeWidth={1}
                     strokeDasharray="4,4"
                 />
@@ -66,10 +66,10 @@ export const ProgressChart: React.FC<ProgressChartProps> = ({ data }) => {
                         <Circle
                             cx={p.x}
                             cy={p.y}
-                            r={p.isToday ? 6 : 4}
-                            fill={p.completed ? YELLOW : BLACK + '20'}
-                            stroke={p.isToday ? BLACK : 'none'}
-                            strokeWidth={p.isToday ? 2 : 0}
+                            r={p.isToday ? 7 : 5}
+                            fill={p.completed ? YELLOW : '#CCCCCC'}
+                            stroke={BLACK}
+                            strokeWidth={p.isToday ? 2.5 : 1.5}
                         />
                         {p.isToday && p.completed && (
                             <Circle
@@ -81,12 +81,11 @@ export const ProgressChart: React.FC<ProgressChartProps> = ({ data }) => {
                         )}
                         <SvgText
                             x={p.x}
-                            y={chartHeight + 18}
-                            fontSize="11"
-                            fontFamily="Carlito"
-                            fill={p.isToday ? BLACK : BLACK + '50'}
+                            y={chartHeight + 20}
+                            fontSize="13"
+                            fontFamily="Carlito-Bold"
+                            fill={p.isToday ? BLACK : '#777777'}
                             textAnchor="middle"
-                            fontWeight={p.isToday ? 'bold' : 'normal'}
                         >
                             {p.day}
                         </SvgText>
@@ -108,7 +107,7 @@ const styles = StyleSheet.create({
         borderColor: BLACK,
     },
     title: {
-        fontFamily: 'GasoekOne',
+        fontFamily: 'MontserratAlternates-ExtraBoldItalic',
         fontSize: 20,
         marginBottom: 12,
         alignSelf: 'flex-start',

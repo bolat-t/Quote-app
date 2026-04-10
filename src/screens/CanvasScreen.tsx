@@ -1,556 +1,560 @@
 import React, { useState, useCallback, useRef, useEffect } from 'react';
 import {
-    View,
-    StyleSheet,
-    Alert,
-    Share,
-    Dimensions,
+    View, Text, StyleSheet, ScrollView,
+    TouchableOpacity, Dimensions, Alert, Image,
 } from 'react-native';
-import { useNavigation } from '@react-navigation/native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import Svg, { Path as SvgPath } from 'react-native-svg';
 import { captureRef } from 'react-native-view-shot';
 import * as Haptics from 'expo-haptics';
-import * as ImagePicker from 'expo-image-picker';
-import { MascotMood } from '../hooks/useMascotState';
-import { TextBoxData, generateTextBoxId } from '../components/DraggableTextBox';
-import { Stroke, Point, Quote, UserProgress, TabScreenNavigationProp } from '../types';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+
+import { Stroke, Point } from '../types';
 import { generateId } from '../utils/dateHelpers';
 import { saveDrawingAsImage } from '../utils/storage';
-import { addJournalImage, getTodayDateString, syncJournalWithSupabase } from '../utils/journalStorage';
-import Svg, { Path as SvgPath } from 'react-native-svg';
-
-import { useAuth } from '../context/AuthContext';
-import { usePurchase } from '../context/PurchaseContext';
-import { trackEvent } from '../lib/analytics';
-import quotesData from '../data/quotes.json';
-import { useDailyQuote } from '../hooks/useDailyQuote';
-
-// Canvas components
-import { CanvasHeader, CanvasMode } from '../components/CanvasHeader';
-import { CanvasSidebar } from '../components/CanvasSidebar';
-import { PaperCanvas } from '../components/PaperCanvas';
-import { CanvasFooter } from '../components/CanvasFooter';
-
-
-// Progression
+import { useHeaderHeight } from '../context/HeaderHeightContext';
+import { awardXP, loadProgress } from '../utils/progressionStorage';
 import { XPToast } from '../components/XPToast';
-import { LevelModal } from '../components/LevelModal';
-import { loadProgress, awardXP } from '../utils/progressionStorage';
-import { LEVEL_TIERS } from '../data/progressionConfig';
-import { PaperSelector } from '../components/PaperSelector';
-import { ConfirmationModal } from '../components/ConfirmationModal';
-import { SavingOverlay } from '../components/SavingOverlay';
-import { loadActivePaper, saveActivePaper } from '../utils/storage';
-import { useFocusEffect } from '@react-navigation/native';
 
-const quotes = quotesData as Quote[];
+const BLACK  = '#000000';
+const WHITE  = '#FFFFFF';
+const YELLOW = '#FFE600';
 
-const { width: screenWidth, height: screenHeight } = Dimensions['get']('window');
+const { width: SCREEN_W, height: SCREEN_H } = Dimensions.get('window');
+const CANVAS_W = SCREEN_W - 32;
+
+type BrushType = 'pencil' | 'crayon';
+
+const BRUSHES: Record<BrushType, { strokeWidth: number; opacity: number }> = {
+    pencil: { strokeWidth: 2,  opacity: 0.92 },
+    crayon: { strokeWidth: 12, opacity: 0.52 },
+};
+
+const COLORS = ['#1C1C1C', '#2C4A6E', '#4A7C3F', '#8B3A3A', '#996600', '#6B4226', '#7B3F7A', '#E87040'];
+
+const STAMPS_KEY = '@ulbo_stamps';
+
+export interface StampEntry {
+    id:   string;
+    uri:  string;
+    date: string;
+}
+
+const pointsToPath = (pts: Point[], dx = 0, dy = 0) => {
+    if (!pts.length) return '';
+    if (pts.length === 1) return `M ${pts[0].x + dx} ${pts[0].y + dy} L ${pts[0].x + dx} ${pts[0].y + dy}`;
+    let d = `M ${pts[0].x + dx} ${pts[0].y + dy}`;
+    for (let i = 1; i < pts.length; i++) d += ` L ${pts[i].x + dx} ${pts[i].y + dy}`;
+    return d;
+};
+
+// Multi-layer offsets — heavy charcoal/pencil grain texture
+const PENCIL_LAYERS = [
+    // Core strokes (dense center)
+    { dx: 0,    dy: 0,    op: 0.80, w: 3.0 },
+    { dx: 0,    dy: 0,    op: 0.40, w: 5.5 },
+    // Near grain
+    { dx: 0.7,  dy: 0.3,  op: 0.38, w: 2.0 },
+    { dx: -0.7, dy: 0.5,  op: 0.35, w: 1.8 },
+    { dx: 0.5,  dy: -0.8, op: 0.30, w: 1.6 },
+    { dx: -0.5, dy: -0.6, op: 0.28, w: 1.4 },
+    { dx: 0.9,  dy: -0.3, op: 0.24, w: 1.2 },
+    { dx: -0.9, dy: 0.8,  op: 0.22, w: 1.0 },
+    // Mid scatter
+    { dx: 1.8,  dy: 0.4,  op: 0.16, w: 1.0 },
+    { dx: -1.6, dy: 0.9,  op: 0.15, w: 0.9 },
+    { dx: 1.3,  dy: -1.5, op: 0.14, w: 0.8 },
+    { dx: -1.5, dy: -1.2, op: 0.12, w: 0.7 },
+    { dx: 2.1,  dy: -0.7, op: 0.10, w: 0.6 },
+    { dx: -2.0, dy: 1.3,  op: 0.09, w: 0.6 },
+    // Far grain scatter
+    { dx: 2.8,  dy: 0.9,  op: 0.07, w: 0.5 },
+    { dx: -2.7, dy: -1.6, op: 0.06, w: 0.5 },
+    { dx: 1.5,  dy: 2.5,  op: 0.05, w: 0.4 },
+    { dx: -1.7, dy: 2.7,  op: 0.05, w: 0.4 },
+    { dx: 3.2,  dy: -1.2, op: 0.04, w: 0.4 },
+    { dx: -3.0, dy: 1.8,  op: 0.04, w: 0.3 },
+];
 
 export const CanvasScreen: React.FC = () => {
-    const { user } = useAuth();
-    const navigation = useNavigation<TabScreenNavigationProp<'Canvas'>>();
-    const { quoteIndex: dailyQuoteIndex } = useDailyQuote();
-    // ── Drawing mode (draw-only now) ──────────────────────────────
-    const [mode] = useState<CanvasMode>('draw');
+    const headerHeight = useHeaderHeight();
+    const insets = useSafeAreaInsets();
+    // Canvas fills the gap between toolbar and tab bar exactly
+    const CANVAS_H = SCREEN_H - headerHeight - (62 + insets.bottom) - 58 - 6 - 14 - 14;
 
-    // Quote selection
-    const [selectedCategory] = useState('All');
-    const filteredQuotes = React.useMemo(() => {
-        if (selectedCategory === 'All') return quotes;
-        return quotes.filter(q => q.category === selectedCategory);
-    }, [selectedCategory]);
-
-    const [quoteIndex, setQuoteIndex] = useState(dailyQuoteIndex);
-    React.useEffect(() => {
-        setQuoteIndex(selectedCategory === 'All' ? dailyQuoteIndex : 0);
-    }, [selectedCategory, dailyQuoteIndex]);
-
-    // Drawing state
-    const [strokes, setStrokes] = useState<Stroke[]>([]);
+    const [strokes,       setStrokes]       = useState<Stroke[]>([]);
     const [currentStroke, setCurrentStroke] = useState<Point[]>([]);
-    const [history, setHistory] = useState<{ strokes: Stroke[], textBoxes: TextBoxData[] }[]>([]);
-    const [redoStack, setRedoStack] = useState<{ strokes: Stroke[], textBoxes: TextBoxData[] }[]>([]);
-    const [textBoxes, setTextBoxes] = useState<TextBoxData[]>([]);
-    const [isAnyTextEditing, setIsAnyTextEditing] = useState(false);
-    const [isDrawing, setIsDrawing] = useState(false);
+    const [history,       setHistory]       = useState<Stroke[][]>([]);
+    const [redoStack,     setRedoStack]     = useState<Stroke[][]>([]);
+    const [isDrawing,     setIsDrawing]     = useState(false);
 
-    const [deleteZone, setDeleteZone] = useState<{ x: number, y: number, width: number, height: number } | null>(null);
-    const [isDraggingOverDelete, setIsDraggingOverDelete] = useState(false);
-    const [isDraggingAny, setIsDraggingAny] = useState(false);
-    const deleteButtonRef = useRef<View>(null);
+    const [brushType,   setBrushType]   = useState<BrushType>('pencil');
+    const [color,       setColor]       = useState(COLORS[0]);
+    const [showColors,  setShowColors]  = useState(false);
 
+    const [stamps,  setStamps]  = useState<StampEntry[]>([]);
+    const [saving,  setSaving]  = useState(false);
+    const [xpToast, setXpToast] = useState<{ amount: number; label?: string } | null>(null);
 
-    // Paint/color state
-    const [selectedColor, setSelectedColor] = useState('#5E4B3C');
-
-    // Progression state
-    const [userProgress, setUserProgress] = useState<UserProgress | null>(null);
-    const [isLevelModalVisible, setIsLevelModalVisible] = useState(false);
-    const [xpToast, setXpToast] = useState<{ amount: number; label?: string; leveledUp?: boolean; newLevelTitle?: string } | null>(null);
-
-    // Paper state
-    const [activePaper, setActivePaper] = useState('plain');
-    const [paperSelectorVisible, setPaperSelectorVisible] = useState(false);
-
-    // Custom Alerts State
-    const [showClearModal, setShowClearModal] = useState(false);
-    const [savingStatus, setSavingStatus] = useState<'saving' | 'success' | 'error' | null>(null);
-    const [savedEntryData, setSavedEntryData] = useState<{ uri: string, reflectionText?: string, entryId?: string } | null>(null);
-
-    useFocusEffect(
-        React.useCallback(() => {
-            const loadData = async () => {
-                const paper = await loadActivePaper();
-                setActivePaper(paper);
-                const progress = await loadProgress();
-                if (progress) {
-                    setUserProgress(progress);
-                }
-            };
-            loadData();
-        }, [])
-    );
-
-    const handleSelectPaper = async (paperId: string) => {
-        setActivePaper(paperId);
-        await saveActivePaper(paperId);
-        setPaperSelectorVisible(false);
-    };
-
-    const lastSavedUriRef = useRef<string | null>(null);
-
-    const [mascotMoodOverride, setMascotMoodOverride] = useState<MascotMood | undefined>(undefined);
-    const { isPremium } = usePurchase();
-
-    // AFK timer
-    const [isAfk, setIsAfk] = useState(false);
-    const afkTimerRef = useRef<NodeJS.Timeout | null>(null);
-    const resetAfkTimer = useCallback(() => {
-        setIsAfk(false);
-        if (afkTimerRef.current) clearTimeout(afkTimerRef.current);
-        afkTimerRef.current = setTimeout(() => setIsAfk(true), 30000);
-    }, []);
+    const canvasRef = useRef<View>(null);
+    // Screen-absolute origin of the canvas view — used to convert pageX/pageY to canvas coords
+    const canvasOrigin = useRef({ x: 0, y: 0 });
 
     useEffect(() => {
-        resetAfkTimer();
-        return () => { if (afkTimerRef.current) clearTimeout(afkTimerRef.current); };
-    }, [resetAfkTimer]);
-
-    // Init
-    React.useEffect(() => {
-        initProgression();
+        AsyncStorage.getItem(STAMPS_KEY).then(v => {
+            if (v) setStamps(JSON.parse(v));
+        });
     }, []);
 
-    React.useEffect(() => {
-        if (user) syncJournalWithSupabase();
-    }, [user]);
-
-    const initProgression = useCallback(async () => {
-        const progress = await loadProgress();
-        setUserProgress(progress);
+    const handleTouchStart = useCallback((e: any) => {
+        setIsDrawing(true);
+        const { locationX, locationY, pageX, pageY } = e.nativeEvent;
+        // Canvas is always the responder on grant — locationX/Y are accurate here.
+        // Derive canvas screen origin so subsequent moves stay in the same coord space.
+        canvasOrigin.current = { x: pageX - locationX, y: pageY - locationY };
+        setCurrentStroke([{ x: locationX, y: locationY }]);
     }, []);
 
-    const handleAwardXP = useCallback(async (action: Parameters<typeof awardXP>[0], label: string) => {
-        if (!userProgress) return;
-        const result = await awardXP(action, userProgress);
-        setUserProgress(result.progress);
-        if (result.xpGained > 0) {
-            setXpToast({
-                amount: result.xpGained,
-                label,
-                leveledUp: result.leveledUp,
-                newLevelTitle: result.leveledUp ? LEVEL_TIERS.find(t => t.level === result.progress.level)?.title : undefined,
-            });
-        }
-    }, [userProgress]);
-
-    // Refs
-    const viewRef = useRef<View>(null);
-    const dragStartSnapshot = useRef<{ strokes: Stroke[], textBoxes: TextBoxData[] } | null>(null);
-    const quote = filteredQuotes[quoteIndex] || filteredQuotes[0] || quotes[0];
-    const reflectionBox = React.useMemo(() => textBoxes.find(b => b.isReflection), [textBoxes]);
-    const strokeColor = selectedColor;
-    const strokeWidth = 2.5;
-    const canvasOffset = useRef({ x: 0, y: 0, width: 0, height: 0 });
-
-    // Canvas coordinate helpers
-    const handleCanvasLayout = useCallback(() => {
-        if (viewRef.current) {
-            (viewRef.current as any).measure(
-                (_x: number, _y: number, width: number, height: number, pageX: number, pageY: number) => {
-                    canvasOffset.current = { x: pageX, y: pageY, width, height };
-                }
-            );
-        }
-    }, []);
-
-    const getCanvasPoint = useCallback((locationX: number, locationY: number): Point | null => {
-        const x = locationX;
-        const y = locationY;
-        const { width, height } = canvasOffset.current;
-        if (x < 0 || y < 0 || (width > 0 && x > width) || (height > 0 && y > height)) return null;
-        return { x, y };
-    }, []);
-
-    // Touch handlers
-    const handleTouchStart = useCallback((event: any) => {
-        resetAfkTimer();
-        if (isAnyTextEditing) return;
-        const { locationX, locationY } = event.nativeEvent;
-        const point = getCanvasPoint(locationX, locationY);
-        if (point) {
-            setIsDrawing(true);
-            setCurrentStroke([point]);
-        }
-    }, [isAnyTextEditing, resetAfkTimer, getCanvasPoint]);
-
-    const handleTouchMove = useCallback((event: any) => {
+    const handleTouchMove = useCallback((e: any) => {
         if (!isDrawing) return;
-        const { locationX, locationY } = event.nativeEvent;
-        const point = getCanvasPoint(locationX, locationY);
-        if (point) setCurrentStroke(prev => [...prev, point]);
-    }, [isDrawing, getCanvasPoint]);
+        const { pageX, pageY } = e.nativeEvent;
+        // Use screen-absolute coords minus the origin captured on touch start
+        const x = Math.max(0, Math.min(CANVAS_W, pageX - canvasOrigin.current.x));
+        const y = Math.max(0, Math.min(CANVAS_H, pageY - canvasOrigin.current.y));
+        setCurrentStroke(prev => [...prev, { x, y }]);
+    }, [isDrawing, CANVAS_H]);
 
     const handleTouchEnd = useCallback(() => {
         if (currentStroke.length > 0) {
-            const newStroke: Stroke = {
-                id: generateId(),
-                points: currentStroke,
-                color: strokeColor,
-                width: strokeWidth,
+            const { strokeWidth, opacity } = BRUSHES[brushType];
+            const stroke: Stroke = {
+                id:      generateId(),
+                points:  currentStroke,
+                color,
+                width:   strokeWidth,
+                opacity,
             };
-            setHistory(prev => [...prev, { strokes, textBoxes }]);
-            setStrokes(prev => [...prev, newStroke]);
+            setHistory(prev => [...prev, strokes]);
+            setStrokes(prev => [...prev, stroke]);
             setRedoStack([]);
         }
         setCurrentStroke([]);
         setIsDrawing(false);
-    }, [currentStroke, strokes, textBoxes, strokeColor]);
+    }, [currentStroke, strokes, color, brushType]);
 
-    // Actions
-    const handleUndo = useCallback(() => {
-        if (history.length === 0) return;
-        const prev = history[history.length - 1];
-        if (!prev?.strokes || !prev?.textBoxes) { setHistory(p => p.slice(0, -1)); return; }
-        setRedoStack(p => [...p, { strokes, textBoxes }]);
-        setStrokes(prev.strokes);
-        setTextBoxes(prev.textBoxes);
-        setHistory(p => p.slice(0, -1));
-    }, [history, strokes, textBoxes]);
+    const handleUndo = () => {
+        if (!history.length) return;
+        setRedoStack(prev => [...prev, strokes]);
+        setStrokes(history[history.length - 1]);
+        setHistory(prev => prev.slice(0, -1));
+        Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    };
 
-    const handleRedo = useCallback(() => {
-        if (redoStack.length === 0) return;
-        const next = redoStack[redoStack.length - 1];
-        if (!next?.strokes || !next?.textBoxes) { setRedoStack(p => p.slice(0, -1)); return; }
-        setHistory(p => [...p, { strokes, textBoxes }]);
-        setStrokes(next.strokes);
-        setTextBoxes(next.textBoxes);
-        setRedoStack(p => p.slice(0, -1));
-    }, [redoStack, strokes, textBoxes]);
+    const handleRedo = () => {
+        if (!redoStack.length) return;
+        setHistory(prev => [...prev, strokes]);
+        setStrokes(redoStack[redoStack.length - 1]);
+        setRedoStack(prev => prev.slice(0, -1));
+        Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    };
 
-    const handleClear = useCallback(() => {
-        setShowClearModal(true);
-    }, []);
-
-    const confirmClear = useCallback(() => {
-        setHistory(prev => [...prev, { strokes, textBoxes }]);
+    const handleClear = () => {
+        if (!strokes.length) return;
+        setHistory(prev => [...prev, strokes]);
         setStrokes([]);
         setRedoStack([]);
-        setShowClearModal(false);
-    }, [strokes, textBoxes]);
+        Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+    };
 
-    const handleRegenerate = useCallback(() => {
-        if (!isPremium) {
-            Alert.alert('Unlock Unlimited Quotes', 'Regenerate quotes endlessly with Ulbo Premium.', [
-                { text: 'Cancel', style: 'cancel' },
-                { text: 'Upgrade', onPress: () => navigation.navigate('Paywall') },
-            ]);
+    const handleStamp = async () => {
+        if (!strokes.length) {
+            Alert.alert('Draw something first!');
             return;
         }
-        Haptics.selectionAsync();
-        if (filteredQuotes.length <= 1) return;
-        let newIndex;
-        do { newIndex = Math.floor(Math.random() * filteredQuotes.length); } while (newIndex === quoteIndex);
-        setQuoteIndex(newIndex);
-        handleAwardXP('readQuote', 'New quote');
-        trackEvent('quote_viewed', { category: selectedCategory, quote_id: filteredQuotes[newIndex]?.id });
-    }, [quoteIndex, filteredQuotes, handleAwardXP]);
-
-    // "Done" = Save canvas, then show overlay
-    const handleDone = useCallback(async () => {
-        setMascotMoodOverride('excited');
-        setSavingStatus('saving');
-
+        setSaving(true);
         try {
-            await new Promise(resolve => setTimeout(resolve, 500));
+            Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+            let tmpUri = await captureRef(canvasRef, { format: 'png', quality: 1 });
+            if (!tmpUri.startsWith('file://')) tmpUri = 'file://' + tmpUri;
+            const uri = await saveDrawingAsImage(tmpUri, `stamp-${Date.now()}`);
+            if (!uri) throw new Error('save failed');
 
-            if (viewRef.current) {
-                let tmpFilePath = await captureRef(viewRef, { format: 'png', quality: 1 });
-                if (!tmpFilePath.startsWith('file://')) tmpFilePath = 'file://' + tmpFilePath;
-                const filename = `ulbo-${Date.now()}`;
-                const savedUri = await saveDrawingAsImage(tmpFilePath, filename);
+            const date  = new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+            const entry = { id: generateId(), uri, date };
+            const updated = [entry, ...stamps];
+            setStamps(updated);
+            await AsyncStorage.setItem(STAMPS_KEY, JSON.stringify(updated));
 
-                if (savedUri) {
-                    lastSavedUriRef.current = savedUri;
-                    const todayDate = getTodayDateString();
-                    const reflectionText = textBoxes.find(b => b.isReflection)?.text;
-                    const savedEntry = await addJournalImage(todayDate, savedUri, { id: quote.id, text: quote.text }, reflectionText);
+            const progress = await loadProgress();
+            const result   = await awardXP('saveCanvas', progress);
+            if (result.xpGained > 0) setXpToast({ amount: result.xpGained, label: 'Stamp saved!' });
 
-                    Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-                    handleAwardXP('saveCanvas', 'Saved canvas');
-                    trackEvent('canvas_saved', { has_drawing: strokes.length > 0, has_reflection: !!reflectionBox });
-
-                    setSavedEntryData({
-                        uri: savedUri,
-                        reflectionText,
-                        entryId: savedEntry?.id
-                    });
-                    setSavingStatus('success');
-                } else {
-                    throw new Error("Failed to save image");
-                }
-            }
-        } catch (error) {
-            console.error('Error saving:', error);
-            setMascotMoodOverride(undefined);
-            setSavingStatus('error');
-        }
-    }, [mode, quote, textBoxes, reflectionBox, strokes]);
-
-
-
-    const handleShareFromModal = useCallback(async () => {
-        if (!savedEntryData?.uri) return;
-        try {
-            await Share.share({ url: savedEntryData.uri, message: 'Created with Ulbo — my daily reflection' });
-            handleAwardXP('shareReflection', 'Shared reflection');
-        } catch (e) { console.log('Share cancelled'); }
-    }, [savedEntryData]);
-
-
-
-    // Text box handlers
-    const handleBoxUpdate = useCallback((id: string, updates: Partial<TextBoxData>) => {
-        setTextBoxes(prev => prev.map(box => box.id === id ? { ...box, ...updates } : box));
-    }, []);
-
-    const handleDragStart = useCallback(() => {
-        dragStartSnapshot.current = { strokes, textBoxes };
-        setIsDraggingAny(true);
-    }, [strokes, textBoxes]);
-
-    const handleDrag = useCallback((x: number, y: number) => {
-        if (deleteZone) {
-            const isOver = x >= deleteZone.x && x <= deleteZone.x + deleteZone.width &&
-                y >= deleteZone.y && y <= deleteZone.y + deleteZone.height;
-            setIsDraggingOverDelete(isOver);
-        }
-    }, [deleteZone]);
-
-    const handleDeleteTextBox = useCallback((id: string) => {
-        Haptics.notificationAsync(Haptics.NotificationFeedbackType.Warning);
-        setHistory(prev => [...prev, { strokes, textBoxes }]);
-        setTextBoxes(prev => prev.filter(box => box.id !== id));
-        setRedoStack([]);
-    }, [strokes, textBoxes]);
-
-    const handleDragEnd = useCallback((id: string, x: number, y: number) => {
-        if (isDraggingOverDelete) {
-            handleDeleteTextBox(id);
-            setIsDraggingOverDelete(false);
-        }
-        if (dragStartSnapshot.current) {
-            setHistory(prev => [...prev, dragStartSnapshot.current!]);
+            setStrokes([]);
+            setHistory([]);
             setRedoStack([]);
-            dragStartSnapshot.current = null;
+        } catch {
+            Alert.alert('Could not save stamp');
+        } finally {
+            setSaving(false);
         }
-        setIsDraggingAny(false);
-    }, [isDraggingOverDelete, handleDeleteTextBox]);
+    };
 
-    const handleTextChange = useCallback((id: string, text: string) => {
-        setHistory(prev => [...prev, { strokes, textBoxes }]);
-        setTextBoxes(prev => prev.map(box => box.id === id ? { ...box, text } : box));
-        setRedoStack([]);
-    }, [strokes, textBoxes]);
-
-    const handleSaveToCanvas = useCallback((text: string) => {
-        setHistory(prev => [...prev, { strokes, textBoxes }]);
-        if (reflectionBox) {
-            setTextBoxes(prev => prev.map(box => box.id === reflectionBox.id ? { ...box, text } : box));
-        } else {
-            const newBox: TextBoxData = {
-                id: generateTextBoxId(),
-                text,
-                x: screenWidth * 0.1,
-                y: screenHeight * 0.3,
-                rotation: 0,
-                scale: 1,
-                isReflection: true,
-            };
-            setTextBoxes(prev => [...prev, newBox]);
-        }
-        setRedoStack([]);
-    }, [strokes, textBoxes, reflectionBox]);
-
-    const handleDeleteZoneLayout = useCallback(() => {
-        deleteButtonRef.current?.measure((_x: number, _y: number, width: number, height: number, pageX: number, pageY: number) => {
-            setDeleteZone({ x: pageX, y: pageY, width, height });
-        });
-    }, []);
-
-    const handleColorChange = useCallback((color: string) => {
-        setSelectedColor(color);
-    }, []);
-
-    const handleAddImage = useCallback(async () => {
-        const result = await ImagePicker.launchImageLibraryAsync({
-            mediaTypes: ['images'] as any,
-            allowsEditing: true,
-            quality: 0.8,
-        });
-        if (!result.canceled) {
-            const uri = result.assets[0].uri;
-            const newBox: TextBoxData = {
-                id: Date.now().toString(),
-                text: `__IMAGE__${uri}`,
-                x: screenWidth * 0.15,
-                y: screenHeight * 0.2,
-                isReflection: false,
-                autoEdit: false,
-            };
-            setTextBoxes(prev => [...prev, newBox]);
-        }
-    }, []);
-
-
+    const { strokeWidth, opacity: brushOpacity } = BRUSHES[brushType];
+    const muted = (active: boolean) => active ? BLACK : BLACK + '28';
 
     return (
-        <SafeAreaView style={styles.container} edges={['top']}>
+        <View style={[st.screen, { paddingTop: headerHeight }]}>
+            <ScrollView
+                showsVerticalScrollIndicator={false}
+                contentContainerStyle={[st.scroll, { paddingBottom: 62 + insets.bottom + 24 }]}
+                scrollEnabled={!isDrawing}
+            >
 
-            {/* ===== HEADER with Draw | Journal segment ===== */}
-            <CanvasHeader
-                onDone={handleDone}
-            />
+                {/* ── Tool card ─────────────────────────────────── */}
+                <View style={st.toolCard}>
+                    {/* Single toolbar row */}
+                    <View style={st.toolRow}>
 
-            {/* ===== DRAW MODE ===== */}
-            {mode === 'draw' && (
-                <>
-                    <PaperCanvas
-                        viewRef={viewRef}
-                        strokes={strokes}
-                        currentStroke={currentStroke}
-                        strokeColor={strokeColor}
-                        strokeWidth={strokeWidth}
-                        quote={quote}
-                        textBoxes={textBoxes}
-                        isDrawing={isDrawing}
-                        isAnyTextEditing={isAnyTextEditing}
-                        mascotMoodOverride={mascotMoodOverride}
-                        isAfk={isAfk}
-                        onCanvasLayout={handleCanvasLayout}
-                        onTouchStart={handleTouchStart}
-                        onTouchMove={handleTouchMove}
-                        onTouchEnd={handleTouchEnd}
-                        onBoxUpdate={handleBoxUpdate}
-                        onTextChange={handleTextChange}
-                        onDeleteTextBox={handleDeleteTextBox}
-                        onDragStart={handleDragStart}
-                        onDrag={handleDrag}
-                        onDragEnd={handleDragEnd}
-                        onEditing={setIsAnyTextEditing}
-                        activePaper={activePaper}
-                    />
+                        {/* Brush: pencil */}
+                        <TouchableOpacity
+                            style={[st.brushBtn, brushType === 'pencil' && st.brushActive]}
+                            onPress={() => setBrushType('pencil')}
+                            activeOpacity={0.7}
+                        >
+                            <Svg width={18} height={18} viewBox="0 0 24 24" fill="none">
+                                <SvgPath d="M12 20h9M16.5 3.5a2.12 2.12 0 013 3L7 19l-4 1 1-4L16.5 3.5z"
+                                    stroke={brushType === 'pencil' ? BLACK : BLACK + '55'} strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" />
+                            </Svg>
+                        </TouchableOpacity>
 
-                    <CanvasSidebar
-                        isDrawing={isDrawing}
-                        onDrawToggle={() => setIsDrawing(!isDrawing)}
-                        onUndo={handleUndo}
-                        onRedo={handleRedo}
-                        historyLength={history.length}
-                        redoLength={redoStack.length}
-                        selectedColor={selectedColor}
-                        onColorChange={handleColorChange}
-                        isPremium={isPremium}
-                        onShowPaywall={() => navigation.navigate('Paywall')}
-                        onRegenerate={handleRegenerate}
-                        onAddImage={handleAddImage}
-                        onPaper={() => setPaperSelectorVisible(true)}
-                        onClear={handleClear}
-                    />
+                        {/* Brush: crayon */}
+                        <TouchableOpacity
+                            style={[st.brushBtn, brushType === 'crayon' && st.brushActive]}
+                            onPress={() => setBrushType('crayon')}
+                            activeOpacity={0.7}
+                        >
+                            <Svg width={18} height={18} viewBox="0 0 24 24" fill="none">
+                                <SvgPath d="M5 16l-1 4 4-1L20 7l-3-3L5 16zM14 5l3 3"
+                                    stroke={brushType === 'crayon' ? BLACK : BLACK + '55'} strokeWidth={2.2} strokeLinecap="round" strokeLinejoin="round" />
+                            </Svg>
+                        </TouchableOpacity>
 
-                    <CanvasFooter
-                        isDragging={isDraggingAny}
-                        isDraggingOverDelete={isDraggingOverDelete}
-                        deleteButtonRef={deleteButtonRef}
-                        onDeleteZoneLayout={handleDeleteZoneLayout}
-                    />
+                        <View style={st.sep} />
 
-                </>
-            )}
+                        {/* Color dot — tap to toggle palette */}
+                        <TouchableOpacity
+                            style={[st.activeDot, { backgroundColor: color }]}
+                            onPress={() => setShowColors(v => !v)}
+                            activeOpacity={0.7}
+                        />
 
+                        <View style={st.sep} />
 
+                        {/* Undo */}
+                        <TouchableOpacity style={st.iconBtn} onPress={handleUndo} disabled={!history.length} activeOpacity={0.7}>
+                            <Svg width={18} height={18} viewBox="0 0 24 24" fill="none">
+                                <SvgPath d="M3 10H14C16.21 10 18 11.79 18 14s-1.79 4-4 4h-1"
+                                    stroke={muted(!!history.length)} strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" />
+                                <SvgPath d="M7 6L3 10l4 4"
+                                    stroke={muted(!!history.length)} strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" />
+                            </Svg>
+                        </TouchableOpacity>
 
-            {/* ===== SHARED MODALS ===== */}
-            {userProgress && (
-                <LevelModal
-                    visible={isLevelModalVisible}
-                    onClose={() => setIsLevelModalVisible(false)}
-                    progress={userProgress}
-                />
-            )}
+                        {/* Redo */}
+                        <TouchableOpacity style={st.iconBtn} onPress={handleRedo} disabled={!redoStack.length} activeOpacity={0.7}>
+                            <Svg width={18} height={18} viewBox="0 0 24 24" fill="none">
+                                <SvgPath d="M21 10H10C7.79 10 6 11.79 6 14s1.79 4 4 4h1"
+                                    stroke={muted(!!redoStack.length)} strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" />
+                                <SvgPath d="M17 6l4 4-4 4"
+                                    stroke={muted(!!redoStack.length)} strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" />
+                            </Svg>
+                        </TouchableOpacity>
+
+                        {/* Clear */}
+                        <TouchableOpacity style={st.iconBtn} onPress={handleClear} activeOpacity={0.7}>
+                            <Svg width={18} height={18} viewBox="0 0 24 24" fill="none">
+                                <SvgPath
+                                    d="M21 5.98C17.67 5.65 14.32 5.48 10.98 5.48 9 5.48 7.02 5.58 5.04 5.78L3 5.98M8.5 4.97l.22-1.31C8.88 2.71 9 2 10.69 2h2.62C15 2 15.13 2.75 15.28 3.67l.22 1.3M18.85 9.14l-.65 10.07C18.09 20.78 18 22 15.21 22H8.79C6 22 5.91 20.78 5.8 19.21L5.15 9.14"
+                                    stroke="#D32F2F" strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round"
+                                />
+                            </Svg>
+                        </TouchableOpacity>
+                    </View>
+
+                    {/* Expanded color palette */}
+                    {showColors && (
+                        <View style={st.palette}>
+                            {COLORS.map(c => (
+                                <TouchableOpacity
+                                    key={c}
+                                    style={[st.paletteDot, { backgroundColor: c }, color === c && st.paletteDotActive]}
+                                    onPress={() => { setColor(c); setShowColors(false); Haptics.selectionAsync(); }}
+                                    activeOpacity={0.7}
+                                />
+                            ))}
+                        </View>
+                    )}
+                </View>
+
+                {/* ── Drawing canvas ─────────────────────────────── */}
+                <View
+                    ref={canvasRef}
+                    style={[st.canvas, { height: CANVAS_H }]}
+                    onStartShouldSetResponder={() => true}
+                    onMoveShouldSetResponder={() => true}
+                    onResponderGrant={handleTouchStart}
+                    onResponderMove={handleTouchMove}
+                    onResponderRelease={handleTouchEnd}
+                    onResponderTerminationRequest={() => false}
+                >
+                    <Svg style={StyleSheet.absoluteFill}>
+                        {strokes.map(s => {
+                            const isPencil = s.width <= 3;
+                            if (isPencil) {
+                                // Multi-layer offset rendering for pencil grain texture
+                                return PENCIL_LAYERS.map((layer, li) => (
+                                    <SvgPath
+                                        key={`${s.id}-${li}`}
+                                        d={pointsToPath(s.points, layer.dx, layer.dy)}
+                                        stroke={s.color}
+                                        strokeWidth={layer.w}
+                                        strokeOpacity={layer.op}
+                                        strokeLinecap="round"
+                                        strokeLinejoin="round"
+                                        fill="none"
+                                    />
+                                ));
+                            }
+                            return (
+                                <SvgPath
+                                    key={s.id}
+                                    d={pointsToPath(s.points)}
+                                    stroke={s.color}
+                                    strokeWidth={s.width}
+                                    strokeOpacity={s.opacity ?? 1}
+                                    strokeLinecap="round"
+                                    strokeLinejoin="round"
+                                    fill="none"
+                                />
+                            );
+                        })}
+                        {/* Live stroke while drawing */}
+                        {currentStroke.length > 0 && (brushType === 'pencil' ? (
+                            PENCIL_LAYERS.map((layer, li) => (
+                                <SvgPath
+                                    key={`live-${li}`}
+                                    d={pointsToPath(currentStroke, layer.dx, layer.dy)}
+                                    stroke={color}
+                                    strokeWidth={layer.w}
+                                    strokeOpacity={layer.op}
+                                    strokeLinecap="round"
+                                    strokeLinejoin="round"
+                                    fill="none"
+                                />
+                            ))
+                        ) : (
+                            <SvgPath
+                                key="live"
+                                d={pointsToPath(currentStroke)}
+                                stroke={color}
+                                strokeWidth={strokeWidth}
+                                strokeOpacity={brushOpacity}
+                                strokeLinecap="round"
+                                strokeLinejoin="round"
+                                fill="none"
+                            />
+                        ))}
+                    </Svg>
+                </View>
+
+                {/* ── Stamp it + collection (below the fold) ────── */}
+                <View style={st.belowFold}>
+                    <TouchableOpacity
+                        style={[st.stampBtn, saving && st.stampBtnDisabled]}
+                        onPress={handleStamp}
+                        disabled={saving}
+                        activeOpacity={0.85}
+                    >
+                        <Text style={st.stampBtnTxt}>{saving ? 'stamping...' : 'stamp it'}</Text>
+                    </TouchableOpacity>
+
+                    {stamps.length > 0 && (
+                        <View style={st.collection}>
+                            <Text style={st.collectionTitle}>my stamps</Text>
+                            <ScrollView
+                                horizontal
+                                showsHorizontalScrollIndicator={false}
+                                contentContainerStyle={st.collectionRow}
+                            >
+                                {stamps.map(s => (
+                                    <View key={s.id} style={st.thumbWrap}>
+                                        <Image source={{ uri: s.uri }} style={st.thumbImg} resizeMode="cover" />
+                                        <Text style={st.thumbDate}>{s.date}</Text>
+                                    </View>
+                                ))}
+                            </ScrollView>
+                        </View>
+                    )}
+                </View>
+
+            </ScrollView>
 
             <XPToast
                 xpAmount={xpToast?.amount ?? 0}
                 label={xpToast?.label}
-                leveledUp={xpToast?.leveledUp}
-                newLevelTitle={xpToast?.newLevelTitle}
                 visible={!!xpToast}
                 onDismiss={() => setXpToast(null)}
             />
-
-            <PaperSelector
-                visible={paperSelectorVisible}
-                onDismiss={() => setPaperSelectorVisible(false)}
-                currentPaper={activePaper}
-                onSelectPaper={handleSelectPaper}
-                userXP={userProgress?.totalXP || 0}
-            />
-
-            <ConfirmationModal
-                visible={showClearModal}
-                title="Clear Canvas"
-                message="Are you sure you want to start over? This cannot be undone."
-                confirmLabel="Clear"
-                cancelLabel="Cancel"
-                isDestructive
-                onConfirm={confirmClear}
-                onCancel={() => setShowClearModal(false)}
-            />
-
-            {mode === 'draw' && (
-                <SavingOverlay
-                    visible={!!savingStatus}
-                    status={savingStatus || 'saving'}
-                    onClose={() => {
-                        setSavingStatus(null);
-                        setMascotMoodOverride(undefined);
-                        navigation.navigate('Home');
-                    }}
-                    onShare={handleShareFromModal}
-                />
-            )}
-        </SafeAreaView>
+        </View>
     );
 };
 
-const styles = StyleSheet.create({
-    container: {
+const st = StyleSheet.create({
+    screen: {
         flex: 1,
-        backgroundColor: '#FFFFFF',
+        backgroundColor: BLACK,
+    },
+    scroll: {
+        paddingHorizontal: 16,
+        paddingTop: 6,
+        alignItems: 'center',
+        gap: 14,
     },
 
+    // ── Toolbar card ────────────────────────────────
+    toolCard: {
+        width:             '100%',
+        backgroundColor:   WHITE,
+        borderRadius:      20,
+        borderWidth:       2,
+        borderColor:       BLACK,
+        paddingHorizontal: 14,
+        paddingVertical:   10,
+        gap:               8,
+    },
+    toolRow: {
+        flexDirection:  'row',
+        alignItems:     'center',
+        justifyContent: 'space-between',
+    },
 
+    // Brush icon buttons
+    brushBtn: {
+        width:          38,
+        height:         38,
+        alignItems:     'center',
+        justifyContent: 'center',
+        borderRadius:   10,
+    },
+    brushActive: {
+        backgroundColor: YELLOW,
+    },
+
+    sep: {
+        width:  1,
+        height: 20,
+        backgroundColor: BLACK + '15',
+        marginHorizontal: 2,
+    },
+
+    // Active color dot
+    activeDot: {
+        width:        30,
+        height:       30,
+        borderRadius: 15,
+        borderWidth:  2,
+        borderColor:  BLACK,
+    },
+
+    // Icon buttons (undo/redo/clear)
+    iconBtn: {
+        width:          38,
+        height:         38,
+        alignItems:     'center',
+        justifyContent: 'center',
+        borderRadius:   8,
+    },
+
+    // Expanded palette
+    palette: {
+        flexDirection:  'row',
+        gap:            10,
+        paddingTop:     4,
+        paddingBottom:  2,
+        paddingHorizontal: 2,
+        flexWrap:       'wrap',
+    },
+    paletteDot: {
+        width:        30,
+        height:       30,
+        borderRadius: 15,
+    },
+    paletteDotActive: {
+        borderWidth: 3,
+        borderColor: BLACK,
+    },
+
+    // ── Canvas ──────────────────────────────────────
+    canvas: {
+        width:           CANVAS_W,
+        backgroundColor: WHITE,
+        borderRadius:    20,
+        borderWidth:     2.5,
+        borderColor:     BLACK,
+        overflow:        'hidden',
+    },
+
+    // ── Below fold ──────────────────────────────────
+    belowFold: {
+        width:     '100%',
+        marginTop: 24,
+        gap:       20,
+    },
+    stampBtn: {
+        width:           '100%',
+        backgroundColor: YELLOW,
+        borderRadius:    16,
+        paddingVertical: 18,
+        alignItems:      'center',
+        borderWidth:     2,
+        borderColor:     BLACK,
+    },
+    stampBtnDisabled: { opacity: 0.5 },
+    stampBtnTxt: {
+        fontFamily: 'MontserratAlternates-Bold',
+        fontSize:   17,
+        color:      BLACK,
+    },
+
+    // ── Collection ────────────────────────────────
+    collection: {
+        gap: 10,
+    },
+    collectionTitle: {
+        fontFamily: 'MontserratAlternates-ExtraBoldItalic',
+        fontSize:   18,
+        color:      WHITE,
+    },
+    collectionRow: {
+        gap:          12,
+        paddingRight: 8,
+    },
+    thumbWrap: {
+        gap:        5,
+        alignItems: 'center',
+    },
+    thumbImg: {
+        width:        90,
+        height:       66,
+        borderRadius: 8,
+        borderWidth:  1.5,
+        borderColor:  WHITE + '30',
+    },
+    thumbDate: {
+        fontFamily: 'OpenSans-SemiBold',
+        fontSize:   10,
+        color:      WHITE + '70',
+    },
 });
 
 export default CanvasScreen;

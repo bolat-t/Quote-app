@@ -128,7 +128,7 @@ export const QuestCard: React.FC<QuestCardProps> = ({
                     <View style={[styles.iconWrap, isDone && styles.iconWrapDone]}>
                         {isDone
                             ? <CheckIcon color={BLACK} size={20} />
-                            : renderIcon(BLACK + '88', 20)
+                            : renderIcon(BLACK, 20)
                         }
                     </View>
 
@@ -140,7 +140,7 @@ export const QuestCard: React.FC<QuestCardProps> = ({
 
                     {/* Chevron */}
                     <View style={{ transform: [{ rotate: expanded ? '180deg' : '0deg' }] }}>
-                        <ChevronDownIcon color={BLACK + '55'} size={18} />
+                        <ChevronDownIcon color={BLACK + 'AA'} size={18} />
                     </View>
                 </TouchableOpacity>
 
@@ -182,6 +182,8 @@ const styles = StyleSheet.create({
         justifyContent: 'center',
         marginRight: 14,
         backgroundColor: GREY,
+        borderWidth: 1.5,
+        borderColor: BLACK + '18',
     },
     iconWrapDone: {
         backgroundColor: WHITE,
@@ -190,17 +192,17 @@ const styles = StyleSheet.create({
         flex: 1,
     },
     title: {
-        fontFamily: 'Caveat-Bold',
+        fontFamily: 'Inter-Bold',
         fontSize: 23,
         lineHeight: 27,
         color: BLACK,
     },
     subtitle: {
-        fontFamily: 'Carlito',
+        fontFamily: 'Inter-SemiBold',
         fontSize: 13,
-        marginTop: 1,
+        marginTop: 2,
         lineHeight: 18,
-        color: BLACK + '77',
+        color: '#4B5563',
     },
     body: {
         paddingHorizontal: 18,

@@ -2,6 +2,7 @@ import React from 'react';
 import {
     View,
     Text,
+    Image,
     StyleSheet,
     Modal,
     TouchableOpacity,
@@ -10,7 +11,18 @@ import {
 import Svg, { Path as SvgPath } from 'react-native-svg';
 import { UserProgress } from '../types';
 import { LEVEL_TIERS, getXPProgress, XP_REWARDS } from '../data/progressionConfig';
-import { LevelIcon } from './LevelIcon';
+
+const POTATO_IMAGES = {
+    1: require('../../assets/mascot/potato_levels/level_1_potato.png'),
+    2: require('../../assets/mascot/potato_levels/level_2_potato.png'),
+    3: require('../../assets/mascot/potato_levels/level_3_potato.png'),
+    4: require('../../assets/mascot/potato_levels/level_4_potato.png'),
+    5: require('../../assets/mascot/potato_levels/level_5_potato.png'),
+    6: require('../../assets/mascot/potato_levels/level_6_potato.png'),
+    7: require('../../assets/mascot/potato_levels/level_7_potato.png'),
+    8: require('../../assets/mascot/potato_levels/level_8_potato.png'),
+    9: require('../../assets/mascot/potato_levels/level_9_potato.png'),
+} as const;
 
 // ─────────────────────────────────────────────
 // Icons
@@ -42,7 +54,21 @@ const LockIcon = ({ color }: { color: string }) => (
 const YELLOW = '#FFE600';
 const BLACK = '#000000';
 const WHITE = '#FFFFFF';
-const GREY = '#F0F0F0';
+
+// ─────────────────────────────────────────────
+// Potato Icon
+// ─────────────────────────────────────────────
+
+const PotatoIcon: React.FC<{ level: number; size: number; opacity?: number }> = ({ level, size, opacity = 1 }) => {
+    const clamped = Math.min(Math.max(level, 1), 9) as keyof typeof POTATO_IMAGES;
+    return (
+        <Image
+            source={POTATO_IMAGES[clamped]}
+            style={{ width: size, height: size, opacity }}
+            resizeMode="contain"
+        />
+    );
+};
 
 // ─────────────────────────────────────────────
 // Modal
@@ -84,6 +110,8 @@ export const LevelModal: React.FC<LevelModalProps> = ({ visible, onClose, progre
                         onPress={onClose}
                         activeOpacity={0.6}
                         hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+                        accessibilityLabel="Close level modal"
+                        accessibilityRole="button"
                     >
                         <XIcon color={BLACK} />
                     </TouchableOpacity>
@@ -92,7 +120,7 @@ export const LevelModal: React.FC<LevelModalProps> = ({ visible, onClose, progre
                         {/* ── Hero ── */}
                         <View style={styles.hero}>
                             <View style={styles.heroRing}>
-                                <LevelIcon level={currentLevel.level} color={BLACK} size={32} />
+                                <PotatoIcon level={currentLevel.level} size={44} />
                             </View>
                             <Text style={styles.heroTitle}>
                                 Level {currentLevel.level}
@@ -124,9 +152,6 @@ export const LevelModal: React.FC<LevelModalProps> = ({ visible, onClose, progre
                                         ]}
                                     />
                                 </View>
-                                <Text style={styles.unlockHint}>
-                                    Unlocks: {nextLevel.unlocks}
-                                </Text>
                             </View>
                         )}
 
@@ -181,11 +206,7 @@ export const LevelModal: React.FC<LevelModalProps> = ({ visible, onClose, progre
                                     style={[styles.tierRow, isCurrent && styles.tierRowCurrent]}
                                 >
                                     <View style={[styles.tierBadge, isUnlocked && styles.tierBadgeUnlocked]}>
-                                        <LevelIcon
-                                            level={tier.level}
-                                            color={isUnlocked ? BLACK : '#AAAAAA'}
-                                            size={18}
-                                        />
+                                        <PotatoIcon level={tier.level} size={24} opacity={isUnlocked ? 1 : 0.3} />
                                     </View>
                                     <View style={styles.tierInfo}>
                                         <Text style={[styles.tierTitle, !isUnlocked && styles.tierTitleLocked]}>
@@ -197,9 +218,6 @@ export const LevelModal: React.FC<LevelModalProps> = ({ visible, onClose, progre
                                             ) : (
                                                 <LockIcon color="#AAAAAA" />
                                             )}
-                                            <Text style={[styles.tierUnlock, !isUnlocked && styles.tierUnlockLocked]}>
-                                                {tier.unlocks}
-                                            </Text>
                                         </View>
                                     </View>
                                     <Text style={[styles.tierXP, !isUnlocked && styles.tierXPLocked]}>
@@ -287,18 +305,18 @@ const styles = StyleSheet.create({
         shadowRadius: 8,
     },
     heroTitle: {
-        fontFamily: 'GasoekOne',
+        fontFamily: 'Inter-Bold',
         fontSize: 32,
         color: BLACK,
     },
     heroSubtitle: {
-        fontFamily: 'GasoekOne',
+        fontFamily: 'Inter-Bold',
         fontSize: 20,
         marginTop: -2,
         color: BLACK,
     },
     heroXP: {
-        fontFamily: 'GasoekOne',
+        fontFamily: 'Inter-Bold',
         fontSize: 13,
         marginTop: 4,
         color: '#777',
@@ -323,12 +341,12 @@ const styles = StyleSheet.create({
         marginBottom: 10,
     },
     cardLabel: {
-        fontFamily: 'GasoekOne',
+        fontFamily: 'Inter-Bold',
         fontSize: 18,
         color: BLACK,
     },
     cardValue: {
-        fontFamily: 'GasoekOne',
+        fontFamily: 'Inter-Bold',
         fontSize: 13,
         color: '#666',
     },
@@ -339,7 +357,7 @@ const styles = StyleSheet.create({
         backgroundColor: YELLOW,
     },
     xpChipText: {
-        fontFamily: 'GasoekOne',
+        fontFamily: 'Inter-Bold',
         fontSize: 12,
         fontWeight: '700',
         color: BLACK,
@@ -358,7 +376,7 @@ const styles = StyleSheet.create({
         backgroundColor: YELLOW,
     },
     unlockHint: {
-        fontFamily: 'GasoekOne',
+        fontFamily: 'Inter-Bold',
         fontSize: 12,
         marginTop: 8,
         color: '#555',
@@ -391,7 +409,7 @@ const styles = StyleSheet.create({
     },
     actionLabel: {
         flex: 1,
-        fontFamily: 'GasoekOne',
+        fontFamily: 'Inter-Bold',
         fontSize: 14,
         color: '#888',
     },
@@ -399,7 +417,7 @@ const styles = StyleSheet.create({
         color: BLACK,
     },
     actionXP: {
-        fontFamily: 'GasoekOne',
+        fontFamily: 'Inter-Bold',
         fontSize: 13,
         fontWeight: '600',
         color: '#BBBBBB',
@@ -410,7 +428,7 @@ const styles = StyleSheet.create({
 
     // ── Roadmap ──
     sectionTitle: {
-        fontFamily: 'GasoekOne',
+        fontFamily: 'Inter-Bold',
         fontSize: 18,
         marginBottom: 10,
         color: BLACK,
@@ -449,7 +467,7 @@ const styles = StyleSheet.create({
         gap: 2,
     },
     tierTitle: {
-        fontFamily: 'GasoekOne',
+        fontFamily: 'Inter-Bold',
         fontSize: 14,
         fontWeight: '600',
         color: BLACK,
@@ -463,7 +481,7 @@ const styles = StyleSheet.create({
         gap: 4,
     },
     tierUnlock: {
-        fontFamily: 'GasoekOne',
+        fontFamily: 'Inter-Bold',
         fontSize: 12,
         color: '#555',
     },
@@ -471,7 +489,7 @@ const styles = StyleSheet.create({
         color: '#BBBBBB',
     },
     tierXP: {
-        fontFamily: 'GasoekOne',
+        fontFamily: 'Inter-Bold',
         fontSize: 12,
         color: '#555',
     },

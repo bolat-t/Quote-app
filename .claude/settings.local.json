@@ -9,7 +9,32 @@
       "Bash(dir \"c:\\\\Users\\\\PC2\\\\Desktop\\\\Portfolio\\\\Quote-app\\\\assets\" /B)",
       "Bash(npm show @expo-google-fonts/gasoek-one --json)",
       "Bash(npm install @expo-google-fonts/gasoek-one --legacy-peer-deps)",
-      "Bash(node -e \"const pkg = require\\(''./node_modules/@expo-google-fonts/gasoek-one/index.js''\\); console.log\\(Object.keys\\(pkg\\).join\\(''\\\\n''\\)\\)\")"
+      "Bash(node -e \"const pkg = require\\(''./node_modules/@expo-google-fonts/gasoek-one/index.js''\\); console.log\\(Object.keys\\(pkg\\).join\\(''\\\\n''\\)\\)\")",
+      "Bash(ls \"c:\\\\Users\\\\PC2\\\\Desktop\\\\Portfolio\\\\Quote-app\\\\assets\\\\mascot\"\" 2>/dev/null || ls \"c:UsersPC2DesktopPortfolioQuote-appassets\"\")",
+      "Bash(wc -l /c/Users/PC2/Desktop/Portfolio/Quote-app/src/**/*.tsx /c/Users/PC2/Desktop/Portfolio/Quote-app/src/**/*.ts)",
+      "Bash(wc -l /c/Users/PC2/Desktop/Portfolio/Quote-app/src/screens/*.tsx)",
+      "Bash(wc -l /c/Users/PC2/Desktop/Portfolio/Quote-app/src/components/*.tsx)",
+      "Bash(xargs grep -l \"const.*DATE\\\\|const.*COLOR\\\\|const.*KEY\")",
+      "Bash(grep -r \"^[[:space:]]*//\" /c/Users/PC2/Desktop/Portfolio/Quote-app/src --include=\"*.ts\" --include=\"*.tsx\")",
+      "WebFetch(domain:21st.dev)",
+      "WebFetch(domain:github.com)",
+      "Bash(claude mcp add magic --scope user --env API_KEY=\"4d37c6f0e1e15f7e719fbf0041aa806f72bd60e3d829bc01d6809139c645eb43\" -- npx -y @21st-dev/magic@latest)",
+      "Bash(where claude)",
+      "Bash(cmd.exe /c \"where claude\")",
+      "Bash(npx -y @21st-dev/magic@latest --version)",
+      "WebFetch(domain:raw.githubusercontent.com)",
+      "Bash(python3 -c \"import sys,json; d=json.load\\(sys.stdin\\); [print\\(k,v\\) for k,v in {**d.get\\(''dependencies'',{}\\), **d.get\\(''devDependencies'',{}\\)}.items\\(\\)]\")",
+      "Bash(node -e \"const d=require\\(''./package.json''\\); Object.entries\\({...d.dependencies,...\\(d.devDependencies||{}\\)}\\).forEach\\(\\([k,v]\\)=>console.log\\(k,v\\)\\)\")",
+      "Bash(wc -l /c/Users/PC2/Desktop/Portfolio/Quote-app/src/**/*.ts /c/Users/PC2/Desktop/Portfolio/Quote-app/src/**/*.tsx)",
+      "Bash(npx expo install expo-secure-store)",
+      "Bash(ls -la \"c:\\\\Users\\\\PC2\\\\Desktop\\\\Portfolio\\\\Quote-app\\\\assets\\\\fonts\"\" 2>/dev/null || echo \"Font directory may not exist \")",
+      "Bash(npm install @expo-google-fonts/montserrat-alternates @expo-google-fonts/open-sans)",
+      "Bash(node -e \":*)",
+      "Bash(npm install react-native-svg-transformer --save-dev)",
+      "Bash(npm install @expo-google-fonts/inter --save)",
+      "Bash(npx expo:*)",
+      "Bash(grep -n \"import.*TextInput\\\\|import.*Keyboard\" src/screens/*.tsx)",
+      "Bash(grep -l \"TextInput\\\\|RNTextInput\" src/screens/*.tsx)"
     ]
   }
 }

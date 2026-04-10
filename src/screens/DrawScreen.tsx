@@ -231,7 +231,7 @@ const styles = StyleSheet.create({
         fontWeight: '400',
         letterSpacing: 1,
         color: BLACK,
-        fontFamily: 'GasoekOne',
+        fontFamily: 'MontserratAlternates-ExtraBoldItalic',
     },
     headerRight: {
         flexDirection: 'row',

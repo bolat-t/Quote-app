@@ -390,7 +390,7 @@ const triggerStyles = StyleSheet.create({
         justifyContent: 'center',
     },
     label: {
-        fontFamily: 'GasoekOne',
+        fontFamily: 'MontserratAlternates-ExtraBoldItalic',
         fontSize: 13,
         color: BLACK,
     },
@@ -425,7 +425,7 @@ const styles = StyleSheet.create({
         marginBottom: 2,
     },
     status: {
-        fontFamily: 'GasoekOne',
+        fontFamily: 'MontserratAlternates-ExtraBoldItalic',
         fontSize: 12,
         letterSpacing: 2.5,
         color: '#BBBBBB',
@@ -439,13 +439,13 @@ const styles = StyleSheet.create({
         marginTop: -8,
     },
     timerElapsed: {
-        fontFamily: 'GasoekOne',
+        fontFamily: 'MontserratAlternates-ExtraBoldItalic',
         fontSize: 32,
         color: BLACK,
         letterSpacing: 1,
     },
     timerRemaining: {
-        fontFamily: 'GasoekOne',
+        fontFamily: 'MontserratAlternates-ExtraBoldItalic',
         fontSize: 16,
         color: '#AAAAAA',
     },
@@ -501,7 +501,7 @@ const styles = StyleSheet.create({
         borderRadius: 2,
     },
     hint: {
-        fontFamily: 'GasoekOne',
+        fontFamily: 'MontserratAlternates-ExtraBoldItalic',
         fontSize: 13,
         color: '#999999',
         textAlign: 'center',
@@ -513,7 +513,7 @@ const styles = StyleSheet.create({
         marginTop: 4,
     },
     cancelText: {
-        fontFamily: 'GasoekOne',
+        fontFamily: 'MontserratAlternates-ExtraBoldItalic',
         fontSize: 14,
         color: '#AAAAAA',
     },

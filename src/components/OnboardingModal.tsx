@@ -15,6 +15,7 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Svg, Path } from 'react-native-svg';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 const ULBO = require('../../assets/mascot/ulbos_coloured.png');
 const COACH = require('../../assets/mascot/coach_bunny.png');
 
@@ -31,7 +32,7 @@ interface OnboardingModalProps {
     onComplete: (name: string) => void;
 }
 
-type SlideId = '1' | '2' | '3' | '4' | '5';
+type SlideId = '1' | '2' | '3' | 'commit' | '4' | '5';
 
 interface Slide {
     id: SlideId;
@@ -53,8 +54,8 @@ const SLIDES: Slide[] = [
     },
     {
         id: '2',
-        title: 'Grow Your Bonsai',
-        description: 'Journal every day to keep your bonsai alive. Miss a day and it wilts — come back and watch it bloom.',
+        title: 'Grow with Ulbo',
+        description: 'Journal every day and Ulbo thrives. Miss a day and he gets a little sad — come back and watch him light up.',
         mascot: ULBO,
         mascotSize: 200,
     },
@@ -64,6 +65,13 @@ const SLIDES: Slide[] = [
         description: 'Everything you need to build a lasting gratitude habit.',
         mascot: COACH,
         mascotSize: 190,
+    },
+    {
+        id: 'commit',
+        title: 'How much time can you give?',
+        description: 'Choose a daily commitment. You can always adjust it later.',
+        mascot: COACH,
+        mascotSize: 180,
     },
     {
         id: '4',
@@ -82,13 +90,13 @@ const SLIDES: Slide[] = [
 ];
 
 const FEATURES = [
-    { label: 'Daily Bonsai', sublabel: 'Grow a living tree through practice', color: '#10B981' },
+    { label: 'Daily Journaling', sublabel: 'Grow through consistent reflection', color: '#10B981' },
     { label: 'Streak Tracking', sublabel: 'Build momentum day by day', color: '#F59E0B' },
     { label: 'AI Mood Insights', sublabel: 'Understand your emotional patterns', color: '#7C5CFC' },
 ];
 
 const CHIPS = [
-    { label: 'Bonsai', color: MINT },
+    { label: 'Journaling', color: MINT },
     { label: 'Streaks', color: '#F59E0B' },
     { label: 'AI Insights', color: '#7C5CFC' },
 ];
@@ -96,6 +104,7 @@ const CHIPS = [
 export const OnboardingModal: React.FC<OnboardingModalProps> = ({ visible, onComplete }) => {
     const [currentIndex, setCurrentIndex] = useState(0);
     const [name, setName] = useState('');
+    const [commitMins, setCommitMins] = useState<5 | 10 | 20>(20);
     const flatListRef = useRef<FlatList>(null);
     const floatAnim = useRef(new Animated.Value(0)).current;
 
@@ -146,22 +155,26 @@ export const OnboardingModal: React.FC<OnboardingModalProps> = ({ visible, onCom
         setCurrentIndex(index);
     };
 
-    const handleNext = () => {
+    const handleNext = async () => {
         if (currentIndex < SLIDES.length - 1) {
             goToIndex(currentIndex + 1);
         } else {
+            const timerSec = commitMins * 60;
+            await AsyncStorage.setItem('@ulbo_commitment_minutes', String(commitMins));
+            await AsyncStorage.setItem('@ulbo_timer_minutes', String(commitMins));
+            await AsyncStorage.setItem('@ulbo_focus_duration_seconds', String(timerSec));
             onComplete(name.trim());
         }
     };
 
     const handleSkip = () => {
-        // Skip to name slide (index 3)
-        goToIndex(3);
+        // Skip to name slide (index 4, after new commit slide)
+        goToIndex(4);
     };
 
     const isNextDisabled =
-        (currentIndex === 3 && !name.trim()) ||
-        (currentIndex === 4 && signaturePath.length < 20);
+        (currentIndex === 4 && !name.trim()) ||
+        (currentIndex === 5 && signaturePath.length < 20);
 
     const btnBg = YELLOW;
     const btnText = BLACK;
@@ -200,6 +213,36 @@ export const OnboardingModal: React.FC<OnboardingModalProps> = ({ visible, onCom
             );
         }
 
+        if (slide.id === 'commit') {
+            const options: { mins: 5 | 10 | 20; label: string; sub: string }[] = [
+                { mins: 5,  label: '5 min / day',  sub: '2 daily missions' },
+                { mins: 10, label: '10 min / day', sub: '3 daily missions' },
+                { mins: 20, label: '20 min / day', sub: '5 daily missions' },
+            ];
+            return (
+                <View style={styles.commitOptions}>
+                    {options.map(o => {
+                        const active = commitMins === o.mins;
+                        return (
+                            <TouchableOpacity
+                                key={o.mins}
+                                style={[styles.commitOption, active && styles.commitOptionActive]}
+                                onPress={() => setCommitMins(o.mins)}
+                                activeOpacity={0.8}
+                            >
+                                <Text style={[styles.commitLabel, active && styles.commitLabelActive]}>
+                                    {o.label}
+                                </Text>
+                                <Text style={[styles.commitSub, active && styles.commitSubActive]}>
+                                    {o.sub}
+                                </Text>
+                            </TouchableOpacity>
+                        );
+                    })}
+                </View>
+            );
+        }
+
         if (slide.id === '4') {
             return (
                 <TextInput
@@ -220,7 +263,7 @@ export const OnboardingModal: React.FC<OnboardingModalProps> = ({ visible, onCom
             return (
                 <View style={styles.contractBlock}>
                     <Text style={[styles.contractText, { color: BLACK + '80' }]}>
-                        {`"${displayName}, I promise to show up for myself.\nEven just 5 minutes a day.\nI'll tend to my bonsai, and\nin return, Ulbo will take care of me."`}
+                        {`"${displayName}, I promise to show up for myself.\nEven just 5 minutes a day.\nI'll show up for Ulbo, and\nin return, Ulbo will take care of me."`}
                     </Text>
                     <View
                         style={[styles.signatureBox, { borderColor: BLACK + '30' }]}
@@ -287,7 +330,7 @@ export const OnboardingModal: React.FC<OnboardingModalProps> = ({ visible, onCom
 
                 {/* Header: Skip + Dots */}
                 <View style={styles.header}>
-                    {currentIndex < 3 ? (
+                    {currentIndex < 4 ? (
                         <TouchableOpacity onPress={handleSkip} style={styles.skipBtn}>
                             <Text style={[styles.skipText, { color: BLACK + '50' }]}>Skip</Text>
                         </TouchableOpacity>
@@ -373,7 +416,7 @@ const styles = StyleSheet.create({
         minWidth: 40,
     },
     skipText: {
-        fontFamily: 'GasoekOne',
+        fontFamily: 'MontserratAlternates-ExtraBoldItalic',
         fontSize: 15,
     },
     dotsRow: {
@@ -411,13 +454,13 @@ const styles = StyleSheet.create({
     },
     title: {
         fontSize: 36,
-        fontFamily: 'GasoekOne',
+        fontFamily: 'MontserratAlternates-ExtraBoldItalic',
         marginBottom: 10,
         lineHeight: 42,
     },
     description: {
         fontSize: 17,
-        fontFamily: 'GasoekOne',
+        fontFamily: 'MontserratAlternates-ExtraBoldItalic',
         lineHeight: 26,
         marginBottom: 28,
     },
@@ -441,7 +484,7 @@ const styles = StyleSheet.create({
         borderRadius: 4,
     },
     chipLabel: {
-        fontFamily: 'GasoekOne',
+        fontFamily: 'MontserratAlternates-ExtraBoldItalic',
         fontSize: 14,
     },
     // Feature rows (slide 3)
@@ -469,18 +512,51 @@ const styles = StyleSheet.create({
         flex: 1,
     },
     featureLabel: {
-        fontFamily: 'GasoekOne',
+        fontFamily: 'MontserratAlternates-ExtraBoldItalic',
         fontSize: 16,
         marginBottom: 2,
     },
     featureSublabel: {
-        fontFamily: 'GasoekOne',
+        fontFamily: 'MontserratAlternates-ExtraBoldItalic',
         fontSize: 13,
+    },
+    // Commitment options (commit slide)
+    commitOptions: {
+        gap: 12,
+        width: '100%',
+    },
+    commitOption: {
+        borderWidth: 2,
+        borderColor: BLACK + '20',
+        borderRadius: 16,
+        paddingVertical: 16,
+        paddingHorizontal: 20,
+    },
+    commitOptionActive: {
+        borderColor: BLACK,
+        backgroundColor: YELLOW,
+    },
+    commitLabel: {
+        fontFamily: 'MontserratAlternates-ExtraBoldItalic',
+        fontSize: 18,
+        color: BLACK,
+    },
+    commitLabelActive: {
+        color: BLACK,
+    },
+    commitSub: {
+        fontFamily: 'MontserratAlternates-ExtraBoldItalic',
+        fontSize: 13,
+        color: BLACK + '50',
+        marginTop: 2,
+    },
+    commitSubActive: {
+        color: BLACK + '70',
     },
     // Name input (slide 4)
     nameInput: {
         fontSize: 30,
-        fontFamily: 'GasoekOne',
+        fontFamily: 'MontserratAlternates-ExtraBoldItalic',
         borderBottomWidth: 2,
         paddingBottom: 8,
         width: '100%',
@@ -491,7 +567,7 @@ const styles = StyleSheet.create({
         gap: 16,
     },
     contractText: {
-        fontFamily: 'GasoekOne',
+        fontFamily: 'MontserratAlternates-ExtraBoldItalic',
         fontSize: 16,
         lineHeight: 26,
         fontStyle: 'italic',
@@ -507,7 +583,7 @@ const styles = StyleSheet.create({
         overflow: 'hidden',
     },
     signaturePlaceholder: {
-        fontFamily: 'GasoekOne',
+        fontFamily: 'MontserratAlternates-ExtraBoldItalic',
         fontSize: 18,
     },
     clearBtn: {
@@ -515,7 +591,7 @@ const styles = StyleSheet.create({
         paddingVertical: 4,
     },
     clearBtnText: {
-        fontFamily: 'GasoekOne',
+        fontFamily: 'MontserratAlternates-ExtraBoldItalic',
         fontSize: 13,
         textDecorationLine: 'underline',
     },
@@ -540,7 +616,7 @@ const styles = StyleSheet.create({
         opacity: 0.45,
     },
     ctaBtnText: {
-        fontFamily: 'GasoekOne',
+        fontFamily: 'MontserratAlternates-ExtraBoldItalic',
         fontSize: 17,
         letterSpacing: 0.3,
     },

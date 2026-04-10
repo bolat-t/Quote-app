@@ -6,14 +6,14 @@ import {
     TouchableWithoutFeedback,
     Image,
 } from 'react-native';
-import { BonsaiAnimationTrigger } from '../types';
+import { PlantAnimationTrigger } from '../types';
 
 // eslint-disable-next-line @typescript-eslint/no-require-imports
-const POTATO_IMAGE = require('../../assets/mascot/potato_in_pot.png') as number;
+const POTATO_IMAGE = require('../../assets/mascot/potato.png') as number;
 
 interface PotatoPlantProps {
     health: number;                         // 0–100
-    animationTrigger: BonsaiAnimationTrigger;
+    animationTrigger: PlantAnimationTrigger;
     onClearTrigger: () => void;
     onWater: () => void;
     onTend: () => void;

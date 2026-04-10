@@ -1,18 +1,13 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { StatusBar } from 'expo-status-bar';
-import { SafeAreaProvider } from 'react-native-safe-area-context';
-import { NavigationContainer } from '@react-navigation/native';
+import { View } from 'react-native';
+import { SafeAreaProvider, useSafeAreaInsets } from 'react-native-safe-area-context';
+import { NavigationContainer, useNavigationState } from '@react-navigation/native';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import type { RootStackParamList, RootTabParamList } from './src/types';
-import { ThemeProvider, useTheme } from './src/context/ThemeContext';
-import {
-    TabHomeIcon,
-    TabCanvasIcon,
-    TabJournalIcon,
-    TabHistoryIcon,
-    TabVisionIcon,
-} from './src/components/TabBarIcons';
+import { ErrorBoundary } from './src/components/ErrorBoundary';
+import { ThemeProvider } from './src/context/ThemeContext';
 import { AuthProvider } from './src/context/AuthContext';
 import { AnalyticsProvider } from './src/context/AnalyticsProvider';
 import { PurchaseProvider } from './src/context/PurchaseContext';
@@ -23,96 +18,152 @@ import { JournalScreen } from './src/screens/JournalScreen';
 import { VisionBoardScreen } from './src/screens/VisionBoardScreen';
 import { PaywallScreen } from './src/screens/PaywallScreen';
 import { AnalyticsScreen } from './src/screens/AnalyticsScreen';
-import { WalkingScreen } from './src/screens/WalkingScreen';
+import { FocusTimerPickerScreen } from './src/screens/FocusTimerPickerScreen';
+import { ReminderSettingsScreen } from './src/screens/ReminderSettingsScreen';
+import { AppHeader } from './src/components/AppHeader';
+import { getUserName } from './src/utils/storage';
+import { HeaderHeightProvider, useSetHeaderHeight } from './src/context/HeaderHeightContext';
+import { TimerProvider } from './src/context/TimerContext';
+import { JournalStepsProvider } from './src/context/JournalStepsContext';
+import { CommitmentProvider } from './src/context/CommitmentContext';
+import { TimerSecondsProvider } from './src/context/TimerSecondsContext';
 import { useFonts } from 'expo-font';
 
 const Tab = createBottomTabNavigator<RootTabParamList>();
 const Stack = createNativeStackNavigator<RootStackParamList>();
 
-const BottomTabs = () => {
-    const { theme } = useTheme();
-    const { colors } = theme;
-    const tabBarStyle = {
-        backgroundColor: colors.paper,
-        borderTopWidth: 0.5,
-        borderTopColor: colors.border + '60',
-        paddingTop: 6,
-        paddingBottom: 60,
-        height: 116,
-        shadowColor: '#000',
-        shadowOffset: { width: 0, height: 0 },
-        shadowOpacity: 0,
-        shadowRadius: 0,
-        elevation: 0,
-    };
+const ROUTE_TITLES: Record<string, { title: string; subtitle?: string }> = {
+    Canvas:  { title: 'Canvas' },
+    Journal: { title: 'Journal' },
+    History: { title: 'History' },
+    Vision:  { title: 'Vision Board' },
+    Home:    { title: 'Welcome' },
+};
+
+const BottomTabsInner = () => {
+    const insets = useSafeAreaInsets();
+    const [userName, setUserName] = useState<string | null>(null);
+    const setHeaderHeight = useSetHeaderHeight();
+
+    const tabIndex = useNavigationState(state => {
+        const tabsRoute = state?.routes?.find((r: any) => r.name === 'Tabs');
+        return tabsRoute?.state?.index ?? 4;
+    });
+    const routeNames = ['Canvas', 'Journal', 'History', 'Vision', 'Home'];
+    const currentRoute = routeNames[tabIndex] ?? 'Home';
+    const headerInfo = { ...ROUTE_TITLES[currentRoute] };
+    if (currentRoute === 'Home') headerInfo.subtitle = userName ?? '';
+
+    useEffect(() => { getUserName().then(setUserName); }, []);
+
     return (
+        // Black background prevents SafeAreaProvider white from bleeding through
+        <View style={{ flex: 1, backgroundColor: '#000000' }}>
+            {/* Floating header — mirrors the floating footer pattern */}
+            <View
+                style={{
+                    position: 'absolute',
+                    top: 0, left: 0, right: 0,
+                    zIndex: 100,
+                    paddingTop: insets.top,
+                    paddingHorizontal: 16,
+                    paddingBottom: 16,
+                }}
+                onLayout={e => setHeaderHeight(e.nativeEvent.layout.height)}
+            >
+                <AppHeader title={headerInfo.title} subtitle={headerInfo.subtitle} />
+            </View>
         <Tab.Navigator
+            initialRouteName="Home"
             screenOptions={{
                 headerShown: false,
-                tabBarStyle,
-                tabBarActiveTintColor: colors.primary,
-                tabBarInactiveTintColor: colors.text + '45',
-                tabBarLabelStyle: {
-                    fontFamily: 'GasoekOne',
-                    fontSize: 13,
-                    marginTop: 1,
-                },
-                tabBarIconStyle: { marginBottom: -2 },
-                tabBarItemStyle: { paddingVertical: 4 },
-                tabBarShowLabel: true,
                 tabBarHideOnKeyboard: true,
                 animation: 'none',
+                tabBarStyle: {
+                    position: 'absolute',
+                    backgroundColor: 'transparent',
+                    borderTopWidth: 0,
+                    left: 0,
+                    right: 0,
+                    bottom: 0,
+                    height: 62 + insets.bottom,
+                    paddingHorizontal: 16,
+                    paddingBottom: insets.bottom,
+                    paddingTop: 14,
+                    elevation: 0,
+                    shadowOpacity: 0,
+                },
+                tabBarBackground: () => (
+                    <View style={{
+                        position: 'absolute',
+                        left: 16,
+                        right: 16,
+                        top: 0,
+                        bottom: 0,
+                        backgroundColor: '#212121',
+                        borderTopLeftRadius: 24,
+                        borderTopRightRadius: 24,
+                    }} />
+                ),
+                tabBarActiveTintColor: '#FFFFFF',
+                tabBarInactiveTintColor: '#666666',
+                tabBarIcon: () => null,
+                tabBarIconStyle: { display: 'none' },
+                tabBarLabelStyle: {
+                    fontFamily: 'Inter-Medium',
+                    fontSize: 14,
+                    letterSpacing: 0.2,
+                    marginTop: 0,
+                    marginBottom: 0,
+                },
+                tabBarItemStyle: {
+                    justifyContent: 'center',
+                    alignItems: 'center',
+                    paddingTop: 0,
+                    paddingBottom: 0,
+                },
             }}
         >
-            <Tab.Screen
-                name="Canvas"
-                component={CanvasScreen}
-                options={{
-                    tabBarIcon: ({ color, size }) => <TabCanvasIcon color={color} size={size} />,
-                }}
-            />
-            <Tab.Screen
-                name="Journal"
-                component={HuntScreen}
-                options={{
-                    tabBarIcon: ({ color, size }) => <TabJournalIcon color={color} size={size} />,
-                }}
-            />
-            <Tab.Screen
-                name="Home"
-                component={HubScreen}
-                options={{
-                    tabBarIcon: ({ color, size }) => <TabHomeIcon color={color} size={size} />,
-                }}
-            />
-            <Tab.Screen
-                name="History"
-                component={JournalScreen}
-                options={{
-                    tabBarIcon: ({ color, size }) => <TabHistoryIcon color={color} size={size} />,
-                }}
-            />
-            <Tab.Screen
-                name="Vision"
-                component={VisionBoardScreen}
-                options={{
-                    tabBarIcon: ({ color, size }) => <TabVisionIcon color={color} size={size} />,
-                    tabBarLabel: 'Vision',
-                }}
-            />
+            <Tab.Screen name="Canvas"  component={CanvasScreen}     />
+            <Tab.Screen name="Journal" component={HuntScreen}       />
+            <Tab.Screen name="History" component={JournalScreen}    />
+            <Tab.Screen name="Vision"  component={VisionBoardScreen} />
+            <Tab.Screen name="Home"    component={HubScreen}        />
         </Tab.Navigator>
+        </View>
     );
 };
 
+const BottomTabs = () => (
+    <HeaderHeightProvider>
+        <TimerProvider>
+            <JournalStepsProvider>
+                <CommitmentProvider>
+                    <TimerSecondsProvider>
+                        <BottomTabsInner />
+                    </TimerSecondsProvider>
+                </CommitmentProvider>
+            </JournalStepsProvider>
+        </TimerProvider>
+    </HeaderHeightProvider>
+);
+
 export default function App() {
     const [fontsLoaded] = useFonts({
-        'GasoekOne': require('./assets/fonts/GasoekOne_400Regular.ttf'),
-        'GasoekOne-Regular': require('./assets/fonts/GasoekOne_400Regular.ttf'),
-        'Caveat-Bold':         require('@expo-google-fonts/caveat/700Bold/Caveat_700Bold.ttf'),
-        'IndieFlower-Regular': require('@expo-google-fonts/indie-flower/400Regular/IndieFlower_400Regular.ttf'),
-        'Carlito':             require('@expo-google-fonts/carlito/400Regular/Carlito_400Regular.ttf'),
-        'Carlito-Bold':        require('@expo-google-fonts/carlito/700Bold/Carlito_700Bold.ttf'),
-        'Carlito-Italic':      require('@expo-google-fonts/carlito/400Regular_Italic/Carlito_400Regular_Italic.ttf'),
+        'GasoekOne':                   require('./assets/fonts/GasoekOne_400Regular.ttf'),
+        'GasoekOne-Regular':           require('./assets/fonts/GasoekOne_400Regular.ttf'),
+        'Caveat-Bold':                 require('@expo-google-fonts/caveat/700Bold/Caveat_700Bold.ttf'),
+        'IndieFlower-Regular':         require('@expo-google-fonts/indie-flower/400Regular/IndieFlower_400Regular.ttf'),
+        'Carlito':                     require('@expo-google-fonts/carlito/400Regular/Carlito_400Regular.ttf'),
+        'Carlito-Bold':                require('@expo-google-fonts/carlito/700Bold/Carlito_700Bold.ttf'),
+        'Carlito-Italic':              require('@expo-google-fonts/carlito/400Regular_Italic/Carlito_400Regular_Italic.ttf'),
+        'MontserratAlternates-ExtraBoldItalic': require('@expo-google-fonts/montserrat-alternates/800ExtraBold_Italic/MontserratAlternates_800ExtraBold_Italic.ttf'),
+        'MontserratAlternates-Bold':   require('@expo-google-fonts/montserrat-alternates/700Bold/MontserratAlternates_700Bold.ttf'),
+        'OpenSans-SemiBold':           require('@expo-google-fonts/open-sans/600SemiBold/OpenSans_600SemiBold.ttf'),
+        'Inter-Bold':                  require('@expo-google-fonts/inter/700Bold/Inter_700Bold.ttf'),
+        'Inter-Medium':                require('@expo-google-fonts/inter/500Medium/Inter_500Medium.ttf'),
+        'Inter-SemiBold':              require('@expo-google-fonts/inter/600SemiBold/Inter_600SemiBold.ttf'),
+        'Gaegu-Bold':                  require('@expo-google-fonts/gaegu/700Bold/Gaegu_700Bold.ttf'),
     });
 
     if (!fontsLoaded) {
@@ -120,6 +171,7 @@ export default function App() {
     }
 
     return (
+        <ErrorBoundary>
         <SafeAreaProvider>
             <ThemeProvider>
                 <AuthProvider>
@@ -144,17 +196,23 @@ export default function App() {
                                         options={{ presentation: 'card' }}
                                     />
                                     <Stack.Screen
-                                        name="Walking"
-                                        component={WalkingScreen}
+                                        name="FocusTimerPicker"
+                                        component={FocusTimerPickerScreen}
+                                        options={{ presentation: 'card' }}
+                                    />
+                                    <Stack.Screen
+                                        name="ReminderSettings"
+                                        component={ReminderSettingsScreen}
                                         options={{ presentation: 'card' }}
                                     />
                                 </Stack.Navigator>
                             </NavigationContainer>
                         </PurchaseProvider>
                     </AnalyticsProvider>
-                    <StatusBar style="auto" />
+                    <StatusBar style="light" />
                 </AuthProvider>
             </ThemeProvider>
         </SafeAreaProvider>
+        </ErrorBoundary>
     );
 }

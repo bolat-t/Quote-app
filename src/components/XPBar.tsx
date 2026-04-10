@@ -36,7 +36,7 @@ export const XPBar: React.FC<XPBarProps> = ({ progress, onPress }) => {
     return (
         <TouchableOpacity style={styles.container} onPress={onPress} activeOpacity={0.7}>
             <Animated.View style={[styles.inner, {
-                opacity: Animated.add(0.85, Animated.multiply(glowAnim, 0.15)),
+                opacity: Animated.add(0.9, Animated.multiply(glowAnim, 0.1)),
             }]}>
                 {/* Level badge */}
                 <View style={styles.levelBadge}>
@@ -50,7 +50,7 @@ export const XPBar: React.FC<XPBarProps> = ({ progress, onPress }) => {
                             Lv.{currentLevel.level} {currentLevel.title}
                         </Text>
                         <Text style={styles.xpText}>
-                            {nextLevel ? `${xpInCurrentLevel}/${xpNeededForNext}` : 'MAX'}
+                            {nextLevel ? `${xpInCurrentLevel}/${xpNeededForNext} XP` : 'MAX'}
                         </Text>
                     </View>
 
@@ -83,19 +83,19 @@ const styles = StyleSheet.create({
         flexDirection: 'row',
         alignItems: 'center',
         borderRadius: 12,
-        borderWidth: 1.5,
+        borderWidth: 2,
         borderColor: BLACK,
         backgroundColor: '#FFFFFF',
         paddingHorizontal: 8,
-        paddingVertical: 5,
+        paddingVertical: 7,
     },
     levelBadge: {
-        width: 24,
-        height: 24,
-        borderRadius: 12,
+        width: 26,
+        height: 26,
+        borderRadius: 13,
         alignItems: 'center',
         justifyContent: 'center',
-        marginRight: 6,
+        marginRight: 8,
         backgroundColor: YELLOW,
     },
     barSection: {
@@ -105,28 +105,28 @@ const styles = StyleSheet.create({
         flexDirection: 'row',
         justifyContent: 'space-between',
         alignItems: 'center',
-        marginBottom: 2,
+        marginBottom: 4,
     },
     levelText: {
-        fontSize: 10,
-        fontFamily: 'GasoekOne',
-        letterSpacing: 0.3,
+        fontSize: 12,
+        fontFamily: 'MontserratAlternates-ExtraBoldItalic',
+        letterSpacing: 0.2,
         color: BLACK,
     },
     xpText: {
-        fontSize: 9,
-        fontFamily: 'GasoekOne',
-        color: BLACK + '80',
+        fontSize: 11,
+        fontFamily: 'OpenSans-SemiBold',
+        color: '#555555',
     },
     track: {
-        height: 4,
-        borderRadius: 2,
+        height: 5,
+        borderRadius: 3,
         overflow: 'hidden',
-        backgroundColor: BLACK + '10',
+        backgroundColor: '#E0E0E0',
     },
     fill: {
         height: '100%',
-        borderRadius: 2,
+        borderRadius: 3,
         backgroundColor: YELLOW,
     },
 });

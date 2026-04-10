@@ -184,7 +184,7 @@ const styles = StyleSheet.create({
         marginBottom: 24,
     },
     title: {
-        fontFamily: 'GasoekOne',
+        fontFamily: 'MontserratAlternates-ExtraBoldItalic',
         fontSize: 28,
         color: BLACK,
     },
@@ -195,7 +195,7 @@ const styles = StyleSheet.create({
         gap: 12,
     },
     sectionTitle: {
-        fontFamily: 'GasoekOne',
+        fontFamily: 'MontserratAlternates-ExtraBoldItalic',
         fontSize: 16,
         color: BLACK + '80',
     },
@@ -227,13 +227,13 @@ const styles = StyleSheet.create({
         borderColor: BLACK,
     },
     typeText: {
-        fontFamily: 'GasoekOne',
+        fontFamily: 'MontserratAlternates-ExtraBoldItalic',
         fontSize: 14,
         color: BLACK,
     },
     typeTextSelected: {
         color: BLACK,
-        fontFamily: 'GasoekOne',
+        fontFamily: 'MontserratAlternates-ExtraBoldItalic',
     },
     textInput: {
         backgroundColor: '#F8FAFC',
@@ -243,7 +243,7 @@ const styles = StyleSheet.create({
         padding: 16,
         height: 120,
         textAlignVertical: 'top',
-        fontFamily: 'GasoekOne',
+        fontFamily: 'MontserratAlternates-ExtraBoldItalic',
         fontSize: 16,
         color: BLACK,
     },
@@ -262,7 +262,7 @@ const styles = StyleSheet.create({
         opacity: 0.7,
     },
     submitButtonText: {
-        fontFamily: 'GasoekOne',
+        fontFamily: 'MontserratAlternates-ExtraBoldItalic',
         fontSize: 20,
         color: BLACK,
     },

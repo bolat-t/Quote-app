@@ -106,14 +106,14 @@ const styles = StyleSheet.create({
         borderColor: BLACK,
     },
     title: {
-        fontFamily: 'GasoekOne',
+        fontFamily: 'MontserratAlternates-ExtraBoldItalic',
         fontSize: 28,
         textAlign: 'center',
         marginBottom: 8,
         color: BLACK,
     },
     subtitle: {
-        fontFamily: 'GasoekOne',
+        fontFamily: 'MontserratAlternates-ExtraBoldItalic',
         fontSize: 16,
         textAlign: 'center',
         marginBottom: 24,
@@ -138,7 +138,7 @@ const styles = StyleSheet.create({
         backgroundColor: '#F0F0F0',
     },
     buttonText: {
-        fontFamily: 'GasoekOne',
+        fontFamily: 'MontserratAlternates-ExtraBoldItalic',
         fontSize: 20,
         color: BLACK,
     },
@@ -147,7 +147,7 @@ const styles = StyleSheet.create({
         padding: 8,
     },
     closeText: {
-        fontFamily: 'GasoekOne',
+        fontFamily: 'MontserratAlternates-ExtraBoldItalic',
         fontSize: 16,
         opacity: 0.6,
         color: BLACK,

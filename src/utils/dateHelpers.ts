@@ -1,4 +1,18 @@
 /**
+ * Get today's date as a YYYY-MM-DD string (local time).
+ *
+ * Single source of truth — import this instead of redefining
+ * getTodayString() or similar in individual files.
+ */
+export const getTodayDateString = (): string => {
+    const d = new Date();
+    const y = d.getFullYear();
+    const m = String(d.getMonth() + 1).padStart(2, '0');
+    const day = String(d.getDate()).padStart(2, '0');
+    return `${y}-${m}-${day}`;
+};
+
+/**
  * Get the day of the year (1-366)
  */
 export const getDayOfYear = (date: Date = new Date()): number => {
@@ -28,7 +42,7 @@ export const getTimestamp = (): number => {
  * Generate a unique ID
  */
 export const generateId = (): string => {
-    return `${getTimestamp()}-${Math.random().toString(36).substr(2, 9)}`;
+    return `${getTimestamp()}-${Math.random().toString(36).slice(2, 11)}`;
 };
 
 /**

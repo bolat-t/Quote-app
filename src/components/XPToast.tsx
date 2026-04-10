@@ -1,5 +1,6 @@
 import React, { useEffect, useRef } from 'react';
-import { View, Text, StyleSheet, Animated } from 'react-native';
+import { View, Text, StyleSheet, Animated, Modal } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import Svg, { Path as SvgPath } from 'react-native-svg';
 import * as Haptics from 'expo-haptics';
 
@@ -36,6 +37,7 @@ export const XPToast: React.FC<XPToastProps> = ({
     visible,
     onDismiss,
 }) => {
+    const insets     = useSafeAreaInsets();
     const translateY = useRef(new Animated.Value(80)).current;
     const opacity    = useRef(new Animated.Value(0)).current;
     const scale      = useRef(new Animated.Value(0.8)).current;
@@ -72,33 +74,34 @@ export const XPToast: React.FC<XPToastProps> = ({
     if (!visible || xpAmount === 0) return null;
 
     return (
-        <Animated.View
-            style={[styles.container, { transform: [{ translateY }, { scale }], opacity }]}
-            pointerEvents="none"
-        >
-            {leveledUp ? (
-                <View style={styles.levelUpContainer}>
-                    <StarIcon />
-                    <View>
-                        <Text style={styles.levelUpText}>Level Up!</Text>
-                        <Text style={styles.levelUpTitle}>{newLevelTitle}</Text>
+        <Modal transparent visible animationType="none" statusBarTranslucent>
+            <Animated.View
+                style={[styles.container, { top: insets.top + 16, transform: [{ translateY }, { scale }], opacity }]}
+                pointerEvents="none"
+            >
+                {leveledUp ? (
+                    <View style={styles.levelUpContainer}>
+                        <StarIcon />
+                        <View>
+                            <Text style={styles.levelUpText}>Level Up!</Text>
+                            <Text style={styles.levelUpTitle}>{newLevelTitle}</Text>
+                        </View>
+                        <StarIcon />
                     </View>
-                    <StarIcon />
-                </View>
-            ) : (
-                <View style={styles.xpContainer}>
-                    <Text style={styles.xpAmount}>+{xpAmount} XP</Text>
-                    {label && <Text style={styles.xpLabel}>{label}</Text>}
-                </View>
-            )}
-        </Animated.View>
+                ) : (
+                    <View style={styles.xpContainer}>
+                        <Text style={styles.xpAmount}>+{xpAmount} XP</Text>
+                        {label && <Text style={styles.xpLabel}>{label}</Text>}
+                    </View>
+                )}
+            </Animated.View>
+        </Modal>
     );
 };
 
 const styles = StyleSheet.create({
     container: {
         position: 'absolute',
-        top: 100,
         alignSelf: 'center',
         zIndex: 9999,
     },
@@ -115,13 +118,13 @@ const styles = StyleSheet.create({
     },
     xpAmount: {
         fontSize: 18,
-        fontFamily: 'GasoekOne',
+        fontFamily: 'MontserratAlternates-ExtraBoldItalic',
         letterSpacing: 0.5,
         color: BLACK,
     },
     xpLabel: {
         fontSize: 13,
-        fontFamily: 'GasoekOne',
+        fontFamily: 'MontserratAlternates-ExtraBoldItalic',
         color: BLACK + 'BB',
     },
     levelUpContainer: {
@@ -137,13 +140,13 @@ const styles = StyleSheet.create({
     },
     levelUpText: {
         fontSize: 20,
-        fontFamily: 'GasoekOne',
+        fontFamily: 'MontserratAlternates-ExtraBoldItalic',
         textAlign: 'center',
         color: BLACK,
     },
     levelUpTitle: {
         fontSize: 14,
-        fontFamily: 'GasoekOne',
+        fontFamily: 'MontserratAlternates-ExtraBoldItalic',
         textAlign: 'center',
         color: BLACK + 'BB',
     },

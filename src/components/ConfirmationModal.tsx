@@ -81,14 +81,14 @@ const styles = StyleSheet.create({
         alignItems: 'center',
     },
     title: {
-        fontFamily: 'GasoekOne',
+        fontFamily: 'MontserratAlternates-ExtraBoldItalic',
         fontSize: 28,
         marginBottom: 8,
         textAlign: 'center',
         color: BLACK,
     },
     message: {
-        fontFamily: 'GasoekOne',
+        fontFamily: 'MontserratAlternates-ExtraBoldItalic',
         fontSize: 17,
         marginBottom: 24,
         textAlign: 'center',
@@ -125,7 +125,7 @@ const styles = StyleSheet.create({
         borderColor: '#D32F2F',
     },
     buttonText: {
-        fontFamily: 'GasoekOne',
+        fontFamily: 'MontserratAlternates-ExtraBoldItalic',
         fontSize: 18,
     },
 });

@@ -90,21 +90,29 @@ export const PaywallScreen = () => {
     }
 
     const displayPackages = packages.length > 0 ? packages : [
-        { identifier: 'monthly', product: { identifier: 'w', priceString: '$7.99', title: 'Weekly', description: '' }, packageType: 'MONTHLY' },
-        { identifier: 'annual', product: { identifier: 'y', priceString: '$70.99', title: 'Yearly', description: '' }, packageType: 'ANNUAL' },
+        { identifier: 'monthly', product: { identifier: 'w', priceString: '$2.99', title: 'Weekly', description: '' }, packageType: 'MONTHLY' },
+        { identifier: 'annual', product: { identifier: 'y', priceString: '$29.99', title: 'Yearly', description: '' }, packageType: 'ANNUAL' },
     ] as PurchasesPackage[];
 
     const annualPkg = displayPackages.find(p => p.packageType === 'ANNUAL');
     const weeklyPkg = displayPackages.find(p => p.packageType === 'MONTHLY');
-    const annualPrice = annualPkg?.product.priceString || '$70.99';
-    const weeklyPrice = weeklyPkg?.product.priceString || '$7.99';
+    const annualPrice = annualPkg?.product.priceString || '$29.99';
+    const weeklyPrice = weeklyPkg?.product.priceString || '$2.99';
+
+    // Calculate savings % for annual vs weekly
+    const annualRaw = annualPkg?.product.price ?? 29.99;
+    const weeklyRaw = weeklyPkg?.product.price ?? 2.99;
+    const weeklyAnnualised = weeklyRaw * 52;
+    const savingsPct = weeklyAnnualised > 0
+        ? Math.round(((weeklyAnnualised - annualRaw) / weeklyAnnualised) * 100)
+        : 80;
 
     return (
         <SafeAreaView style={styles.container}>
             <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
 
                 {/* Close */}
-                <TouchableOpacity onPress={() => navigation.goBack()} style={styles.closeButton}>
+                <TouchableOpacity onPress={() => navigation.goBack()} style={styles.closeButton} accessibilityLabel="Close paywall" accessibilityRole="button">
                     <Svg width={24} height={24} viewBox="0 0 24 24" fill="none">
                         <Path d="M18 6L6 18M6 6l12 12" stroke={BLACK + '55'} strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" />
                     </Svg>
@@ -142,9 +150,12 @@ export const PaywallScreen = () => {
                         style={[styles.planCard, selectedPlan === 'annual' && styles.planCardSelected]}
                         onPress={() => setSelectedPlan('annual')}
                         activeOpacity={0.8}
+                        accessibilityLabel={`Annual plan, ${annualPrice} per year, save ${savingsPct}%`}
+                        accessibilityRole="radio"
+                        accessibilityState={{ checked: selectedPlan === 'annual' }}
                     >
                         <View style={styles.bestOfferBadge}>
-                            <Text style={styles.bestOfferText}>BEST OFFER</Text>
+                            <Text style={styles.bestOfferText}>SAVE {savingsPct}%</Text>
                         </View>
                         <CheckCircle selected={selectedPlan === 'annual'} />
                         <View style={styles.planInfo}>
@@ -152,8 +163,9 @@ export const PaywallScreen = () => {
                             <Text style={styles.planPriceMain}>
                                 {annualPrice}<Text style={styles.planPeriod}>/year</Text>
                             </Text>
+                            <Text style={styles.planSavingsNote}>vs {weeklyPrice}/week billed weekly</Text>
                         </View>
-                        <Text style={styles.planWeekly}>$1.37/week</Text>
+                        <Text style={styles.planWeekly}>$0.58/week</Text>
                     </TouchableOpacity>
 
                     {/* Weekly */}
@@ -161,6 +173,9 @@ export const PaywallScreen = () => {
                         style={[styles.planCard, selectedPlan === 'weekly' && styles.planCardSelected]}
                         onPress={() => setSelectedPlan('weekly')}
                         activeOpacity={0.8}
+                        accessibilityLabel={`Weekly plan, ${weeklyPrice} per week`}
+                        accessibilityRole="radio"
+                        accessibilityState={{ checked: selectedPlan === 'weekly' }}
                     >
                         <CheckCircle selected={selectedPlan === 'weekly'} />
                         <View style={styles.planInfo}>
@@ -186,6 +201,9 @@ export const PaywallScreen = () => {
                     }}
                     disabled={purchasing}
                     activeOpacity={0.85}
+                    accessibilityLabel={`Continue with ${selectedPlan} plan`}
+                    accessibilityRole="button"
+                    accessibilityState={{ disabled: purchasing }}
                 >
                     {purchasing
                         ? <ActivityIndicator size="small" color={BLACK} />
@@ -195,7 +213,7 @@ export const PaywallScreen = () => {
 
                 {/* Footer Links */}
                 <View style={styles.footerLinks}>
-                    <TouchableOpacity onPress={handleRestore} disabled={purchasing}>
+                    <TouchableOpacity onPress={handleRestore} disabled={purchasing} accessibilityLabel="Restore purchases" accessibilityRole="button">
                         <Text style={styles.footerLink}>Restore</Text>
                     </TouchableOpacity>
                     <Text style={styles.footerDot}>·</Text>
@@ -244,7 +262,7 @@ const styles = StyleSheet.create({
     },
     title: {
         fontSize: 32,
-        fontFamily: 'GasoekOne',
+        fontFamily: 'MontserratAlternates-ExtraBoldItalic',
         textAlign: 'center',
         marginBottom: 28,
         color: BLACK,
@@ -270,13 +288,13 @@ const styles = StyleSheet.create({
     },
     featureTitle: {
         fontSize: 16,
-        fontFamily: 'GasoekOne',
+        fontFamily: 'MontserratAlternates-ExtraBoldItalic',
         marginBottom: 1,
         color: BLACK,
     },
     featureDesc: {
         fontSize: 13,
-        fontFamily: 'GasoekOne',
+        fontFamily: 'MontserratAlternates-ExtraBoldItalic',
         color: '#666',
     },
     planSection: {
@@ -335,13 +353,13 @@ const styles = StyleSheet.create({
     },
     planName: {
         fontSize: 16,
-        fontFamily: 'GasoekOne',
+        fontFamily: 'MontserratAlternates-ExtraBoldItalic',
         marginBottom: 2,
         color: BLACK,
     },
     planPriceMain: {
         fontSize: 15,
-        fontFamily: 'GasoekOne',
+        fontFamily: 'MontserratAlternates-ExtraBoldItalic',
         color: BLACK,
     },
     planPeriod: {
@@ -349,15 +367,21 @@ const styles = StyleSheet.create({
         fontWeight: '400',
         color: BLACK + '88',
     },
+    planSavingsNote: {
+        fontSize: 11,
+        fontFamily: 'MontserratAlternates-ExtraBoldItalic',
+        color: BLACK + '60',
+        marginTop: 2,
+    },
     planWeekly: {
         fontSize: 13,
-        fontFamily: 'GasoekOne',
+        fontFamily: 'MontserratAlternates-ExtraBoldItalic',
         color: BLACK + '88',
     },
     billingNote: {
         textAlign: 'center',
         fontSize: 13,
-        fontFamily: 'GasoekOne',
+        fontFamily: 'MontserratAlternates-ExtraBoldItalic',
         marginBottom: 20,
         color: '#888',
     },
@@ -376,7 +400,7 @@ const styles = StyleSheet.create({
     },
     ctaText: {
         fontSize: 20,
-        fontFamily: 'GasoekOne',
+        fontFamily: 'MontserratAlternates-ExtraBoldItalic',
         color: BLACK,
         letterSpacing: 0.3,
     },
@@ -388,7 +412,7 @@ const styles = StyleSheet.create({
     },
     footerLink: {
         fontSize: 13,
-        fontFamily: 'GasoekOne',
+        fontFamily: 'MontserratAlternates-ExtraBoldItalic',
         color: '#888',
     },
     footerDot: {

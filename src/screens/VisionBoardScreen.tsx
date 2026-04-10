@@ -12,15 +12,14 @@ import {
     TextInput as RNTextInput,
     FlatList,
 } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
-import { useNavigation } from '@react-navigation/native';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useFocusEffect } from '@react-navigation/native';
 import * as ImagePicker from 'expo-image-picker';
 import { Gesture, GestureDetector, GestureHandlerRootView } from 'react-native-gesture-handler';
 import Animated, {
     useSharedValue, useAnimatedStyle, useAnimatedProps, runOnJS,
     FadeIn, FadeInDown, SlideInDown, SlideOutDown,
-    withTiming, withSpring,
+    withTiming, withSpring, Easing,
 } from 'react-native-reanimated';
 import type { SharedValue } from 'react-native-reanimated';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -33,6 +32,7 @@ import {
     Portal,
 } from 'react-native-paper';
 import { addVisionItem, deleteVisionItem, fetchVisionItems, updateVisionItemPosition, updateVisionItemStyle, VisionItem } from '../utils/visionBoardStorage';
+import { useHeaderHeight } from '../context/HeaderHeightContext';
 import { searchPhotos, UNSPLASH_ACCESS_KEY, UnsplashPhoto } from '../utils/unsplashApi';
 import { getDailyVisionBoard, saveDailyVisionBoard, DailyVisionBoard } from '../utils/dailyVisionStorage';
 import { getThemeForDate, VisionTheme } from '../data/visionThemes';
@@ -158,10 +158,10 @@ const AFFIRMATION_TEMPLATES = [
 // ═══════════════════════════════════════════════════════════
 
 const FONT_OPTIONS = [
-    { label: 'Script', value: 'GasoekOne' },
-    { label: 'Bold', value: 'GasoekOne' },
-    { label: 'Flower', value: 'GasoekOne' },
-    { label: 'Clean', value: 'GasoekOne' },
+    { label: 'Impact', value: 'GasoekOne' },
+    { label: 'Script', value: 'Caveat-Bold' },
+    { label: 'Playful', value: 'IndieFlower-Regular' },
+    { label: 'Clean', value: 'Carlito' },
 ];
 
 const TEXT_COLORS = [
@@ -316,98 +316,98 @@ const BROWSE_CATEGORIES: BrowseCategory[] = [
         label: 'Nature',
         thumb: 'https://images.unsplash.com/photo-1506905925346-21bda4d32df4?w=600&q=80',
         subcategories: [
-            { label: 'Mountains', query: 'dramatic mountain peaks cinematic golden hour landscape', thumb: 'https://images.unsplash.com/photo-1464822759023-fed622ff2c3b?w=400&q=80' },
-            { label: 'Forests', query: 'misty forest atmospheric cinematic moody trees light', thumb: 'https://images.unsplash.com/photo-1448375240586-882707db888b?w=400&q=80' },
-            { label: 'Ocean', query: 'cinematic ocean waves coastline moody sea editorial', thumb: 'https://images.unsplash.com/photo-1505118380757-91f5f5632de0?w=400&q=80' },
-            { label: 'Rivers', query: 'river waterfall serene nature cinematic long exposure', thumb: 'https://images.unsplash.com/photo-1470770903676-69b98201ea1c?w=400&q=80' },
-            { label: 'Desert', query: 'desert dunes cinematic golden sand landscape aerial', thumb: 'https://images.unsplash.com/photo-1509316785289-025f5b846b35?w=400&q=80' },
-            { label: 'Wildflowers', query: 'wildflower meadow bloom cinematic spring golden hour', thumb: 'https://images.unsplash.com/photo-1490750967868-88df5691cc9b?w=400&q=80' },
+            { label: 'Mountains', query: 'mountains', thumb: 'https://images.unsplash.com/photo-1464822759023-fed622ff2c3b?w=400&q=80' },
+            { label: 'Forests', query: 'forest', thumb: 'https://images.unsplash.com/photo-1448375240586-882707db888b?w=400&q=80' },
+            { label: 'Ocean', query: 'ocean', thumb: 'https://images.unsplash.com/photo-1505118380757-91f5f5632de0?w=400&q=80' },
+            { label: 'Rivers', query: 'river', thumb: 'https://images.unsplash.com/photo-1470770903676-69b98201ea1c?w=400&q=80' },
+            { label: 'Desert', query: 'desert', thumb: 'https://images.unsplash.com/photo-1509316785289-025f5b846b35?w=400&q=80' },
+            { label: 'Wildflowers', query: 'wildflowers', thumb: 'https://images.unsplash.com/photo-1490750967868-88df5691cc9b?w=400&q=80' },
         ],
     },
     {
         label: 'Travel',
         thumb: 'https://images.unsplash.com/photo-1476514525535-07fb3b4ae5f1?w=600&q=80',
         subcategories: [
-            { label: 'Cities', query: 'cinematic city skyline editorial moody urban photography', thumb: 'https://images.unsplash.com/photo-1477959858617-67f85cf4f1df?w=400&q=80' },
-            { label: 'Architecture', query: 'stunning architecture editorial cinematic geometric', thumb: 'https://images.unsplash.com/photo-1487958449943-2429e8be8625?w=400&q=80' },
-            { label: 'Beaches', query: 'tropical beach paradise cinematic turquoise clear water', thumb: 'https://images.unsplash.com/photo-1507525428034-b723cf961d3e?w=400&q=80' },
-            { label: 'Asia', query: 'japan asia travel cinematic cultural temple', thumb: 'https://images.unsplash.com/photo-1540959733332-eab4deabeeaf?w=400&q=80' },
-            { label: 'Europe', query: 'europe travel cinematic european streets architecture', thumb: 'https://images.unsplash.com/photo-1499856871958-5b9627545d1a?w=400&q=80' },
-            { label: 'Landscapes', query: 'epic travel landscape cinematic wide aerial photography', thumb: 'https://images.unsplash.com/photo-1469474968028-56623f02e42e?w=400&q=80' },
+            { label: 'Cities', query: 'city skyline', thumb: 'https://images.unsplash.com/photo-1477959858617-67f85cf4f1df?w=400&q=80' },
+            { label: 'Architecture', query: 'modern architecture', thumb: 'https://images.unsplash.com/photo-1487958449943-2429e8be8625?w=400&q=80' },
+            { label: 'Beaches', query: 'tropical beach', thumb: 'https://images.unsplash.com/photo-1507525428034-b723cf961d3e?w=400&q=80' },
+            { label: 'Asia', query: 'asia', thumb: 'https://images.unsplash.com/photo-1540959733332-eab4deabeeaf?w=400&q=80' },
+            { label: 'Europe', query: 'europe', thumb: 'https://images.unsplash.com/photo-1499856871958-5b9627545d1a?w=400&q=80' },
+            { label: 'Landscapes', query: 'travel landscape', thumb: 'https://images.unsplash.com/photo-1469474968028-56623f02e42e?w=400&q=80' },
         ],
     },
     {
         label: 'Wellness',
         thumb: 'https://images.unsplash.com/photo-1545205597-3d9d02c29597?w=600&q=80',
         subcategories: [
-            { label: 'Yoga', query: 'yoga pose serene wellness cinematic sunrise', thumb: 'https://images.unsplash.com/photo-1544367567-0f2fcb009e0b?w=400&q=80' },
-            { label: 'Meditation', query: 'meditation mindfulness peaceful cinematic soft light', thumb: 'https://images.unsplash.com/photo-1506126613408-eca07ce68773?w=400&q=80' },
-            { label: 'Spa', query: 'luxury spa wellness retreat cinematic serene', thumb: 'https://images.unsplash.com/photo-1540555700478-4be289fbecef?w=400&q=80' },
-            { label: 'Nutrition', query: 'healthy food aesthetic cinematic editorial flat lay', thumb: 'https://images.unsplash.com/photo-1490645935967-10de6ba17061?w=400&q=80' },
-            { label: 'Fitness', query: 'fitness athletic cinematic editorial motivational', thumb: 'https://images.unsplash.com/photo-1517836357463-d25dfeac3438?w=400&q=80' },
-            { label: 'Relationships', query: 'couple love connection cinematic romantic friendship golden hour', thumb: 'https://images.unsplash.com/photo-1516589178581-6cd7833ae3b2?w=400&q=80' },
+            { label: 'Yoga', query: 'yoga pose', thumb: 'https://images.unsplash.com/photo-1544367567-0f2fcb009e0b?w=400&q=80' },
+            { label: 'Meditation', query: 'meditation', thumb: 'https://images.unsplash.com/photo-1506126613408-eca07ce68773?w=400&q=80' },
+            { label: 'Spa', query: 'spa relaxation', thumb: 'https://images.unsplash.com/photo-1540555700478-4be289fbecef?w=400&q=80' },
+            { label: 'Nutrition', query: 'healthy food', thumb: 'https://images.unsplash.com/photo-1490645935967-10de6ba17061?w=400&q=80' },
+            { label: 'Fitness', query: 'fitness training', thumb: 'https://images.unsplash.com/photo-1517836357463-d25dfeac3438?w=400&q=80' },
+            { label: 'Relationships', query: 'happy couple', thumb: 'https://images.unsplash.com/photo-1516589178581-6cd7833ae3b2?w=400&q=80' },
         ],
     },
     {
         label: 'Goals',
         thumb: 'https://images.unsplash.com/photo-1484480974693-6ca0a78fb36b?w=600&q=80',
         subcategories: [
-            { label: 'Career', query: 'professional success career workspace cinematic editorial', thumb: 'https://images.unsplash.com/photo-1497366216548-37526070297c?w=400&q=80' },
-            { label: 'Finance', query: 'financial freedom wealth abundance cinematic lifestyle', thumb: 'https://images.unsplash.com/photo-1559526324-4b87b5e36e44?w=400&q=80' },
-            { label: 'Education', query: 'education learning books knowledge cinematic aesthetic', thumb: 'https://images.unsplash.com/photo-1481627834876-b7833e8f5570?w=400&q=80' },
-            { label: 'Creativity', query: 'creative workspace art studio cinematic editorial', thumb: 'https://images.unsplash.com/photo-1541701494587-cb58502866ab?w=400&q=80' },
-            { label: 'Entrepreneur', query: 'entrepreneur hustle startup cinematic lifestyle editorial', thumb: 'https://images.unsplash.com/photo-1519389950473-47ba0277781c?w=400&q=80' },
-            { label: 'Mindset', query: 'growth mindset motivation cinematic inspirational', thumb: 'https://images.unsplash.com/photo-1532012197267-da84d127e765?w=400&q=80' },
+            { label: 'Career', query: 'office work', thumb: 'https://images.unsplash.com/photo-1497366216548-37526070297c?w=400&q=80' },
+            { label: 'Finance', query: 'money wealth', thumb: 'https://images.unsplash.com/photo-1559526324-4b87b5e36e44?w=400&q=80' },
+            { label: 'Education', query: 'study books', thumb: 'https://images.unsplash.com/photo-1481627834876-b7833e8f5570?w=400&q=80' },
+            { label: 'Creativity', query: 'art studio', thumb: 'https://images.unsplash.com/photo-1541701494587-cb58502866ab?w=400&q=80' },
+            { label: 'Entrepreneur', query: 'startup team', thumb: 'https://images.unsplash.com/photo-1519389950473-47ba0277781c?w=400&q=80' },
+            { label: 'Mindset', query: 'motivation success', thumb: 'https://images.unsplash.com/photo-1532012197267-da84d127e765?w=400&q=80' },
         ],
     },
     {
         label: 'Luxury',
         thumb: 'https://images.unsplash.com/photo-1540202404-a2f29016b523?w=600&q=80',
         subcategories: [
-            { label: 'Villas', query: 'luxury villa infinity pool cinematic editorial architecture', thumb: 'https://images.unsplash.com/photo-1613490493576-7fde63acd811?w=400&q=80' },
-            { label: 'Yachts', query: 'luxury yacht sailing ocean cinematic editorial', thumb: 'https://images.unsplash.com/photo-1567899378494-47b22a2ae96a?w=400&q=80' },
-            { label: 'Hotels', query: 'luxury hotel suite interior cinematic editorial', thumb: 'https://images.unsplash.com/photo-1542314831-068cd1dbfeeb?w=400&q=80' },
-            { label: 'Cars', query: 'luxury sports car cinematic editorial moody', thumb: 'https://images.unsplash.com/photo-1503376780353-7e6692767b70?w=400&q=80' },
-            { label: 'Jewelry', query: 'luxury jewelry diamonds editorial cinematic elegant', thumb: 'https://images.unsplash.com/photo-1515562141207-7a88fb7ce338?w=400&q=80' },
-            { label: 'Fine Dining', query: 'fine dining gourmet luxury restaurant cinematic plating', thumb: 'https://images.unsplash.com/photo-1414235077428-338989a2e8c0?w=400&q=80' },
+            { label: 'Villas', query: 'luxury villa', thumb: 'https://images.unsplash.com/photo-1613490493576-7fde63acd811?w=400&q=80' },
+            { label: 'Yachts', query: 'luxury yacht', thumb: 'https://images.unsplash.com/photo-1567899378494-47b22a2ae96a?w=400&q=80' },
+            { label: 'Hotels', query: 'luxury hotel', thumb: 'https://images.unsplash.com/photo-1542314831-068cd1dbfeeb?w=400&q=80' },
+            { label: 'Cars', query: 'sports car', thumb: 'https://images.unsplash.com/photo-1503376780353-7e6692767b70?w=400&q=80' },
+            { label: 'Jewelry', query: 'diamond jewelry', thumb: 'https://images.unsplash.com/photo-1515562141207-7a88fb7ce338?w=400&q=80' },
+            { label: 'Fine Dining', query: 'fine dining', thumb: 'https://images.unsplash.com/photo-1414235077428-338989a2e8c0?w=400&q=80' },
         ],
     },
     {
         label: 'Home',
         thumb: 'https://images.unsplash.com/photo-1600210492493-0946911123ea?w=600&q=80',
         subcategories: [
-            { label: 'House', query: 'luxury house exterior architecture cinematic modern dream home', thumb: 'https://images.unsplash.com/photo-1564013799919-ab600027ffc6?w=400&q=80' },
-            { label: 'Living Room', query: 'luxury living room interior design cinematic warm', thumb: 'https://images.unsplash.com/photo-1586023492125-27b2c045efd7?w=400&q=80' },
-            { label: 'Bedroom', query: 'dreamy bedroom interior design cinematic cozy', thumb: 'https://images.unsplash.com/photo-1540518614846-7eded433c457?w=400&q=80' },
-            { label: 'Kitchen', query: 'modern luxury kitchen interior cinematic editorial', thumb: 'https://images.unsplash.com/photo-1556909114-f6e7ad7d3136?w=400&q=80' },
-            { label: 'Garden', query: 'beautiful garden landscape cinematic botanical', thumb: 'https://images.unsplash.com/photo-1585320806297-9794b3e4eeae?w=400&q=80' },
-            { label: 'Home Office', query: 'dream home office workspace cinematic aesthetic', thumb: 'https://images.unsplash.com/photo-1593642632559-0c6d3fc62b89?w=400&q=80' },
+            { label: 'House', query: 'modern house', thumb: 'https://images.unsplash.com/photo-1564013799919-ab600027ffc6?w=400&q=80' },
+            { label: 'Living Room', query: 'living room', thumb: 'https://images.unsplash.com/photo-1586023492125-27b2c045efd7?w=400&q=80' },
+            { label: 'Bedroom', query: 'cozy bedroom', thumb: 'https://images.unsplash.com/photo-1540518614846-7eded433c457?w=400&q=80' },
+            { label: 'Kitchen', query: 'modern kitchen', thumb: 'https://images.unsplash.com/photo-1556909114-f6e7ad7d3136?w=400&q=80' },
+            { label: 'Garden', query: 'garden plants', thumb: 'https://images.unsplash.com/photo-1585320806297-9794b3e4eeae?w=400&q=80' },
+            { label: 'Home Office', query: 'home office', thumb: 'https://images.unsplash.com/photo-1593642632559-0c6d3fc62b89?w=400&q=80' },
         ],
     },
     {
         label: 'Fashion',
         thumb: 'https://images.unsplash.com/photo-1509631179647-0177331693ae?w=600&q=80',
         subcategories: [
-            { label: 'Editorial', query: 'fashion editorial cinematic high fashion magazine', thumb: 'https://images.unsplash.com/photo-1509631179647-0177331693ae?w=400&q=80' },
-            { label: 'Street Style', query: 'street fashion cinematic urban editorial cool', thumb: 'https://images.unsplash.com/photo-1515886657613-9f3515b0c78f?w=400&q=80' },
-            { label: 'Accessories', query: 'luxury fashion accessories bags editorial cinematic', thumb: 'https://images.unsplash.com/photo-1548036328-c9fa89d128fa?w=400&q=80' },
-            { label: 'Minimalist', query: 'minimalist fashion clean aesthetic cinematic editorial', thumb: 'https://images.unsplash.com/photo-1558618666-fcd25c85cd64?w=400&q=80' },
-            { label: 'Beauty', query: 'beauty skincare glam editorial cinematic portrait', thumb: 'https://images.unsplash.com/photo-1522337360788-8b13dee7a37e?w=400&q=80' },
-            { label: 'Couture', query: 'haute couture luxury fashion gown editorial cinematic', thumb: 'https://images.unsplash.com/photo-1469334031218-e382a71b716b?w=400&q=80' },
+            { label: 'Editorial', query: 'fashion editorial', thumb: 'https://images.unsplash.com/photo-1509631179647-0177331693ae?w=400&q=80' },
+            { label: 'Street Style', query: 'street fashion', thumb: 'https://images.unsplash.com/photo-1515886657613-9f3515b0c78f?w=400&q=80' },
+            { label: 'Accessories', query: 'fashion accessories', thumb: 'https://images.unsplash.com/photo-1548036328-c9fa89d128fa?w=400&q=80' },
+            { label: 'Minimalist', query: 'minimal fashion', thumb: 'https://images.unsplash.com/photo-1558618666-fcd25c85cd64?w=400&q=80' },
+            { label: 'Beauty', query: 'beauty portrait', thumb: 'https://images.unsplash.com/photo-1522337360788-8b13dee7a37e?w=400&q=80' },
+            { label: 'Couture', query: 'haute couture', thumb: 'https://images.unsplash.com/photo-1469334031218-e382a71b716b?w=400&q=80' },
         ],
     },
     {
-        label: 'Abstract',
-        thumb: 'https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?w=600&q=80',
+        label: 'Aesthetic',
+        thumb: 'https://images.unsplash.com/photo-1519681393784-d120267933ba?w=600&q=80',
         subcategories: [
-            { label: 'Colors', query: 'vibrant bold color abstract art cinematic', thumb: 'https://images.unsplash.com/photo-1541701494587-cb58502866ab?w=400&q=80' },
-            { label: 'Texture', query: 'abstract texture surface macro cinematic editorial', thumb: 'https://images.unsplash.com/photo-1558618666-fcd25c85cd64?w=400&q=80' },
-            { label: 'Geometric', query: 'geometric abstract minimal shapes cinematic photography', thumb: 'https://images.unsplash.com/photo-1550859492-d5da9d8e45f3?w=400&q=80' },
-            { label: 'Light & Shadow', query: 'light shadow abstract cinematic moody photography', thumb: 'https://images.unsplash.com/photo-1497436072909-60f360e1d4b1?w=400&q=80' },
-            { label: 'Fluid Art', query: 'fluid art pour painting abstract colorful editorial', thumb: 'https://images.unsplash.com/photo-1504198322253-cfa87a0ff25f?w=400&q=80' },
-            { label: 'Gradient', query: 'gradient sky color abstract cinematic atmospheric', thumb: 'https://images.unsplash.com/photo-1557682257-2f9c37a3a5f3?w=400&q=80' },
+            { label: 'Minimal', query: 'minimal aesthetic', thumb: 'https://images.unsplash.com/photo-1500530855697-b586d89ba3ee?w=400&q=80' },
+            { label: 'Pastel', query: 'pastel aesthetic', thumb: 'https://images.unsplash.com/photo-1492724441997-5dc865305da7?w=400&q=80' },
+            { label: 'Vintage', query: 'vintage aesthetic', thumb: 'https://images.unsplash.com/photo-1481277542470-605612bd2d61?w=400&q=80' },
+            { label: 'Dark', query: 'dark aesthetic', thumb: 'https://images.unsplash.com/photo-1500534623283-312aade485b7?w=400&q=80' },
+            { label: 'Soft Light', query: 'soft light', thumb: 'https://images.unsplash.com/photo-1504198453319-5ce911bafcde?w=400&q=80' },
+            { label: 'Desk Setup', query: 'desk setup', thumb: 'https://images.unsplash.com/photo-1498050108023-c5249f4df085?w=400&q=80' },
         ],
-    },
+    }
 ];
 
 // Tile width for 3-column grid with 3px gutters
@@ -589,7 +589,7 @@ const DraggableItem = ({
                                         <SvgPath d="M3 9l4 4 4-4 6 6" />
                                         <SvgCircle cx="8.5" cy="7.5" r="1" />
                                     </Svg>
-                                    <Text style={{ fontSize: 11, color: BLACK, fontFamily: 'GasoekOne', marginTop: 4 }}>Image unavailable</Text>
+                                    <Text style={{ fontSize: 11, color: BLACK, fontFamily: 'MontserratAlternates-ExtraBoldItalic', marginTop: 4 }}>Image unavailable</Text>
                                 </View>
                             )}
                         </View>
@@ -643,7 +643,7 @@ const DailyEmptyState = ({
 
             <Animated.View entering={FadeInDown.delay(350).springify()} style={{ alignItems: 'center', paddingHorizontal: 24 }}>
                 <Text style={[styles.emptyTitle, { color: BLACK + 'AA', fontSize: 16 }]}>
-                    Today's Theme
+                    This Week's Theme
                 </Text>
                 <Text style={[styles.emptySubtitle, { color: BLACK, fontFamily: 'Outfit-Bold', fontSize: 24, marginTop: 8, textAlign: 'center' }]}>
                     {theme.title}
@@ -698,52 +698,57 @@ const EmptyState = ({
 }) => {
     return (
         <Animated.View style={styles.emptyContainer} entering={FadeIn.duration(600)}>
-            {/* Decorative orbs */}
-            <View style={[styles.emptyOrb, styles.emptyOrb1, { backgroundColor: YELLOW + '06' }]} />
-            <View style={[styles.emptyOrb, styles.emptyOrb2, { backgroundColor: YELLOW + '10' }]} />
+            {/* Decorative orbs — subtle, not competing */}
+            <View style={[styles.emptyOrb, styles.emptyOrb1, { backgroundColor: YELLOW + '22' }]} />
+            <View style={[styles.emptyOrb, styles.emptyOrb2, { backgroundColor: YELLOW + '18' }]} />
 
-            <Animated.View entering={FadeInDown.delay(200).springify().damping(14)}>
-                <CompassIcon color={YELLOW + '30'} size={64} />
+            {/* Icon — clearly visible on white */}
+            <Animated.View
+                entering={FadeInDown.delay(200).springify().damping(14)}
+                style={styles.emptyIconWrap}
+            >
+                <CompassIcon color={BLACK} size={36} />
             </Animated.View>
 
-            <Animated.View entering={FadeInDown.delay(350).springify()} style={{ alignItems: 'center' }}>
-                <Text style={[styles.emptyTitle, { color: BLACK + 'AA' }]}>
+            <Animated.View entering={FadeInDown.delay(350).springify()} style={{ alignItems: 'center', paddingHorizontal: 32 }}>
+                <Text style={[styles.emptyTitle, { color: BLACK }]}>
                     This space is yours
                 </Text>
-                <Text style={[styles.emptySubtitle, { color: BLACK + '80' }]}>
-                    Pin images & affirmations that{'\n'}light up your future
+                <Text style={[styles.emptySubtitle, { color: BLACK + 'AA', fontFamily: 'OpenSans-SemiBold', fontSize: 15, lineHeight: 22 }]}>
+                    Pin images & affirmations that light up your future
                 </Text>
             </Animated.View>
 
-            {/* Primary CTA — Browse stock photos */}
+            {/* Primary CTA */}
             <Animated.View entering={FadeInDown.delay(480).springify()} style={{ width: '100%', paddingHorizontal: 36 }}>
                 <TouchableOpacity
                     style={[styles.emptyBrowseBtn, { backgroundColor: YELLOW, shadowColor: BLACK }]}
                     onPress={onBrowseStock}
                     activeOpacity={0.8}
                 >
-                    <SearchImageIcon color="#FFF" size={20} />
-                    <Text style={[styles.emptyBrowseBtnText, { color: '#FFF' }]}>Browse Photos</Text>
+                    <SearchImageIcon color={BLACK} size={20} />
+                    {/* BLACK text on YELLOW — high contrast */}
+                    <Text style={[styles.emptyBrowseBtnText, { color: BLACK }]}>Browse Photos</Text>
                 </TouchableOpacity>
             </Animated.View>
 
-            {/* Secondary actions */}
+            {/* Secondary actions — BLACK text on subtle gray, clearly readable */}
             <Animated.View entering={FadeInDown.delay(560).springify()} style={styles.emptyActions}>
                 <TouchableOpacity
-                    style={[styles.emptyActionBtn, { backgroundColor: YELLOW + '0A', borderColor: BLACK + '18' }]}
+                    style={[styles.emptyActionBtn, { backgroundColor: BLACK + '08', borderColor: BLACK + '20' }]}
                     onPress={onAddImage}
                     activeOpacity={0.7}
                 >
-                    <ImagePlusIcon color={YELLOW} size={17} />
-                    <Text style={[styles.emptyActionText, { color: YELLOW }]}>From Gallery</Text>
+                    <ImagePlusIcon color={BLACK} size={17} />
+                    <Text style={[styles.emptyActionText, { color: BLACK }]}>From Gallery</Text>
                 </TouchableOpacity>
                 <TouchableOpacity
-                    style={[styles.emptyActionBtn, { backgroundColor: YELLOW + '0A', borderColor: BLACK + '18' }]}
+                    style={[styles.emptyActionBtn, { backgroundColor: BLACK + '08', borderColor: BLACK + '20' }]}
                     onPress={onAddText}
                     activeOpacity={0.7}
                 >
-                    <TextPlusIcon color={YELLOW} size={17} />
-                    <Text style={[styles.emptyActionText, { color: YELLOW }]}>Add Affirmation</Text>
+                    <TextPlusIcon color={BLACK} size={17} />
+                    <Text style={[styles.emptyActionText, { color: BLACK }]}>Add Affirmation</Text>
                 </TouchableOpacity>
             </Animated.View>
         </Animated.View>
@@ -1012,8 +1017,8 @@ const TextStyleSheet = ({
             />
 
             <Animated.View
-                entering={SlideInDown.duration(320).springify().damping(18)}
-                exiting={SlideOutDown.duration(200)}
+                entering={SlideInDown.duration(260).easing(Easing.out(Easing.cubic))}
+                exiting={SlideOutDown.duration(200).easing(Easing.in(Easing.cubic))}
                 style={[styles.textStyleSheet, { backgroundColor: WHITE }]}
             >
                 {/* Handle */}
@@ -1039,12 +1044,13 @@ const TextStyleSheet = ({
                             const isActive = activeFont === f.value;
                             return (
                                 <TouchableOpacity
-                                    key={f.value}
+                                    key={f.label}   // label is unique; value was shared before
                                     style={[
                                         styles.fontPill,
                                         {
                                             backgroundColor: isActive ? YELLOW : '#F0F0F0',
-                                            borderColor: isActive ? YELLOW : 'transparent',
+                                            borderColor: isActive ? BLACK : 'transparent',
+                                            borderWidth: isActive ? 1.5 : 0,
                                         },
                                     ]}
                                     onPress={() => {
@@ -1055,8 +1061,8 @@ const TextStyleSheet = ({
                                 >
                                     <Text style={{
                                         fontFamily: f.value,
-                                        fontSize: f.value === 'GasoekOne' ? 14 : 16,
-                                        color: isActive ? '#FFF' : BLACK,
+                                        fontSize: 14,
+                                        color: BLACK,   // always black for readability
                                     }}>
                                         {f.label}
                                     </Text>
@@ -1164,15 +1170,13 @@ export const StockImageSheet = ({
     visible: boolean;
     onDismiss: () => void;
     onSelect: (url: string) => void;
-    /** If set, prepends a "Today's Theme" category with these subcategories */
+    /** If set, replaces all categories with theme-specific keyword cards */
     themeCategory?: { label: string; subcategories: { label: string; query: string }[] };
 }) => {
     // ── 4 views: categories → subcategories → photos | search ──
     const [view, setView] = useState<'categories' | 'subcategories' | 'photos' | 'search'>('categories');
     const [selectedCatIdx, setSelectedCatIdx] = useState<number>(0);
     const [selectedSubIdx, setSelectedSubIdx] = useState<number>(0);
-    // Track whether the active subcategory view is for the theme category (vs a regular category)
-    const [isThemeCat, setIsThemeCat] = useState(false);
     const [activeSubLabel, setActiveSubLabel] = useState('');
     const [searchText, setSearchText] = useState('');
     const [photos, setPhotos] = useState<UnsplashPhoto[]>([]);
@@ -1182,8 +1186,29 @@ export const StockImageSheet = ({
     const [hasMore, setHasMore] = useState(true);
     const [currentQuery, setCurrentQuery] = useState('');
 
+    // Dynamically fetched thumbnails for theme keyword cards (null = still loading)
+    const [themeThumbs, setThemeThumbs] = useState<(string | null)[]>([]);
+
     const searchTimer = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
     const isLoadingRef = useRef(false);
+
+    // ── Fetch one thumbnail per theme keyword when sheet opens in theme mode ──
+    useEffect(() => {
+        if (!visible || !themeCategory) { setThemeThumbs([]); return; }
+        const kws = themeCategory.subcategories;
+        setThemeThumbs(new Array(kws.length).fill(null));
+        kws.forEach((kw, i) => {
+            searchPhotos(kw.query, 1, 1).then(results => {
+                if (results.length > 0) {
+                    setThemeThumbs(prev => {
+                        const next = [...prev];
+                        next[i] = results[0].urls.small;
+                        return next;
+                    });
+                }
+            });
+        });
+    }, [visible, themeCategory]);
 
     // ── Load photos ──
     const loadPhotos = useCallback(async (
@@ -1217,49 +1242,41 @@ export const StockImageSheet = ({
         setView('categories');
         setSearchText('');
         setPhotos([]);
-        setIsThemeCat(false);
         setActiveSubLabel('');
     }, [visible]);
 
-    // ── Theme category tapped → show theme subcategories ──
-    const handleThemeCategorySelect = () => {
+    // ── Theme keyword tapped → load photos directly (no subcategory step) ──
+    const handleThemeKeywordSelect = (idx: number) => {
         Haptics.selectionAsync();
-        setIsThemeCat(true);
-        setView('subcategories');
+        const kw = themeCategory!.subcategories[idx];
+        setActiveSubLabel(kw.label);
+        setCurrentQuery(kw.query);
+        setView('photos');
+        loadPhotos(kw.query, 1, true);
     };
 
     // ── Regular category tapped → show its subcategories ──
     const handleCategorySelect = (idx: number) => {
         Haptics.selectionAsync();
-        setIsThemeCat(false);
         setSelectedCatIdx(idx);
         setView('subcategories');
     };
 
-    // ── Subcategory tapped → load photos ──
+    // ── Regular subcategory tapped → load photos ──
     const handleSubcategorySelect = (subIdx: number) => {
         Haptics.selectionAsync();
         setSelectedSubIdx(subIdx);
+        const sub = BROWSE_CATEGORIES[selectedCatIdx].subcategories[subIdx];
+        setActiveSubLabel(sub.label);
+        setCurrentQuery(sub.query);
         setView('photos');
-
-        if (isThemeCat && themeCategory) {
-            // Theme subcategory — no thumb image, just load photos directly
-            const sub = themeCategory.subcategories[subIdx];
-            setActiveSubLabel(sub.label);
-            setCurrentQuery(sub.query);
-            loadPhotos(sub.query, 1, true);
-        } else {
-            const sub = BROWSE_CATEGORIES[selectedCatIdx].subcategories[subIdx];
-            setActiveSubLabel(sub.label);
-            setCurrentQuery(sub.query);
-            const thumbPhoto: UnsplashPhoto = {
-                id: `sub-thumb-${selectedCatIdx}-${subIdx}`,
-                alt_description: sub.label,
-                description: null,
-                urls: { thumb: sub.thumb, small: sub.thumb, regular: sub.thumb },
-            };
-            loadPhotos(sub.query, 1, true, thumbPhoto);
-        }
+        const thumbPhoto: UnsplashPhoto = {
+            id: `sub-thumb-${selectedCatIdx}-${subIdx}`,
+            alt_description: sub.label,
+            description: null,
+            urls: { thumb: sub.thumb, small: sub.thumb, regular: sub.thumb },
+        };
+        loadPhotos(sub.query, 1, true, thumbPhoto);
     };
 
     // ── Search (debounced) ──
@@ -1278,14 +1295,19 @@ export const StockImageSheet = ({
         }, 400);
     };
 
-    // ── Tap photo → add to board ──
+    // ── Tap photo → add to board, stay open so user can add more ──
+    const [lastAdded, setLastAdded] = useState<string | null>(null);
+
     const handlePhotoTap = (photo: UnsplashPhoto) => {
-        Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
         const url = (photo.id.startsWith('sub-thumb-') || photo.id.startsWith('cat-thumb-'))
             ? photo.urls.small
             : photo.urls.regular;
         onSelect(url);
-        onDismiss();
+        setLastAdded(photo.id);
+        Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+        // Don't dismiss — let user keep browsing and add more images
+        // They close with the X button when done
+        setTimeout(() => setLastAdded(null), 1200);
     };
 
     const handleLoadMore = () => {
@@ -1297,11 +1319,11 @@ export const StockImageSheet = ({
 
     const handleBack = () => {
         if (view === 'photos') {
-            setView('subcategories');
+            // In theme mode photos go straight back to categories (no subcategory step)
+            setView(themeCategory ? 'categories' : 'subcategories');
             setPhotos([]);
         } else {
             setView('categories');
-            setIsThemeCat(false);
             setSearchText('');
             setPhotos([]);
         }
@@ -1310,10 +1332,6 @@ export const StockImageSheet = ({
     if (!visible) return null;
 
     const cat = BROWSE_CATEGORIES[selectedCatIdx];
-    const activeSubs = isThemeCat && themeCategory
-        ? themeCategory.subcategories
-        : cat.subcategories;
-    const activeCatLabel = isThemeCat && themeCategory ? themeCategory.label : cat.label;
     const showBackBtn = view !== 'categories';
 
     return (
@@ -1340,7 +1358,7 @@ export const StockImageSheet = ({
                 {view === 'photos' ? (
                     <View style={{ flex: 1 }}>
                         <Text style={[styles.browserDrillTitle, { color: BLACK }]}>
-                            {activeSubLabel || activeCatLabel}
+                            {activeSubLabel}
                         </Text>
                         <Text style={[styles.browserDrillHint, { color: BLACK }]}>
                             Tap to add to your board
@@ -1349,7 +1367,7 @@ export const StockImageSheet = ({
                 ) : view === 'subcategories' ? (
                     <View style={{ flex: 1 }}>
                         <Text style={[styles.browserDrillTitle, { color: BLACK }]}>
-                            {activeCatLabel}
+                            {cat.label}
                         </Text>
                         <Text style={[styles.browserDrillHint, { color: BLACK }]}>
                             Choose a style
@@ -1387,71 +1405,71 @@ export const StockImageSheet = ({
             {view === 'categories' && (
                 <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.catCardsGrid}>
                     <View style={styles.catCardsRow}>
-                        {/* Today's Theme card — pinned first when available */}
-                        {themeCategory && (
-                            <TouchableOpacity
-                                key="theme"
-                                style={[styles.catCard, { backgroundColor: YELLOW }]}
-                                onPress={handleThemeCategorySelect}
-                                activeOpacity={0.85}
-                            >
-                                <View style={[styles.catCardImg, { alignItems: 'center', justifyContent: 'center' }]}>
-                                    <Text style={{ fontSize: 32 }}>✦</Text>
-                                    <Text style={{ fontFamily: 'GasoekOne', fontSize: 11, color: BLACK, marginTop: 4, textAlign: 'center', paddingHorizontal: 8 }}>
-                                        {themeCategory.label}
-                                    </Text>
-                                </View>
-                                <View style={[styles.catCardOverlay, { backgroundColor: 'rgba(0,0,0,0.18)' }]}>
-                                    <Text style={styles.catCardLabel}>Today's Theme</Text>
-                                </View>
-                            </TouchableOpacity>
+                        {themeCategory ? (
+                            // Theme mode: show only theme keywords as categories with live-fetched images
+                            themeCategory.subcategories.map((kw, i) => (
+                                <TouchableOpacity
+                                    key={i}
+                                    style={[styles.catCard, { backgroundColor: '#F0F0F0' }]}
+                                    onPress={() => handleThemeKeywordSelect(i)}
+                                    activeOpacity={0.85}
+                                >
+                                    {themeThumbs[i] ? (
+                                        <Image
+                                            source={{ uri: themeThumbs[i]! }}
+                                            style={styles.catCardImg}
+                                            resizeMode="cover"
+                                        />
+                                    ) : (
+                                        <View style={[styles.catCardImg, { alignItems: 'center', justifyContent: 'center' }]}>
+                                            <ActivityIndicator size="small" color={BLACK + '40'} />
+                                        </View>
+                                    )}
+                                    <View style={styles.catCardOverlay}>
+                                        <Text style={styles.catCardLabel}>{kw.label}</Text>
+                                    </View>
+                                </TouchableOpacity>
+                            ))
+                        ) : (
+                            // Regular mode: show all browse categories
+                            BROWSE_CATEGORIES.map((c, i) => (
+                                <TouchableOpacity
+                                    key={i}
+                                    style={[styles.catCard, { backgroundColor: '#F0F0F0' }]}
+                                    onPress={() => handleCategorySelect(i)}
+                                    activeOpacity={0.85}
+                                >
+                                    <Image
+                                        source={{ uri: c.thumb }}
+                                        style={styles.catCardImg}
+                                        resizeMode="cover"
+                                    />
+                                    <View style={styles.catCardOverlay}>
+                                        <Text style={styles.catCardLabel}>{c.label}</Text>
+                                    </View>
+                                </TouchableOpacity>
+                            ))
                         )}
-                        {BROWSE_CATEGORIES.map((c, i) => (
-                            <TouchableOpacity
-                                key={i}
-                                style={[styles.catCard, { backgroundColor: '#F0F0F0' }]}
-                                onPress={() => handleCategorySelect(i)}
-                                activeOpacity={0.85}
-                            >
-                                <Image
-                                    source={{ uri: c.thumb }}
-                                    style={styles.catCardImg}
-                                    resizeMode="cover"
-                                />
-                                <View style={styles.catCardOverlay}>
-                                    <Text style={styles.catCardLabel}>{c.label}</Text>
-                                </View>
-                            </TouchableOpacity>
-                        ))}
                     </View>
                 </ScrollView>
             )}
 
-            {/* ── View: Subcategory cards ── */}
+            {/* ── View: Subcategory cards (regular categories only) ── */}
             {view === 'subcategories' && (
                 <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.catCardsGrid}>
                     <View style={styles.catCardsRow}>
-                        {activeSubs.map((s, i) => (
+                        {cat.subcategories.map((s, i) => (
                             <TouchableOpacity
                                 key={i}
-                                style={[styles.catCard, { backgroundColor: isThemeCat ? YELLOW + '33' : '#F0F0F0' }]}
+                                style={[styles.catCard, { backgroundColor: '#F0F0F0' }]}
                                 onPress={() => handleSubcategorySelect(i)}
                                 activeOpacity={0.85}
                             >
-                                {isThemeCat ? (
-                                    // Theme subcategory — no image, styled label card
-                                    <View style={[styles.catCardImg, { alignItems: 'center', justifyContent: 'center', backgroundColor: YELLOW + '55' }]}>
-                                        <Text style={{ fontFamily: 'GasoekOne', fontSize: 13, color: BLACK, textAlign: 'center', paddingHorizontal: 8 }}>
-                                            {s.label}
-                                        </Text>
-                                    </View>
-                                ) : (
-                                    <Image
-                                        source={{ uri: (s as any).thumb }}
-                                        style={styles.catCardImg}
-                                        resizeMode="cover"
-                                    />
-                                )}
+                                <Image
+                                    source={{ uri: s.thumb }}
+                                    style={styles.catCardImg}
+                                    resizeMode="cover"
+                                />
                                 <View style={styles.catCardOverlay}>
                                     <Text style={styles.catCardLabel}>{s.label}</Text>
                                 </View>
@@ -1469,7 +1487,7 @@ export const StockImageSheet = ({
                     </View>
                 ) : photos.length === 0 ? (
                     <View style={styles.browserCenterMsg}>
-                        <Text style={{ color: BLACK, fontFamily: 'GasoekOne', fontSize: 14 }}>
+                        <Text style={{ color: BLACK, fontFamily: 'MontserratAlternates-ExtraBoldItalic', fontSize: 14 }}>
                             No images found
                         </Text>
                     </View>
@@ -1488,19 +1506,31 @@ export const StockImageSheet = ({
                                 <ActivityIndicator size="small" color={YELLOW} />
                             </View>
                         ) : null}
-                        renderItem={({ item }) => (
-                            <TouchableOpacity
-                                style={[styles.browserTile, { backgroundColor: '#F0F0F0' }]}
-                                onPress={() => handlePhotoTap(item)}
-                                activeOpacity={0.85}
-                            >
-                                <Image
-                                    source={{ uri: item.urls.small }}
-                                    style={styles.browserTileImg}
-                                    resizeMode="cover"
-                                />
-                            </TouchableOpacity>
-                        )}
+                        renderItem={({ item }) => {
+                            const wasJustAdded = lastAdded === item.id;
+                            return (
+                                <TouchableOpacity
+                                    style={[styles.browserTile, { backgroundColor: '#F0F0F0' }]}
+                                    onPress={() => handlePhotoTap(item)}
+                                    activeOpacity={0.85}
+                                >
+                                    <Image
+                                        source={{ uri: item.urls.small }}
+                                        style={styles.browserTileImg}
+                                        resizeMode="cover"
+                                    />
+                                    {/* "Added" flash overlay */}
+                                    {wasJustAdded && (
+                                        <View style={styles.addedOverlay}>
+                                            <Svg width={22} height={22} viewBox="0 0 24 24" fill="none">
+                                                <SvgCircle cx="12" cy="12" r="11" fill={YELLOW} />
+                                                <SvgPath d="M7 12l4 4 6-7" stroke={BLACK} strokeWidth={2.2} strokeLinecap="round" strokeLinejoin="round" />
+                                            </Svg>
+                                        </View>
+                                    )}
+                                </TouchableOpacity>
+                            );
+                        }}
                     />
                 )
             )}
@@ -1513,9 +1543,10 @@ export const StockImageSheet = ({
 // ═══════════════════════════════════════════════════════════
 
 export const VisionBoardScreen: React.FC = () => {
-    const navigation = useNavigation();
-    const boardRef = useRef<View>(null);
-    const [boardMode, setBoardMode] = useState<'master' | 'daily'>('master');
+    const boardRef     = useRef<View>(null);
+    const headerHeight = useHeaderHeight();
+    const insets       = useSafeAreaInsets();
+    const [boardMode, setBoardMode] = useState<'monthly' | 'weekly'>('monthly');
 
     const todayStr = useMemo(() => {
         const d = new Date();
@@ -1561,7 +1592,7 @@ export const VisionBoardScreen: React.FC = () => {
     }, [items.length]);
 
     const loadItems = async () => {
-        if (boardMode === 'master') {
+        if (boardMode === 'monthly') {
             const data = await fetchVisionItems();
             setItems(data);
         } else {
@@ -1737,7 +1768,7 @@ export const VisionBoardScreen: React.FC = () => {
         // Skip items that still have a temporary local ID (not yet persisted to DB)
         if (id.startsWith('temp-') || id.startsWith('stock-')) return;
 
-        if (boardMode === 'daily') {
+        if (boardMode === 'weekly') {
             setItems(prev => {
                 const updated = prev.map(i => i.id === id ? { ...i, position_x: x, position_y: y, scale: s, rotation: r } : i);
                 saveDailyVisionBoard({ date: todayStr, themeId: getThemeForDate(todayStr).id, completed: true, items: updated });
@@ -1750,7 +1781,7 @@ export const VisionBoardScreen: React.FC = () => {
 
     const confirmDelete = async () => {
         if (deleteId) {
-            if (boardMode === 'daily') {
+            if (boardMode === 'weekly') {
                 setItems(prev => {
                     const updated = prev.filter(i => i.id !== deleteId);
                     saveDailyVisionBoard({ date: todayStr, themeId: getThemeForDate(todayStr).id, completed: true, items: updated });
@@ -1767,7 +1798,7 @@ export const VisionBoardScreen: React.FC = () => {
     const handleUpdateTextStyle = (style: { text_color?: string; font_family?: string; bg_style?: string }) => {
         if (!editingTextItem) return;
 
-        if (boardMode === 'daily') {
+        if (boardMode === 'weekly') {
             setItems(prev => {
                 const updated = prev.map(i => i.id === editingTextItem.id ? { ...i, ...style } : i);
                 saveDailyVisionBoard({ date: todayStr, themeId: getThemeForDate(todayStr).id, completed: true, items: updated });
@@ -1788,29 +1819,22 @@ export const VisionBoardScreen: React.FC = () => {
         <GestureHandlerRootView style={{ flex: 1 }}>
             <View style={[styles.container, { backgroundColor: WHITE }]}>
                 {/* ── Header ── */}
-                <SafeAreaView edges={['top']} style={styles.headerSafe}>
+                <SafeAreaView edges={['top']} style={[styles.headerSafe, { paddingTop: headerHeight }]}>
                     <View style={styles.header}>
-                        <TouchableOpacity
-                            onPress={() => navigation.goBack()}
-                            style={styles.backBtn}
-                            activeOpacity={0.6}
-                            hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
-                        >
-                            <ChevronLeftIcon color={BLACK} size={24} />
-                        </TouchableOpacity>
+                        <View style={styles.backBtn} />
                         <View style={styles.headerTitleWrap}>
                             <View style={{ flexDirection: 'row', backgroundColor: BLACK + '08', borderRadius: 20, padding: 4, alignSelf: 'center' }}>
                                 <TouchableOpacity
-                                    onPress={() => setBoardMode('master')}
-                                    style={{ paddingVertical: 8, paddingHorizontal: 16, borderRadius: 16, backgroundColor: boardMode === 'master' ? WHITE : 'transparent', shadowColor: boardMode === 'master' ? BLACK : 'transparent', shadowOpacity: 0.1, shadowRadius: 4, elevation: boardMode === 'master' ? 2 : 0 }}
+                                    onPress={() => setBoardMode('monthly')}
+                                    style={{ paddingVertical: 8, paddingHorizontal: 16, borderRadius: 16, backgroundColor: boardMode === 'monthly' ? WHITE : 'transparent', shadowColor: boardMode === 'monthly' ? BLACK : 'transparent', shadowOpacity: 0.1, shadowRadius: 4, elevation: boardMode === 'monthly' ? 2 : 0 }}
                                 >
-                                    <Text style={{ fontFamily: 'Outfit-Medium', fontSize: 14, color: boardMode === 'master' ? BLACK : BLACK + '60' }}>Master</Text>
+                                    <Text style={{ fontFamily: 'Outfit-Medium', fontSize: 14, color: boardMode === 'monthly' ? BLACK : BLACK + '60' }}>Monthly</Text>
                                 </TouchableOpacity>
                                 <TouchableOpacity
-                                    onPress={() => setBoardMode('daily')}
-                                    style={{ paddingVertical: 8, paddingHorizontal: 16, borderRadius: 16, backgroundColor: boardMode === 'daily' ? WHITE : 'transparent', shadowColor: boardMode === 'daily' ? BLACK : 'transparent', shadowOpacity: 0.1, shadowRadius: 4, elevation: boardMode === 'daily' ? 2 : 0 }}
+                                    onPress={() => setBoardMode('weekly')}
+                                    style={{ paddingVertical: 8, paddingHorizontal: 16, borderRadius: 16, backgroundColor: boardMode === 'weekly' ? WHITE : 'transparent', shadowColor: boardMode === 'weekly' ? BLACK : 'transparent', shadowOpacity: 0.1, shadowRadius: 4, elevation: boardMode === 'weekly' ? 2 : 0 }}
                                 >
-                                    <Text style={{ fontFamily: 'Outfit-Medium', fontSize: 14, color: boardMode === 'daily' ? BLACK : BLACK + '60' }}>Today</Text>
+                                    <Text style={{ fontFamily: 'Outfit-Medium', fontSize: 14, color: boardMode === 'weekly' ? BLACK : BLACK + '60' }}>Weekly</Text>
                                 </TouchableOpacity>
                             </View>
                         </View>
@@ -1825,12 +1849,6 @@ export const VisionBoardScreen: React.FC = () => {
                     </View>
                 </SafeAreaView>
 
-                {boardMode === 'daily' && items.length > 0 && (
-                    <Animated.View entering={FadeInDown.duration(300)} style={{ paddingHorizontal: 16, paddingVertical: 12, backgroundColor: BLACK, borderBottomWidth: 0 }}>
-                        <Text style={{ fontFamily: 'Outfit-Bold', fontSize: 16, color: YELLOW }}>{getThemeForDate(todayStr).title}</Text>
-                        <Text style={{ fontFamily: 'Outfit-Regular', fontSize: 13, color: '#FFF', opacity: 0.8, marginTop: 4 }}>{getThemeForDate(todayStr).description}</Text>
-                    </Animated.View>
-                )}
 
                 {/* ── Board ── */}
                 <View style={styles.board} ref={boardRef} collapsable={false}>
@@ -1881,7 +1899,7 @@ export const VisionBoardScreen: React.FC = () => {
                         />
                     ))}
                     {items.length === 0 && (
-                        boardMode === 'master' ? (
+                        boardMode === 'monthly' ? (
                             <EmptyState
                                 onAddImage={handleAddImage}
                                 onAddText={() => setIsInputVisible(true)}
@@ -1933,11 +1951,19 @@ export const VisionBoardScreen: React.FC = () => {
                 {items.length > 0 && !isDraggingAny && !isStockVisible && (
                     <Animated.View
                         entering={FadeInDown.duration(300)}
-                        style={[styles.bottomBar, { backgroundColor: WHITE + 'F0' }]}
+                        style={[styles.bottomBar, { backgroundColor: WHITE + 'F0', bottom: 62 + insets.bottom }]}
                     >
                         <TouchableOpacity
                             style={[styles.actionPill, styles.actionPillIconOnly, { backgroundColor: WHITE, borderColor: BLACK + '12' }]}
-                            onPress={() => { setStockThemeCategory(undefined); setIsStockVisible(true); }}
+                            onPress={() => {
+                                if (boardMode === 'weekly') {
+                                    const theme = getThemeForDate(todayStr);
+                                    setStockThemeCategory({ label: theme.title, subcategories: theme.keywords });
+                                } else {
+                                    setStockThemeCategory(undefined);
+                                }
+                                setIsStockVisible(true);
+                            }}
                             activeOpacity={0.7}
                         >
                             <SearchImageIcon color={BLACK} size={20} />
@@ -2122,12 +2148,12 @@ const styles = StyleSheet.create({
         alignItems: 'center',
     },
     headerTitle: {
-        fontFamily: 'GasoekOne',
+        fontFamily: 'MontserratAlternates-ExtraBoldItalic',
         fontSize: 26,
         lineHeight: 30,
     },
     headerSub: {
-        fontFamily: 'GasoekOne',
+        fontFamily: 'MontserratAlternates-ExtraBoldItalic',
         fontSize: 13,
         marginTop: 1,
     },
@@ -2170,7 +2196,7 @@ const styles = StyleSheet.create({
     overlayText: {
         fontSize: 12,
         color: '#FFF',
-        fontFamily: 'GasoekOne',
+        fontFamily: 'MontserratAlternates-ExtraBoldItalic',
         fontWeight: '600',
         textAlign: 'center',
     },
@@ -2188,7 +2214,7 @@ const styles = StyleSheet.create({
         elevation: 2,
     },
     textItemContent: {
-        fontFamily: 'GasoekOne',
+        fontFamily: 'MontserratAlternates-ExtraBoldItalic',
         fontSize: 17,
         lineHeight: 24,
         textAlign: 'center',
@@ -2218,12 +2244,17 @@ const styles = StyleSheet.create({
         bottom: '22%',
         left: -40,
     },
+    emptyIconWrap: {
+        width: 72, height: 72, borderRadius: 36,
+        backgroundColor: YELLOW,
+        alignItems: 'center', justifyContent: 'center',
+    },
     emptyTitle: {
-        fontFamily: 'GasoekOne',
+        fontFamily: 'MontserratAlternates-ExtraBoldItalic',
         fontSize: 24,
     },
     emptySubtitle: {
-        fontFamily: 'GasoekOne',
+        fontFamily: 'MontserratAlternates-ExtraBoldItalic',
         fontSize: 14,
         marginTop: 6,
         textAlign: 'center',
@@ -2243,7 +2274,7 @@ const styles = StyleSheet.create({
         marginBottom: 4,
     },
     emptyBrowseBtnText: {
-        fontFamily: 'GasoekOne',
+        fontFamily: 'MontserratAlternates-ExtraBoldItalic',
         fontSize: 16,
         fontWeight: '700',
     },
@@ -2262,7 +2293,7 @@ const styles = StyleSheet.create({
         borderWidth: 1,
     },
     emptyActionText: {
-        fontFamily: 'GasoekOne',
+        fontFamily: 'MontserratAlternates-ExtraBoldItalic',
         fontSize: 14,
         fontWeight: '600',
     },
@@ -2289,7 +2320,7 @@ const styles = StyleSheet.create({
         gap: 10,
     },
     deleteText: {
-        fontFamily: 'GasoekOne',
+        fontFamily: 'MontserratAlternates-ExtraBoldItalic',
         fontSize: 15,
         fontWeight: '600',
     },
@@ -2327,7 +2358,7 @@ const styles = StyleSheet.create({
         height: 48,
     },
     actionPillText: {
-        fontFamily: 'GasoekOne',
+        fontFamily: 'MontserratAlternates-ExtraBoldItalic',
         fontSize: 15,
         fontWeight: '600',
     },
@@ -2356,7 +2387,7 @@ const styles = StyleSheet.create({
         gap: 8,
     },
     layoutName: {
-        fontFamily: 'GasoekOne',
+        fontFamily: 'MontserratAlternates-ExtraBoldItalic',
         fontSize: 14,
         fontWeight: '600',
     },
@@ -2380,12 +2411,12 @@ const styles = StyleSheet.create({
         justifyContent: 'center',
     },
     clearBoardText: {
-        fontFamily: 'GasoekOne',
+        fontFamily: 'MontserratAlternates-ExtraBoldItalic',
         fontSize: 15,
         fontWeight: '600',
     },
     clearBoardSub: {
-        fontFamily: 'GasoekOne',
+        fontFamily: 'MontserratAlternates-ExtraBoldItalic',
         fontSize: 12,
         marginTop: 1,
     },
@@ -2406,7 +2437,7 @@ const styles = StyleSheet.create({
         alignItems: 'center',
     },
     catText: {
-        fontFamily: 'GasoekOne',
+        fontFamily: 'MontserratAlternates-ExtraBoldItalic',
         fontSize: 14,
         fontWeight: '600',
         textAlign: 'center',
@@ -2449,17 +2480,17 @@ const styles = StyleSheet.create({
     },
     browserSearchInput: {
         flex: 1,
-        fontFamily: 'GasoekOne',
+        fontFamily: 'MontserratAlternates-ExtraBoldItalic',
         fontSize: 15,
         padding: 0,
     },
     browserDrillHint: {
-        fontFamily: 'GasoekOne',
+        fontFamily: 'MontserratAlternates-ExtraBoldItalic',
         fontSize: 11,
         opacity: 0.6,
     },
     browserDrillTitle: {
-        fontFamily: 'GasoekOne',
+        fontFamily: 'MontserratAlternates-ExtraBoldItalic',
         fontSize: 22,
         lineHeight: 26,
     },
@@ -2495,7 +2526,7 @@ const styles = StyleSheet.create({
     },
     catCardLabel: {
         color: '#FFF',
-        fontFamily: 'GasoekOne',
+        fontFamily: 'MontserratAlternates-ExtraBoldItalic',
         fontSize: 20,
     },
     // Photo grid
@@ -2514,6 +2545,11 @@ const styles = StyleSheet.create({
         width: TILE_SIZE,
         height: TILE_SIZE,
     },
+    addedOverlay: {
+        position: 'absolute', top: 0, left: 0, right: 0, bottom: 0,
+        backgroundColor: BLACK + '55',
+        alignItems: 'center', justifyContent: 'center',
+    },
     browserMoreBadge: {
         position: 'absolute',
         bottom: 0,
@@ -2527,7 +2563,7 @@ const styles = StyleSheet.create({
     browserMoreText: {
         color: '#FFF',
         fontSize: 9,
-        fontFamily: 'GasoekOne',
+        fontFamily: 'MontserratAlternates-ExtraBoldItalic',
     },
     browserCenterMsg: {
         flex: 1,
@@ -2537,11 +2573,11 @@ const styles = StyleSheet.create({
         gap: 12,
     },
     browserMsgTitle: {
-        fontFamily: 'GasoekOne',
+        fontFamily: 'MontserratAlternates-ExtraBoldItalic',
         fontSize: 22,
     },
     browserMsgBody: {
-        fontFamily: 'GasoekOne',
+        fontFamily: 'MontserratAlternates-ExtraBoldItalic',
         fontSize: 14,
         textAlign: 'center',
         lineHeight: 22,
@@ -2581,11 +2617,11 @@ const styles = StyleSheet.create({
         paddingBottom: 8,
     },
     sheetTitle: {
-        fontFamily: 'GasoekOne',
+        fontFamily: 'MontserratAlternates-ExtraBoldItalic',
         fontSize: 24,
     },
     sheetSubtitle: {
-        fontFamily: 'GasoekOne',
+        fontFamily: 'MontserratAlternates-ExtraBoldItalic',
         fontSize: 13,
         marginTop: 2,
     },
@@ -2612,7 +2648,7 @@ const styles = StyleSheet.create({
         marginRight: 8,
     },
     templateText: {
-        fontFamily: 'GasoekOne',
+        fontFamily: 'MontserratAlternates-ExtraBoldItalic',
         fontSize: 13,
         maxWidth: 180,
     },
@@ -2627,7 +2663,7 @@ const styles = StyleSheet.create({
     },
     sheetInput: {
         flex: 1,
-        fontFamily: 'GasoekOne',
+        fontFamily: 'MontserratAlternates-ExtraBoldItalic',
         fontSize: 15,
         paddingHorizontal: 16,
         paddingVertical: 12,
@@ -2662,12 +2698,12 @@ const styles = StyleSheet.create({
         elevation: 12,
     },
     dialogTitle: {
-        fontFamily: 'GasoekOne',
+        fontFamily: 'MontserratAlternates-ExtraBoldItalic',
         fontSize: 22,
         marginTop: 4,
     },
     dialogBody: {
-        fontFamily: 'GasoekOne',
+        fontFamily: 'MontserratAlternates-ExtraBoldItalic',
         fontSize: 14,
         textAlign: 'center',
         lineHeight: 20,
@@ -2685,7 +2721,7 @@ const styles = StyleSheet.create({
         alignItems: 'center',
     },
     dialogBtnText: {
-        fontFamily: 'GasoekOne',
+        fontFamily: 'MontserratAlternates-ExtraBoldItalic',
         fontSize: 15,
         fontWeight: '600',
     },
@@ -2750,7 +2786,7 @@ const styles = StyleSheet.create({
         gap: 3,
     },
     bgChipLabel: {
-        fontFamily: 'GasoekOne',
+        fontFamily: 'MontserratAlternates-ExtraBoldItalic',
         fontSize: 11,
         fontWeight: '600',
     },
@@ -2762,7 +2798,7 @@ const styles = StyleSheet.create({
         gap: 8,
     },
     bgPickerLabel: {
-        fontFamily: 'GasoekOne',
+        fontFamily: 'MontserratAlternates-ExtraBoldItalic',
         fontSize: 11,
         fontWeight: '700',
         letterSpacing: 0.8,
@@ -2780,7 +2816,7 @@ const styles = StyleSheet.create({
         gap: 2,
     },
     boardBgChipLabel: {
-        fontFamily: 'GasoekOne',
+        fontFamily: 'MontserratAlternates-ExtraBoldItalic',
         fontSize: 10,
         fontWeight: '600',
     },

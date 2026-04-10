@@ -11,7 +11,6 @@ import {
     Dimensions
 } from 'react-native';
 import { BlurView } from 'expo-blur';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 const YELLOW = '#FFE600';
 const BLACK = '#000000';
@@ -58,8 +57,6 @@ export const InsightModal: React.FC<InsightModalProps> = ({
     data,
     error
 }) => {
-    const insets = useSafeAreaInsets();
-
     if (!visible) return null;
 
     return (
@@ -165,7 +162,7 @@ const styles = StyleSheet.create({
         borderBottomColor: 'rgba(0,0,0,0.05)',
     },
     title: {
-        fontFamily: 'GasoekOne',
+        fontFamily: 'MontserratAlternates-ExtraBoldItalic',
         fontSize: 28,
     },
     closeButton: {
@@ -185,11 +182,11 @@ const styles = StyleSheet.create({
     },
     loadingText: {
         marginTop: 16,
-        fontFamily: 'GasoekOne',
+        fontFamily: 'MontserratAlternates-ExtraBoldItalic',
         fontSize: 18,
     },
     errorText: {
-        fontFamily: 'GasoekOne',
+        fontFamily: 'MontserratAlternates-ExtraBoldItalic',
         fontSize: 16,
         textAlign: 'center',
     },
@@ -200,12 +197,12 @@ const styles = StyleSheet.create({
         borderStyle: 'dashed',
     },
     sectionTitle: {
-        fontFamily: 'GasoekOne',
+        fontFamily: 'MontserratAlternates-ExtraBoldItalic',
         fontSize: 22,
         marginBottom: 8,
     },
     bodyText: {
-        fontFamily: 'GasoekOne',
+        fontFamily: 'MontserratAlternates-ExtraBoldItalic',
         fontSize: 18,
         lineHeight: 26,
     },
@@ -218,13 +215,13 @@ const styles = StyleSheet.create({
         borderRadius: 16,
     },
     cardTitle: {
-        fontFamily: 'GasoekOne',
+        fontFamily: 'MontserratAlternates-ExtraBoldItalic',
         fontSize: 18,
         marginBottom: 4,
         opacity: 0.8,
     },
     cardBody: {
-        fontFamily: 'GasoekOne',
+        fontFamily: 'MontserratAlternates-ExtraBoldItalic',
         fontSize: 16,
         lineHeight: 22,
     },
@@ -234,23 +231,23 @@ const styles = StyleSheet.create({
         alignItems: 'center',
     },
     suggestionTitle: {
-        fontFamily: 'GasoekOne',
+        fontFamily: 'MontserratAlternates-ExtraBoldItalic',
         fontSize: 24,
         marginBottom: 8,
     },
     suggestionBody: {
-        fontFamily: 'GasoekOne',
+        fontFamily: 'MontserratAlternates-ExtraBoldItalic',
         fontSize: 18,
         textAlign: 'center',
         lineHeight: 26,
     },
     emptyTitle: {
-        fontFamily: 'GasoekOne',
+        fontFamily: 'MontserratAlternates-ExtraBoldItalic',
         fontSize: 24,
         marginBottom: 12,
     },
     emptyText: {
-        fontFamily: 'GasoekOne',
+        fontFamily: 'MontserratAlternates-ExtraBoldItalic',
         fontSize: 16,
         textAlign: 'center',
         opacity: 0.8,

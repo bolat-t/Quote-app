@@ -50,6 +50,9 @@ export const JournalInput: React.FC<JournalInputProps> = ({
     const [isExpanded, setIsExpanded] = useState(autoFocus);
     const [existingEntry, setExistingEntry] = useState<JournalEntry | null>(null);
     const [keyboardVisible, setKeyboardVisible] = useState(false);
+    const [isSaving, setIsSaving] = useState(false);
+    const [saveError, setSaveError] = useState<string | null>(null);
+    const [isFocused, setIsFocused] = useState(false);
     const inputRef = useRef<TextInput>(null);
 
     // Listen for keyboard
@@ -96,10 +99,12 @@ export const JournalInput: React.FC<JournalInputProps> = ({
 
     const handleSave = useCallback(async () => {
         if (!response.trim()) {
-            Alert.alert('Empty Response', 'Write something first!');
+            setSaveError('Write something first before saving.');
             return;
         }
 
+        setIsSaving(true);
+        setSaveError(null);
         try {
             // ALWAYS create a new entry ID for "fresh start" behavior
             const entry: JournalEntry = {
@@ -118,10 +123,10 @@ export const JournalInput: React.FC<JournalInputProps> = ({
             setIsExpanded(false);
 
             onSaveToCanvas?.(response.trim());
-
-            Alert.alert('Saved!', 'Drag your reflection to position it.');
-        } catch (error) {
-            Alert.alert('Error', 'Failed to save your reflection.');
+        } catch {
+            setSaveError('Could not save your reflection. Please try again.');
+        } finally {
+            setIsSaving(false);
         }
     }, [response, quoteId, quoteText, existingEntry, onSaveToCanvas]);
 
@@ -146,6 +151,9 @@ export const JournalInput: React.FC<JournalInputProps> = ({
                     onPress={handleExpand}
                     style={styles.promptButton}
                     activeOpacity={0.7}
+                    accessibilityLabel={prompt || "What does this mean to you?"}
+                    accessibilityRole="button"
+                    accessibilityHint="Tap to write your reflection"
                 >
                     <Text style={styles.promptText}>
                         {prompt || "What does this mean to you?"}
@@ -172,6 +180,8 @@ export const JournalInput: React.FC<JournalInputProps> = ({
                     onPress={handleClose}
                     style={styles.closeButton}
                     hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+                    accessibilityLabel="Close reflection input"
+                    accessibilityRole="button"
                 >
                     <Svg width={20} height={20} viewBox="0 0 24 24">
                         <Path
@@ -187,7 +197,7 @@ export const JournalInput: React.FC<JournalInputProps> = ({
             {/* Display Prompt in Expanded View */}
             {prompt && (
                 <Text style={{
-                    fontFamily: 'GasoekOne',
+                    fontFamily: 'MontserratAlternates-ExtraBoldItalic',
                     fontSize: 18,
                     marginBottom: 16,
                     color: BLACK,
@@ -201,23 +211,35 @@ export const JournalInput: React.FC<JournalInputProps> = ({
             {/* Text Input */}
             <TextInput
                 ref={inputRef}
-                style={styles.input}
+                style={[styles.input, isFocused && styles.inputFocused]}
                 placeholder="Write your thoughts..."
                 placeholderTextColor={BLACK + '40'}
                 value={response}
-                onChangeText={setResponse}
+                onChangeText={(t) => { setResponse(t); if (saveError) setSaveError(null); }}
+                onFocus={() => setIsFocused(true)}
+                onBlur={() => setIsFocused(false)}
                 multiline
                 numberOfLines={2}
                 textAlignVertical="top"
+                accessibilityLabel="Write your reflection"
+                accessibilityHint="Type your thoughts here"
             />
+
+            {/* Inline error */}
+            {saveError ? (
+                <Text style={styles.errorText}>{saveError}</Text>
+            ) : null}
 
             {/* Save button */}
             <TouchableOpacity
-                style={styles.saveButton}
+                style={[styles.saveButton, isSaving && styles.saveButtonDisabled]}
                 onPress={handleSave}
                 activeOpacity={0.7}
+                disabled={isSaving}
+                accessibilityLabel="Save reflection to canvas"
+                accessibilityRole="button"
             >
-                <Text style={styles.buttonText}>Save to Canvas</Text>
+                <Text style={styles.buttonText}>{isSaving ? 'Saving…' : 'Save to Canvas'}</Text>
             </TouchableOpacity>
         </View>
     );
@@ -239,7 +261,7 @@ const styles = StyleSheet.create({
     },
     promptText: {
         fontSize: 16,
-        fontFamily: 'GasoekOne',
+        fontFamily: 'MontserratAlternates-ExtraBoldItalic',
         textAlign: 'center',
         color: BLACK,
     },
@@ -269,14 +291,14 @@ const styles = StyleSheet.create({
     },
     headerText: {
         fontSize: 14,
-        fontFamily: 'GasoekOne',
+        fontFamily: 'MontserratAlternates-ExtraBoldItalic',
         textTransform: 'uppercase',
         letterSpacing: 1,
         opacity: 0.7,
         color: BLACK,
     },
     quoteText: {
-        fontFamily: 'GasoekOne',
+        fontFamily: 'MontserratAlternates-ExtraBoldItalic',
         fontSize: 16,
         paddingHorizontal: 20,
         marginBottom: 12,
@@ -292,14 +314,25 @@ const styles = StyleSheet.create({
         paddingBottom: 8,
         fontSize: 22,
         lineHeight: 30,
-        fontFamily: 'GasoekOne',
+        fontFamily: 'MontserratAlternates-ExtraBoldItalic',
         minHeight: 80,
         maxHeight: 200,
         textAlignVertical: 'top',
         color: BLACK,
     },
+    inputFocused: {
+        borderBottomColor: YELLOW,
+        borderBottomWidth: 2,
+    },
+    errorText: {
+        fontFamily: 'MontserratAlternates-ExtraBoldItalic',
+        fontSize: 13,
+        color: '#D32F2F',
+        marginTop: 8,
+        textAlign: 'center',
+    },
     saveButton: {
-        paddingVertical: 12,
+        paddingVertical: 14,
         paddingHorizontal: 32,
         borderRadius: 30,
         alignSelf: 'center',
@@ -308,13 +341,17 @@ const styles = StyleSheet.create({
         borderWidth: 2,
         borderColor: BLACK,
     },
+    saveButtonDisabled: {
+        backgroundColor: '#F2F2F2',
+        borderColor: '#CCCCCC',
+    },
     closeButton: {
         padding: 4,
         opacity: 0.6,
     },
     buttonText: {
         fontSize: 16,
-        fontFamily: 'GasoekOne',
+        fontFamily: 'MontserratAlternates-ExtraBoldItalic',
         color: BLACK,
     },
 });

@@ -420,7 +420,7 @@ const styles = StyleSheet.create({
         gap: 6,
     },
     countdown: {
-        fontFamily: 'GasoekOne',
+        fontFamily: 'MontserratAlternates-ExtraBoldItalic',
         fontSize: 13,
         color: YELLOW,
         marginBottom: 4,

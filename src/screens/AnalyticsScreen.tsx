@@ -1,8 +1,9 @@
 import React, { useEffect, useState } from 'react';
-import { View, Text, StyleSheet, ScrollView, Dimensions, TouchableOpacity } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, Dimensions, TouchableOpacity, ActivityIndicator } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { getJournalEntries, JournalEntry } from '../utils/journalStorage';
-import { Svg, Path, Circle, Line, Text as SvgText } from 'react-native-svg';
+import { getJournalEntries, JournalEntry, calculateStreak } from '../utils/journalStorage';
+import { Svg, Path, Circle, Line } from 'react-native-svg';
+import { ActivityRings } from '../components/ActivityRings';
 
 const YELLOW = '#FFE600';
 const BLACK = '#000000';
@@ -17,44 +18,59 @@ type NavProps = {
 export const AnalyticsScreen: React.FC<NavProps> = ({ navigation }) => {
     const [entries, setEntries] = useState<JournalEntry[]>([]);
     const [averageMood, setAverageMood] = useState(0);
+    const [streak, setStreak] = useState(0);
     const [tagCounts, setTagCounts] = useState<{ [tag: string]: number }>({});
+    const [loading, setLoading] = useState(true);
+    const [error, setError] = useState<string | null>(null);
 
     useEffect(() => {
         loadData();
     }, []);
 
     const loadData = async () => {
-        const allEntries = await getJournalEntries();
-        // Sort by date ascending
-        const sorted = allEntries.sort((a, b) => a.createdAt - b.createdAt);
-        setEntries(sorted);
+        setLoading(true);
+        setError(null);
+        try {
+            const [allEntries, currentStreak] = await Promise.all([
+                getJournalEntries(),
+                calculateStreak(),
+            ]);
+            setStreak(currentStreak);
+            // Sort by date ascending
+            const sorted = [...allEntries].sort((a, b) => a.createdAt - b.createdAt);
+            setEntries(sorted);
 
-        // Calc stats
-        let totalMood = 0;
-        let moodCount = 0;
-        const tags: { [tag: string]: number } = {};
+            // Calc stats
+            let totalMood = 0;
+            let moodCount = 0;
+            const tags: { [tag: string]: number } = {};
 
-        sorted.forEach(e => {
-            if (e.moodScore) {
-                totalMood += e.moodScore;
-                moodCount++;
-            }
-            if (e.sentimentTags) {
-                e.sentimentTags.forEach(t => {
-                    tags[t] = (tags[t] || 0) + 1;
-                });
-            }
-        });
+            sorted.forEach(e => {
+                if (e.moodScore) {
+                    totalMood += e.moodScore;
+                    moodCount++;
+                }
+                if (e.sentimentTags) {
+                    e.sentimentTags.forEach(t => {
+                        tags[t] = (tags[t] || 0) + 1;
+                    });
+                }
+            });
 
-        setAverageMood(moodCount > 0 ? parseFloat((totalMood / moodCount).toFixed(1)) : 0);
-        setTagCounts(tags);
+            setAverageMood(moodCount > 0 ? parseFloat((totalMood / moodCount).toFixed(1)) : 0);
+            setTagCounts(tags);
+        } catch {
+            setError('Could not load your data. Please try again.');
+        } finally {
+            setLoading(false);
+        }
     };
 
     // Simple Line Chart Implementation
     const renderMoodChart = () => {
         const data = entries.filter(e => e.moodScore).slice(-7); // Last 7 entries with mood
         if (data.length < 2) return (
-            <Text style={{ color: BLACK, opacity: 0.5, textAlign: 'center', marginVertical: 20, fontFamily: 'GasoekOne' }}>
+            <Text style={{ color: BLACK, opacity: 0.5, textAlign: 'center', marginVertical: 20, fontFamily: 'MontserratAlternates-ExtraBoldItalic' }}>
                 Not enough data for chart yet. Keep journaling!
             </Text>
         );
@@ -117,10 +133,41 @@ export const AnalyticsScreen: React.FC<NavProps> = ({ navigation }) => {
         );
     };
 
+    if (loading) {
+        return (
+            <SafeAreaView style={[styles.container, { justifyContent: 'center', alignItems: 'center' }]}>
+                <ActivityIndicator size="large" color={BLACK} />
+                <Text style={[styles.title, { fontSize: 16, marginTop: 12, opacity: 0.5 }]}>Loading your data…</Text>
+            </SafeAreaView>
+        );
+    }
+
+    if (error) {
+        return (
+            <SafeAreaView style={[styles.container, { justifyContent: 'center', alignItems: 'center', paddingHorizontal: 32 }]}>
+                <Text style={[styles.title, { fontSize: 18, textAlign: 'center', marginBottom: 16 }]}>Something went wrong</Text>
+                <Text style={{ fontFamily: 'MontserratAlternates-ExtraBoldItalic', fontSize: 14, color: BLACK, opacity: 0.5, textAlign: 'center', marginBottom: 24 }}>{error}</Text>
+                <TouchableOpacity
+                    onPress={loadData}
+                    style={{ backgroundColor: YELLOW, borderWidth: 2, borderColor: BLACK, borderRadius: 16, paddingVertical: 14, paddingHorizontal: 32 }}
+                    accessibilityLabel="Retry loading analytics"
+                    accessibilityRole="button"
+                >
+                    <Text style={{ fontFamily: 'MontserratAlternates-ExtraBoldItalic', fontSize: 16, color: BLACK }}>Try Again</Text>
+                </TouchableOpacity>
+            </SafeAreaView>
+        );
+    }
+
     return (
         <SafeAreaView style={styles.container}>
             <View style={styles.header}>
-                <TouchableOpacity onPress={() => navigation.goBack()} style={{ marginRight: 16 }}>
+                <TouchableOpacity
+                    onPress={() => navigation.goBack()}
+                    style={{ marginRight: 16 }}
+                    accessibilityLabel="Go back"
+                    accessibilityRole="button"
+                >
                     <Svg width={24} height={24} viewBox="0 0 24 24" fill="none">
                         <Path d="M15 18l-6-6 6-6" stroke={BLACK} strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" />
                     </Svg>
@@ -129,19 +176,12 @@ export const AnalyticsScreen: React.FC<NavProps> = ({ navigation }) => {
             </View>
 
             <ScrollView contentContainerStyle={styles.content}>
-                {/* Stats Cards */}
-                <View style={styles.statsRow}>
-                    <View style={styles.statCard}>
-                        <Text style={styles.statLabel}>AVG MOOD</Text>
-                        <Text style={styles.statValue}>{averageMood}</Text>
-                        <Text style={styles.statSub}>/ 10</Text>
-                    </View>
-                    <View style={styles.statCard}>
-                        <Text style={styles.statLabel}>ENTRIES</Text>
-                        <Text style={styles.statValue}>{entries.length}</Text>
-                        <Text style={styles.statSub}>Total</Text>
-                    </View>
-                </View>
+                {/* Activity Rings */}
+                <ActivityRings
+                    entriesTotal={entries.length}
+                    streak={streak}
+                    avgMood={averageMood}
+                />
 
                 {/* Chart Section */}
                 <View style={styles.section}>
@@ -165,7 +205,7 @@ export const AnalyticsScreen: React.FC<NavProps> = ({ navigation }) => {
                                 </View>
                             ))}
                         {Object.keys(tagCounts).length === 0 && (
-                            <Text style={{ color: BLACK, opacity: 0.5, fontFamily: 'GasoekOne' }}>
+                            <Text style={{ color: BLACK, opacity: 0.5, fontFamily: 'MontserratAlternates-ExtraBoldItalic' }}>
                                 No emotions tagged yet.
                             </Text>
                         )}
@@ -188,46 +228,12 @@ const styles = StyleSheet.create({
     },
     title: {
         fontSize: 28,
-        fontFamily: 'GasoekOne',
+        fontFamily: 'MontserratAlternates-ExtraBoldItalic',
         color: BLACK,
     },
     content: {
         padding: 24,
         paddingTop: 0,
-    },
-    statsRow: {
-        flexDirection: 'row',
-        justifyContent: 'space-between',
-        marginBottom: 24,
-    },
-    statCard: {
-        width: '48%',
-        padding: 16,
-        borderRadius: 16,
-        alignItems: 'center',
-        backgroundColor: WHITE,
-        elevation: 6,
-        shadowColor: BLACK,
-        shadowOffset: { width: 0, height: 4 },
-        shadowOpacity: 0.1,
-        shadowRadius: 8,
-    },
-    statLabel: {
-        fontSize: 12,
-        fontWeight: 'bold',
-        marginBottom: 8,
-        letterSpacing: 1,
-        color: BLACK,
-    },
-    statValue: {
-        fontSize: 32,
-        fontFamily: 'GasoekOne',
-        color: YELLOW,
-    },
-    statSub: {
-        fontSize: 12,
-        opacity: 0.6,
-        color: BLACK,
     },
     section: {
         padding: 20,
@@ -242,7 +248,7 @@ const styles = StyleSheet.create({
     },
     sectionTitle: {
         fontSize: 18,
-        fontFamily: 'GasoekOne',
+        fontFamily: 'MontserratAlternates-ExtraBoldItalic',
         marginBottom: 16,
         color: BLACK,
     },
@@ -263,7 +269,7 @@ const styles = StyleSheet.create({
     cloudTagText: {
         fontSize: 14,
         marginRight: 8,
-        fontFamily: 'GasoekOne',
+        fontFamily: 'MontserratAlternates-ExtraBoldItalic',
         color: BLACK,
     },
     countBadge: {

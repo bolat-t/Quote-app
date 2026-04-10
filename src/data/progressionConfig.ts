@@ -2,55 +2,40 @@ import { LevelTier, XPAction } from '../types';
 
 // XP rewards per action
 export const XP_REWARDS: Record<XPAction, number> = {
-    openApp: 5,
-    readQuote: 5,
+    openApp: 10,
+    readQuote: 15,
     completeHunt: 25,
-    drawReflection: 15,
-    writeReflection: 15,
-    saveCanvas: 10,
+    drawReflection: 20,
+    writeReflection: 30,
+    saveCanvas: 20,
     shareReflection: 10,
     streak7Day: 50,
     streak30Day: 200,
 };
 
 export const PAPER_TYPES = {
-    plain: { id: 'plain', name: 'Plain White', levelRequired: 1, color: '#FFFFFF' },
-    cream: { id: 'cream', name: 'Warm Cream', levelRequired: 2, color: '#F5E6D3' },
-    grid: { id: 'grid', name: 'Math Grid', levelRequired: 3, type: 'pattern', pattern: 'grid' },
-    dots: { id: 'dots', name: 'Bullet Dots', levelRequired: 4, type: 'pattern', pattern: 'dots' },
-    lined: { id: 'lined', name: 'Lined Paper', levelRequired: 5, type: 'pattern', pattern: 'lines' },
-    dark: { id: 'dark', name: 'Midnight', levelRequired: 6, color: '#1A1D23', textColor: '#FFFFFF' },
-    starry: { id: 'starry', name: 'Starry Night', levelRequired: 7, type: 'pattern', pattern: 'stars', color: '#0F172A', textColor: '#E2E8F0' },
-    parchment: { id: 'parchment', name: 'Ancient Scroll', levelRequired: 8, color: '#F0E6D2', textColor: '#5C4033' },
+    plain:     { id: 'plain',     name: 'Plain White',    levelRequired: 1, color: '#FFFFFF' },
+    cream:     { id: 'cream',     name: 'Warm Cream',     levelRequired: 2, color: '#F5E6D3' },
+    grid:      { id: 'grid',      name: 'Math Grid',      levelRequired: 3, type: 'pattern', pattern: 'grid' },
+    dots:      { id: 'dots',      name: 'Bullet Dots',    levelRequired: 3, type: 'pattern', pattern: 'dots' },
+    lined:     { id: 'lined',     name: 'Lined Paper',    levelRequired: 4, type: 'pattern', pattern: 'lines' },
+    dark:      { id: 'dark',      name: 'Midnight',       levelRequired: 4, color: '#1A1D23', textColor: '#FFFFFF' },
+    starry:    { id: 'starry',    name: 'Starry Night',   levelRequired: 5, type: 'pattern', pattern: 'stars', color: '#0F172A', textColor: '#E2E8F0' },
+    parchment: { id: 'parchment', name: 'Ancient Scroll', levelRequired: 5, color: '#F0E6D2', textColor: '#5C4033' },
 };
 
-// Level tiers — 10 levels from Raw Spud to God Potato
+// Level tiers — 9 levels
 export const LEVEL_TIERS: LevelTier[] = [
-    { level: 1,  title: 'Raw Spud',        xpRequired: 0,     unlocks: 'Base app' },
-    { level: 2,  title: 'Muddy Potato',    xpRequired: 100,   unlocks: 'Warm Cream Paper' },
-    { level: 3,  title: 'Dumb Potato',     xpRequired: 300,   unlocks: 'Grid Paper' },
-    { level: 4,  title: 'Basic Spud',      xpRequired: 600,   unlocks: 'Dot Grid' },
-    { level: 5,  title: 'Aware Potato',    xpRequired: 1000,  unlocks: 'Lined Paper' },
-    { level: 6,  title: 'Wise Spud',       xpRequired: 1500,  unlocks: 'Dark Mode Paper' },
-    { level: 7,  title: 'Cool Potato',     xpRequired: 2500,  unlocks: 'Starry Night Theme' },
-    { level: 8,  title: 'Epic Tater',      xpRequired: 4000,  unlocks: 'Parchment' },
-    { level: 9,  title: 'Ancient Spud',    xpRequired: 6000,  unlocks: 'Community' },
-    { level: 10, title: 'God Potato',      xpRequired: 10000, unlocks: 'Everything unlocked' },
+    { level: 1, title: 'Raw Spud',        xpRequired: 0    },
+    { level: 2, title: 'Muddy Potato',    xpRequired: 100  },
+    { level: 3, title: 'Sprouting Spud',  xpRequired: 300  },
+    { level: 4, title: 'Speaking Potato', xpRequired: 600  },
+    { level: 5, title: 'Happy Potato',    xpRequired: 1000 },
+    { level: 6, title: 'Glowing Spud',    xpRequired: 1500 },
+    { level: 7, title: 'Wise Potato',     xpRequired: 2200 },
+    { level: 8, title: 'Radiant Spud',    xpRequired: 3000 },
+    { level: 9, title: 'Enlightened Potato', xpRequired: 4000 },
 ];
-
-// Level tier icons (used in UI)
-export const LEVEL_ICONS: Record<number, string> = {
-    1: '🥔',
-    2: '🥔',
-    3: '🥔',
-    4: '🥔',
-    5: '🥔',
-    6: '🥔',
-    7: '🥔',
-    8: '🥔',
-    9: '🥔',
-    10: '🥔',
-};
 
 // Get level tier for a given XP amount
 export const getLevelForXP = (xp: number): LevelTier => {

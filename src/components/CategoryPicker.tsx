@@ -35,7 +35,7 @@ export const CategoryPicker: React.FC<CategoryPickerProps> = ({ categories, sele
                         <Text style={[
                             styles.categoryText,
                             { color: selected === cat ? BLACK : BLACK + '60' },
-                            selected === cat && { fontFamily: 'GasoekOne' }
+                            selected === cat && { fontFamily: 'MontserratAlternates-ExtraBoldItalic' }
                         ]}>
                             {cat}
                         </Text>
@@ -69,7 +69,7 @@ const styles = StyleSheet.create({
         borderColor: BLACK,
     },
     categoryText: {
-        fontFamily: 'GasoekOne',
+        fontFamily: 'MontserratAlternates-ExtraBoldItalic',
         fontSize: 16,
     },
 });

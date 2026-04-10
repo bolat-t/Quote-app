@@ -55,14 +55,11 @@ export const CalendarModal: React.FC<CalendarModalProps> = ({ visible, onClose, 
         setInsightData(null); // Reset prev data while loading
 
         try {
-            console.log("Fetching weekly insights...");
             const { data, error } = await supabase.functions.invoke('analyze-weekly');
             if (error) {
-                // Parse detailed error if possible
                 const msg = (error as any).message || JSON.stringify(error);
                 throw new Error(msg);
             }
-            console.log("Insights received:", data);
             setInsightData(data);
         } catch (err: any) {
             console.error("Insight Error:", err);
@@ -144,17 +141,6 @@ export const CalendarModal: React.FC<CalendarModalProps> = ({ visible, onClose, 
     const selectedEntry = entries[selectedDate];
     const displayImages = selectedEntry ? (selectedEntry.images || (selectedEntry.imageUri ? [selectedEntry.imageUri] : [])) : [];
 
-    // Debug logging
-    if (selectedEntry) {
-        console.log('[CALENDAR] selectedEntry:', JSON.stringify({
-            date: selectedEntry.date,
-            imageUri: selectedEntry.imageUri,
-            images: selectedEntry.images,
-            hasImages: !!selectedEntry.images,
-        }));
-        console.log('[CALENDAR] displayImages:', displayImages);
-    }
-
     return (
         <Modal
             visible={visible}
@@ -166,7 +152,7 @@ export const CalendarModal: React.FC<CalendarModalProps> = ({ visible, onClose, 
                 {/* Header */}
                 <View style={styles.header}>
                     <Text style={[styles.title, { color: BLACK }]}>Journal</Text>
-                    <Text style={{ fontFamily: 'GasoekOne', color: BLACK, opacity: 0.5, fontSize: 13 }}>Your reflection history</Text>
+                    <Text style={{ fontFamily: 'MontserratAlternates-ExtraBoldItalic', color: BLACK, opacity: 0.5, fontSize: 13 }}>Your reflection history</Text>
                     <TouchableOpacity onPress={onClose} style={styles.closeButton}>
                         <Svg width={24} height={24} viewBox="0 0 24 24" fill="none">
                             <Path d="M6 18L18 6M6 6l12 12" stroke={BLACK} strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" />
@@ -184,8 +170,8 @@ export const CalendarModal: React.FC<CalendarModalProps> = ({ visible, onClose, 
                         <Path d="M12 2L15.09 8.26L22 9.27L17 14.14L18.18 21.02L12 17.77L5.82 21.02L7 14.14L2 9.27L8.91 8.26L12 2Z" stroke={BLACK} strokeWidth={1.5} fill={YELLOW} strokeLinecap="round" strokeLinejoin="round" />
                     </Svg>
                     <View style={{ flex: 1, marginLeft: 12 }}>
-                        <Text style={{ fontFamily: 'GasoekOne', fontSize: 18, color: BLACK }}>Weekly Spirit Summary</Text>
-                        <Text style={{ fontFamily: 'GasoekOne', fontSize: 12, color: BLACK, opacity: 0.7 }}>Tap to see Ulbo's insights for your week</Text>
+                        <Text style={{ fontFamily: 'MontserratAlternates-ExtraBoldItalic', fontSize: 18, color: BLACK }}>Weekly Spirit Summary</Text>
+                        <Text style={{ fontFamily: 'MontserratAlternates-ExtraBoldItalic', fontSize: 12, color: BLACK, opacity: 0.7 }}>Tap to see Ulbo's insights for your week</Text>
                     </View>
                     <Svg width={18} height={18} viewBox="0 0 24 24" fill="none">
                         <Path d="M9 18l6-6-6-6" stroke={BLACK} strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" />
@@ -359,7 +345,7 @@ const styles = StyleSheet.create({
     },
     title: {
         fontSize: 28,
-        fontFamily: 'GasoekOne',
+        fontFamily: 'MontserratAlternates-ExtraBoldItalic',
     },
     closeButton: {
         padding: 8,
@@ -397,7 +383,7 @@ const styles = StyleSheet.create({
         textTransform: 'uppercase',
         letterSpacing: 1,
         marginBottom: 16,
-        fontFamily: 'GasoekOne',
+        fontFamily: 'MontserratAlternates-ExtraBoldItalic',
     },
     card: {
         padding: 24,
@@ -426,7 +412,7 @@ const styles = StyleSheet.create({
     quoteText: {
         fontSize: 20,
         lineHeight: 28,
-        fontFamily: 'GasoekOne',
+        fontFamily: 'MontserratAlternates-ExtraBoldItalic',
         marginBottom: 24,
     },
     divider: {
@@ -436,7 +422,7 @@ const styles = StyleSheet.create({
     },
     reflectionLabel: {
         fontSize: 12,
-        fontFamily: 'GasoekOne',
+        fontFamily: 'MontserratAlternates-ExtraBoldItalic',
         letterSpacing: 2,
         marginBottom: 12,
         opacity: 0.7,
@@ -444,7 +430,7 @@ const styles = StyleSheet.create({
     reflectionText: {
         fontSize: 18,
         lineHeight: 26,
-        fontFamily: 'GasoekOne',
+        fontFamily: 'MontserratAlternates-ExtraBoldItalic',
     },
     emptyState: {
         paddingTop: 40,
@@ -452,7 +438,7 @@ const styles = StyleSheet.create({
     },
     emptyText: {
         fontSize: 18,
-        fontFamily: 'GasoekOne',
+        fontFamily: 'MontserratAlternates-ExtraBoldItalic',
     },
     spiritBox: {
         marginTop: 24,
@@ -470,12 +456,12 @@ const styles = StyleSheet.create({
     },
     spiritTitle: {
         fontSize: 20,
-        fontFamily: 'GasoekOne',
+        fontFamily: 'MontserratAlternates-ExtraBoldItalic',
     },
     spiritText: {
         fontSize: 16,
         lineHeight: 24,
-        fontFamily: 'GasoekOne',
+        fontFamily: 'MontserratAlternates-ExtraBoldItalic',
         marginBottom: 12,
     },
     moodBadge: {

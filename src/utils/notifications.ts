@@ -1,5 +1,5 @@
 import * as Notifications from 'expo-notifications';
-import { Platform } from 'react-native';
+
 
 // Configure notifications handler
 Notifications.setNotificationHandler({
@@ -12,20 +12,33 @@ Notifications.setNotificationHandler({
     }),
 });
 
+const REMINDER_MESSAGES = [
+    { title: "ulbo.", body: "hi. just checking in. how are you doing today?" },
+    { title: "ulbo.", body: "i saved a little space for your thoughts. come fill it in." },
+    { title: "ulbo.", body: "today happened. you should probably write about it." },
+    { title: "ulbo.", body: "even one sentence counts. i promise." },
+    { title: "ulbo.", body: "i miss you. come reflect for a bit." },
+    { title: "ulbo.", body: "your thoughts deserve somewhere to live. i am that place." },
+    { title: "ulbo.", body: "take two minutes. just for you. i will be here." },
+];
+
 export const scheduleDailyReminder = async (hour = 8, minute = 0) => {
-    // Cancel existing to avoid duplicates
     await Notifications.cancelAllScheduledNotificationsAsync();
+
+    // Pick a message based on the day of week so it rotates
+    const idx = new Date().getDay() % REMINDER_MESSAGES.length;
+    const msg  = REMINDER_MESSAGES[idx];
 
     await Notifications.scheduleNotificationAsync({
         content: {
-            title: "From your future self...",
-            body: "Take a moment to reflect on today's wisdom.",
+            title: msg.title,
+            body:  msg.body,
             sound: true,
         },
         trigger: {
             hour,
             minute,
-            type: Notifications.SchedulableTriggerInputTypes.DAILY
+            type: Notifications.SchedulableTriggerInputTypes.DAILY,
         },
     });
 };

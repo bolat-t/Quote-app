@@ -25,6 +25,27 @@ export interface JournalEntry {
 }
 
 /**
+ * Get how many AI analyses have been used today (out of 20 daily limit)
+ */
+export const getAnalysisUsageToday = async (): Promise<number> => {
+    try {
+        const { data: { user } } = await supabase.auth.getUser();
+        if (!user) return 0;
+        const today = new Date().toISOString().split('T')[0];
+        const { data } = await supabase
+            .from('api_usage')
+            .select('request_count')
+            .eq('user_id', user.id)
+            .eq('date', today)
+            .eq('endpoint', 'analyze-journal')
+            .single();
+        return data?.request_count ?? 0;
+    } catch {
+        return 0;
+    }
+};
+
+/**
  * Call Supabase Edge Function to analyze journal text
  */
 export const analyzeJournalEntry = async (text: string, userName: string): Promise<{ reply: string; mood: number; tags: string[]; followUp?: string } | null> => {
@@ -54,6 +75,50 @@ export const analyzeJournalEntry = async (text: string, userName: string): Promi
         };
     } catch (error) {
         console.error('Failed to analyze journal:', error);
+        return null;
+    }
+}
+
+/**
+ * Chat with Ulbo (quote chat) — sends full conversation context
+ */
+export const chatWithUlbo = async (
+    messages: { role: string; text: string }[],
+    userName: string,
+    quote?: { text: string; author?: string },
+    memoryContext?: {
+        mood_trend?: string;
+        dominant_mood?: string;
+        streak?: number;
+        dominant_themes?: string[];
+        sentiment?: string;
+        days_since_last_entry?: number;
+    }
+): Promise<{ reply: string } | null> => {
+    try {
+        const { data, error } = await supabase.functions.invoke('chat-ulbo', {
+            body: {
+                messages,
+                user_name: userName,
+                quote: quote || null,
+                memory_context: memoryContext || null,
+            }
+        });
+
+        if (error) {
+            console.error('Chat Ulbo Invocation Error:', error);
+            return null;
+        }
+
+        const result = typeof data === 'string' ? JSON.parse(data) : data;
+        if (result.error) {
+            console.error('Chat Ulbo Logic Error:', result.error);
+            return null;
+        }
+
+        return { reply: result.reply };
+    } catch (error) {
+        console.error('Failed to chat with Ulbo:', error);
         return null;
     }
 }
@@ -224,7 +289,8 @@ const syncEntryToSupabase = async (entry: JournalEntry) => {
             // AI Fields
             mood_score: entryToSync.moodScore,
             sentiment_tags: entryToSync.sentimentTags,
-            spirit_reply: entryToSync.spiritReply
+            spirit_reply: entryToSync.spiritReply,
+            followup_question: entryToSync.followUpQuestion ?? null,
         });
 
     if (error) console.error('Supabase upsert error:', error);
@@ -321,7 +387,8 @@ export const syncJournalWithSupabase = async (): Promise<void> => {
                         // Map new AI fields
                         moodScore: cloudEntry.mood_score,
                         sentimentTags: cloudEntry.sentiment_tags,
-                        spiritReply: cloudEntry.spirit_reply
+                        spiritReply: cloudEntry.spirit_reply,
+                        followUpQuestion: cloudEntry.followup_question,
                     };
                     mergedEntries.push(newEntry);
                     hasChanges = true;
@@ -333,7 +400,8 @@ export const syncJournalWithSupabase = async (): Promise<void> => {
                             ...local,
                             spiritReply: cloudEntry.spirit_reply,
                             moodScore: cloudEntry.mood_score,
-                            sentimentTags: cloudEntry.sentiment_tags
+                            sentimentTags: cloudEntry.sentiment_tags,
+                            followUpQuestion: cloudEntry.followup_question,
                         };
                         // Find and replace in mergedEntries
                         const idx = mergedEntries.findIndex(e => e.id === local.id);

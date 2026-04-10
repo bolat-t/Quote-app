@@ -4,6 +4,7 @@ import {
     View,
     ScrollView,
     TouchableOpacity,
+    Pressable,
     Image,
     Dimensions,
     TextInput as RNTextInput,
@@ -11,12 +12,13 @@ import {
     Platform,
     KeyboardAvoidingView,
     Modal,
+    Animated as RNAnimated,
 } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
 import * as Haptics from 'expo-haptics';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Text, ActivityIndicator } from 'react-native-paper';
 import Animated, { FadeIn, FadeInDown } from 'react-native-reanimated';
-import Svg, { Path, Circle } from 'react-native-svg';
+import Svg, { Path } from 'react-native-svg';
 
 import { UserProgress, DailyHunt } from '../types';
 import { loadProgress, awardXP, loadDailyHunt, addHuntEntry, saveDailyHunt } from '../utils/progressionStorage';
@@ -28,15 +30,118 @@ import { useDailyQuote } from '../hooks/useDailyQuote';
 import { useMascotState } from '../hooks/useMascotState';
 import { selectDailyPrompt, getMascotIntro, recordPromptUsage } from '../utils/promptSystem';
 import { GratitudePrompt } from '../data/gratitudePrompts';
-import { getTodayDateString, saveJournalEntry, generateJournalId, analyzeJournalEntry, updateEntryWithAI } from '../utils/journalStorage';
+import { getTodayDateString, saveJournalEntry, generateJournalId, analyzeJournalEntry, chatWithUlbo, updateEntryWithAI } from '../utils/journalStorage';
 import { SpiritResponseModal } from '../components/SpiritResponseModal';
 import { HUNT_PLACEHOLDERS } from '../data/gratitudePrompts';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { buildMemoryContext } from '../memory/MemorySystem';
+import { useHeaderHeight } from '../context/HeaderHeightContext';
+import { useIsFocused, useFocusEffect } from '@react-navigation/native';
+import { useSetTimerDisplay } from '../context/TimerContext';
+import { useSetJournalSteps } from '../context/JournalStepsContext';
+import { useTimerSecs } from '../context/TimerSecondsContext';
 import { VoiceSheet, MicTriggerButton } from '../components/VoiceSheet';
+
+// ── Animated avatar — pops on tap ─────────────────────────────────────────
+const AnimatedAvatar: React.FC<{ source: any; size?: number }> = ({ source, size = 36 }) => {
+    const scale = useRef(new RNAnimated.Value(1)).current;
+    const pop = () => {
+        RNAnimated.sequence([
+            RNAnimated.spring(scale, { toValue: 1.4, useNativeDriver: true, friction: 3, tension: 320 }),
+            RNAnimated.spring(scale, { toValue: 1,   useNativeDriver: true, friction: 5, tension: 200 }),
+        ]).start();
+    };
+    return (
+        <TouchableOpacity onPress={pop} activeOpacity={1}>
+            <RNAnimated.View style={{ transform: [{ scale }] }}>
+                <Image source={source} style={{ width: size, height: size }} resizeMode="contain" />
+            </RNAnimated.View>
+        </TouchableOpacity>
+    );
+};
+
+// ── Typing dots animation ──────────────────────────────────────────────────
+const TypingDots: React.FC = () => {
+    const dots = [
+        useRef(new RNAnimated.Value(0)).current,
+        useRef(new RNAnimated.Value(0)).current,
+        useRef(new RNAnimated.Value(0)).current,
+    ];
+
+    useEffect(() => {
+        const anims = dots.map((dot, i) =>
+            RNAnimated.loop(
+                RNAnimated.sequence([
+                    RNAnimated.delay(i * 200),
+                    RNAnimated.timing(dot, { toValue: 1, duration: 300, useNativeDriver: true }),
+                    RNAnimated.timing(dot, { toValue: 0, duration: 300, useNativeDriver: true }),
+                    RNAnimated.delay((dots.length - i) * 200),
+                ])
+            )
+        );
+        anims.forEach(a => a.start());
+        return () => anims.forEach(a => a.stop());
+    }, []);
+
+    return (
+        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 5, paddingVertical: 4 }}>
+            {dots.map((dot, i) => (
+                <RNAnimated.View
+                    key={i}
+                    style={{
+                        width: 8, height: 8, borderRadius: 4,
+                        backgroundColor: '#888888',
+                        opacity: dot,
+                        transform: [{ scale: dot.interpolate({ inputRange: [0, 1], outputRange: [0.6, 1] }) }],
+                    }}
+                />
+            ))}
+        </View>
+    );
+};
 
 // Assets
 const coachBunny = require('../../assets/mascot/coach_bunny.png');
+const chatPotatoIcon     = require('../../assets/chat_potato.png');
+const chatModePotatoIcon = require('../../assets/mascot/chat_mode_potato_icon.png');
+const textPotatoIcon     = require('../../assets/mascot/text_mode_potato_icon.png');
 const { width } = Dimensions.get('window');
+
+// Level-based potato images
+const POTATO_IMAGES: Record<number, any> = {
+    1: require('../../assets/mascot/potato_levels/level_1_potato.png'),
+    2: require('../../assets/mascot/potato_levels/level_2_potato.png'),
+    3: require('../../assets/mascot/potato_levels/level_3_potato.png'),
+    4: require('../../assets/mascot/potato_levels/level_4_potato.png'),
+    5: require('../../assets/mascot/potato_levels/level_5_potato.png'),
+    6: require('../../assets/mascot/potato_levels/level_6_potato.png'),
+    7: require('../../assets/mascot/potato_levels/level_7_potato.png'),
+    8: require('../../assets/mascot/potato_levels/level_8_potato.png'),
+    9: require('../../assets/mascot/potato_levels/level_9_potato.png'),
+};
+
+// Emotion state images
+const EMOTION_IMAGES = {
+    happy: {
+        selected:   require('../../assets/mascot/potato_emotion_states/potato_happy_selected.png'),
+        unselected: require('../../assets/mascot/potato_emotion_states/potato_happy_unselected.png'),
+    },
+    sad: {
+        selected:   require('../../assets/mascot/potato_emotion_states/potato_sad_selected.png'),
+        unselected: require('../../assets/mascot/potato_emotion_states/potato_sad_unselected.png'),
+    },
+    upset: {
+        selected:   require('../../assets/mascot/potato_emotion_states/potato_upset_selected.png'),
+        unselected: require('../../assets/mascot/potato_emotion_states/potato_upset_unselected.png'),
+    },
+    bored: {
+        selected:   require('../../assets/mascot/potato_emotion_states/potato_bored_selected.png'),
+        unselected: require('../../assets/mascot/potato_emotion_states/potato_bored_unselected.png'),
+    },
+} as const;
+
+type Emotion = keyof typeof EMOTION_IMAGES;
+const EMOTIONS: Emotion[] = ['happy', 'sad', 'upset', 'bored'];
 
 // Coach messages — first is task-oriented, rest are encouragements
 const COACH_MESSAGES = [
@@ -50,18 +155,46 @@ const COACH_MESSAGES = [
     "you're building a beautiful habit",
 ];
 
-const STEP_LABELS = ['3 things', 'prompt', 'reflect', 'quote'];
+const STEP_LABELS = ['Emotion', '3 things', 'reflect', 'quote'];
+const STEP_TITLES = ['How Do You Feel?', 'Find 3 Good Things', 'Write a Reflection', "Today's Quote"];
+
+const YELLOW = '#FFE600';
+const BLACK  = '#000000';
+const WHITE  = '#FFFFFF';
 
 // Fallback Ulbo response when AI call fails or returns null
 const SPIRIT_FALLBACK = (name: string) => ({
     reply: `You showed up and wrote it down, ${name}. That already counts for a lot.`,
     mood: 7,
-    tags: ['#ShowingUp', '#Reflective'],
+    tags: ['showing up', 'reflective'],
     followUp: "What's one thing from today you want to remember tomorrow?",
 });
 
 
 // ─── Custom SVG: Arrow/Send ───
+const SendArrowIcon = ({ color = BLACK, size = 20 }: { color?: string; size?: number }) => (
+    <Svg width={size} height={size} viewBox="0 0 24 24" fill="none">
+        <Path d="M22 2L11 13M22 2l-7 20-4-9-9-4 20-7z" stroke={color} strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" />
+    </Svg>
+);
+
+type ChatMsg = { id: string; role: 'user' | 'ulbo'; text: string };
+
+const ULBO_FALLBACKS = [
+    "That's worth sitting with. Sometimes the heaviest thoughts are the ones closest to something real.",
+    "Hmm. What part of that feels like it's trying to teach you something?",
+    "There's something deeper underneath that thought... can you feel it? What lives beneath the surface?",
+    "You know, Nietzsche said the most spiritual people experience the most painful truths. The fact that you're thinking this deeply already says something about you.",
+    "Interesting. Most people run from that kind of honesty. But you're leaning in. That takes a quiet kind of strength.",
+    "Sometimes the discomfort IS the transformation happening. What would it mean to sit with this instead of solving it?",
+];
+
+const ArrowRightIcon = ({ color, size = 18 }: { color: string; size?: number }) => (
+    <Svg width={size} height={size} viewBox="0 0 24 24" fill="none">
+        <Path d="M5 12h14M13 6l6 6-6 6" stroke={color} strokeWidth={2.2} strokeLinecap="round" strokeLinejoin="round" />
+    </Svg>
+);
+
 const SendIcon = ({ color, size = 18 }: { color: string; size?: number }) => (
     <Svg width={size} height={size} viewBox="0 0 24 24" fill="none">
         <Path d="M22 2L11 13" stroke={color} strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" />
@@ -80,12 +213,264 @@ const ShuffleIcon = ({ color, size = 18 }: { color: string; size?: number }) => 
 
 
 // ═══════════════════════════════════════════════
+// Confetti Rain
+// ═══════════════════════════════════════════════
+
+const CONFETTI_COLORS = ['#FFFF01', '#FF4757', '#2ED573', '#1E90FF', '#FF6B81', '#FFFFFF'];
+const SCREEN_W = Dimensions.get('window').width;
+const SCREEN_H = Dimensions.get('window').height;
+
+const ConfettiRain: React.FC<{ active: boolean }> = ({ active }) => {
+    const pieces = useRef(
+        Array.from({ length: 30 }, () => ({
+            anim:     new RNAnimated.Value(0),
+            x:        Math.random() * SCREEN_W,
+            color:    CONFETTI_COLORS[Math.floor(Math.random() * CONFETTI_COLORS.length)],
+            duration: 1200 + Math.random() * 800,
+            delay:    Math.random() * 800,
+        }))
+    ).current;
+
+    useEffect(() => {
+        if (!active) return;
+        const anims = pieces.map(p =>
+            RNAnimated.loop(
+                RNAnimated.timing(p.anim, {
+                    toValue: 1,
+                    duration: p.duration,
+                    delay: p.delay,
+                    useNativeDriver: true,
+                })
+            )
+        );
+        anims.forEach(a => a.start());
+        return () => anims.forEach(a => a.stop());
+    }, [active, pieces]);
+
+    return (
+        <View style={StyleSheet.absoluteFill} pointerEvents="none">
+            {pieces.map((p, i) => {
+                const translateY = p.anim.interpolate({
+                    inputRange:  [0, 1],
+                    outputRange: [-20, SCREEN_H],
+                });
+                return (
+                    <RNAnimated.View
+                        key={i}
+                        style={{
+                            position:        'absolute',
+                            left:            p.x,
+                            top:             0,
+                            width:           8,
+                            height:          8,
+                            backgroundColor: p.color,
+                            transform:       [{ translateY }],
+                        }}
+                    />
+                );
+            })}
+        </View>
+    );
+};
+
+// ═══════════════════════════════════════════════
+// Alarm Overlay
+// ═══════════════════════════════════════════════
+
+interface AlarmOverlayProps {
+    visible:      boolean;
+    allTasksDone: boolean;
+    missionsLeft: number;
+    onKeepGoing:  () => void;
+    onStop:       () => void;
+    onGrowPotato: () => void;
+}
+
+const AlarmOverlay: React.FC<AlarmOverlayProps> = ({
+    visible, allTasksDone, missionsLeft, onKeepGoing, onStop, onGrowPotato,
+}) => {
+    const pulseAnim = useRef(new RNAnimated.Value(1)).current;
+
+    // Pulsing alarm for "not done" flow
+    useEffect(() => {
+        if (!visible || allTasksDone) { pulseAnim.setValue(1); return; }
+        const loop = RNAnimated.loop(
+            RNAnimated.sequence([
+                RNAnimated.timing(pulseAnim, { toValue: 1.08, duration: 300, useNativeDriver: true }),
+                RNAnimated.timing(pulseAnim, { toValue: 1,    duration: 300, useNativeDriver: true }),
+            ])
+        );
+        loop.start();
+        return () => loop.stop();
+    }, [visible, allTasksDone, pulseAnim]);
+
+    return (
+        <Modal visible={visible} transparent animationType="fade" onRequestClose={onStop}>
+            <View style={alarmStyles.backdrop}>
+                {allTasksDone && <ConfettiRain active={visible && allTasksDone} />}
+                <View style={alarmStyles.card}>
+                    {allTasksDone ? (
+                        <>
+                            <Text style={alarmStyles.bigEmoji}>🎉</Text>
+                            <Text style={alarmStyles.doneTitle}>All Done!</Text>
+                            <Text style={alarmStyles.doneSub}>You crushed all today's missions!</Text>
+                            <TouchableOpacity style={alarmStyles.growBtn} onPress={onGrowPotato} activeOpacity={0.8}>
+                                <Text style={alarmStyles.growBtnText}>Grow Your Potato 🥔</Text>
+                            </TouchableOpacity>
+                            <TouchableOpacity onPress={onStop} activeOpacity={0.6}>
+                                <Text style={alarmStyles.doneForNow}>Done for Now</Text>
+                            </TouchableOpacity>
+                        </>
+                    ) : (
+                        <>
+                            <RNAnimated.Text style={[alarmStyles.alarmEmoji, { transform: [{ scale: pulseAnim }] }]}>
+                                ⏰
+                            </RNAnimated.Text>
+                            <Text style={alarmStyles.timesUpTitle}>Time's Up!</Text>
+                            <Text style={alarmStyles.missionsLeftText}>
+                                {missionsLeft} mission{missionsLeft !== 1 ? 's' : ''} left
+                            </Text>
+                            <TouchableOpacity style={alarmStyles.keepGoingBtn} onPress={onKeepGoing} activeOpacity={0.8}>
+                                <Text style={alarmStyles.keepGoingText}>Keep Going</Text>
+                            </TouchableOpacity>
+                            <TouchableOpacity style={alarmStyles.stopBtn} onPress={onStop} activeOpacity={0.6}>
+                                <Text style={alarmStyles.stopText}>Stop</Text>
+                            </TouchableOpacity>
+                        </>
+                    )}
+                </View>
+            </View>
+        </Modal>
+    );
+};
+
+const alarmStyles = StyleSheet.create({
+    backdrop: {
+        flex:            1,
+        backgroundColor: 'rgba(0,0,0,0.95)',
+        justifyContent:  'center',
+        alignItems:      'center',
+    },
+    card: {
+        backgroundColor:  WHITE,
+        borderWidth:      2.5,
+        borderColor:      BLACK,
+        borderRadius:     28,
+        padding:          32,
+        marginHorizontal: 24,
+        alignItems:       'center',
+        width:            SCREEN_W - 48,
+    },
+    // Congrats flow
+    bigEmoji: {
+        fontSize: 56,
+        marginBottom: 8,
+    },
+    doneTitle: {
+        fontFamily: 'Inter-Bold',
+        fontSize:   32,
+        color:      BLACK,
+        marginBottom: 4,
+    },
+    doneSub: {
+        fontFamily:    'Inter-Medium',
+        fontSize:      16,
+        color:         '#666',
+        textAlign:     'center',
+        marginVertical: 12,
+    },
+    growBtn: {
+        backgroundColor: YELLOW,
+        borderWidth:     2,
+        borderColor:     BLACK,
+        borderRadius:    20,
+        paddingVertical:   16,
+        paddingHorizontal: 32,
+        marginTop:       8,
+    },
+    growBtnText: {
+        fontFamily: 'Inter-Bold',
+        fontSize:   16,
+        color:      BLACK,
+    },
+    doneForNow: {
+        fontFamily:   'Inter-Medium',
+        fontSize:     15,
+        color:        '#999',
+        paddingVertical: 16,
+    },
+    // Alarm / not done flow
+    alarmEmoji: {
+        fontSize: 56,
+        marginBottom: 4,
+    },
+    timesUpTitle: {
+        fontFamily: 'Inter-Bold',
+        fontSize:   36,
+        color:      BLACK,
+        marginTop:  16,
+        marginBottom: 4,
+    },
+    missionsLeftText: {
+        fontFamily: 'Inter-Medium',
+        fontSize:   16,
+        color:      '#666',
+    },
+    keepGoingBtn: {
+        backgroundColor: YELLOW,
+        borderWidth:     2,
+        borderColor:     BLACK,
+        borderRadius:    50,
+        paddingVertical: 18,
+        width:           200,
+        alignItems:      'center',
+        marginTop:       24,
+    },
+    keepGoingText: {
+        fontFamily: 'Inter-Bold',
+        fontSize:   20,
+        color:      BLACK,
+    },
+    stopBtn: {
+        backgroundColor: 'transparent',
+        borderWidth:     2,
+        borderColor:     '#CCCCCC',
+        borderRadius:    50,
+        paddingVertical: 14,
+        width:           160,
+        alignItems:      'center',
+        marginTop:       12,
+    },
+    stopText: {
+        fontFamily: 'Inter-Medium',
+        fontSize:   16,
+        color:      '#999',
+    },
+});
+
+// ═══════════════════════════════════════════════
 // Journal Screen — Daily Reflection & Gratitude
 // ═══════════════════════════════════════════════
 
 export const HuntScreen: React.FC = () => {
+    const headerHeight = useHeaderHeight();
+    const insets = useSafeAreaInsets();
+    const setTimerDisplay = useSetTimerDisplay();
+    const setJournalSteps = useSetJournalSteps();
+    const isFocused = useIsFocused();
     const { quote: todayQuote } = useDailyQuote();
     const { mood } = useMascotState();
+
+    // Refs for auto-focusing inputs
+    const emotionInputRef = useRef<any>(null);
+    const huntInputRef = useRef<any>(null);
+    const chatScrollRef = useRef<any>(null);
+
+    // ── Chat state (step 3) ──
+    const [chatMessages, setChatMessages] = useState<ChatMsg[]>([]);
+    const [chatInput, setChatInput] = useState('');
+    const [ulboThinking, setUlboThinking] = useState(false);
+    const [chatInitialized, setChatInitialized] = useState(false);
 
     // ── Data ──
     const [progress, setProgress] = useState<UserProgress | null>(null);
@@ -109,21 +494,37 @@ export const HuntScreen: React.FC = () => {
 
     // ── Timer done modal ──
     const [showTimerDone, setShowTimerDone] = useState(false);
+    const [potatoGrown, setPotatoGrown] = useState(false);
 
     // ── Focus Timer ──
-    const [timerMinutes, setTimerMinutes] = useState(10);
+    // timerSecs comes from shared context — updates instantly when settings change
+    const savedTimerSecs = useTimerSecs();
+    const [timerMinutes, setTimerMinutes] = useState(savedTimerSecs / 60);
     const [isTimerRunning, setIsTimerRunning] = useState(false);
-    const [timerTotalSeconds, setTimerTotalSeconds] = useState(10 * 60);
+    const [timerTotalSeconds, setTimerTotalSeconds] = useState(savedTimerSecs);
     const timerRef = useRef<NodeJS.Timeout | null>(null);
 
-    // Load saved timer preference from Settings
+    // Sync timer preset whenever the saved duration changes (only when not running)
     useEffect(() => {
-        AsyncStorage.getItem('@ulbo_timer_minutes').then(val => {
-            const mins = val ? Number(val) : 10;
-            setTimerMinutes(mins);
-            setTimerTotalSeconds(mins * 60);
-        });
-    }, []);
+        if (isTimerRunning) return;
+        setTimerMinutes(savedTimerSecs / 60);
+        setTimerTotalSeconds(savedTimerSecs);
+    }, [savedTimerSecs]);
+
+    // ── Emotion step ──
+    const [selectedEmotion, setSelectedEmotion] = useState<Emotion | null>(null);
+    const [emotionNote, setEmotionNote] = useState('');
+    const [emotionSaved, setEmotionSaved] = useState(false);
+    const emotionScales      = useRef(Object.fromEntries(EMOTIONS.map(e => [e, new RNAnimated.Value(1)])) as Record<Emotion, RNAnimated.Value>).current;
+    const emotionTranslateX  = useRef(Object.fromEntries(EMOTIONS.map(e => [e, new RNAnimated.Value(0)])) as Record<Emotion, RNAnimated.Value>).current;
+    const emotionTranslateY  = useRef(Object.fromEntries(EMOTIONS.map(e => [e, new RNAnimated.Value(0)])) as Record<Emotion, RNAnimated.Value>).current;
+    const emotionAnimRef     = useRef<RNAnimated.CompositeAnimation | null>(null);
+
+    // ── Gratitude mascot interaction ──
+    const gratitudeMascotY = useRef(new RNAnimated.Value(0)).current;
+    const gratitudeSquishX = useRef(new RNAnimated.Value(1)).current;
+    const gratitudeSquishY = useRef(new RNAnimated.Value(1)).current;
+    const mascotJumpRef    = useRef<RNAnimated.CompositeAnimation | null>(null);
 
     // ── Step flow ──
     const [activeStep, setActiveStep] = useState(0);
@@ -140,11 +541,6 @@ export const HuntScreen: React.FC = () => {
     // ── Voice sheet ──
     type VoiceTarget = 'hunt' | 'prompt' | 'reflection' | 'bonus';
     const [voiceTarget, setVoiceTarget] = useState<VoiceTarget | null>(null);
-
-    const handleMascotTap = useCallback(() => {
-        Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-        setCoachMsgIndex(prev => (prev + 1) % COACH_MESSAGES.length);
-    }, []);
 
     // ── XP Toast ──
     const [xpToast, setXpToast] = useState<{
@@ -199,6 +595,49 @@ export const HuntScreen: React.FC = () => {
     const displaySeconds = timerTotalSeconds % 60;
     const timerProgress = timerMinutes > 0 ? 1 - (timerTotalSeconds / (timerMinutes * 60)) : 0;
 
+    // ── Derived (declared early so useFocusEffect can reference isHuntDone) ──
+    const huntCount = hunt?.entries?.length || 0;
+    const isHuntDone = hunt?.completed || false;
+
+    // Sync journal step dots into AppHeader — only when this tab is focused
+    useEffect(() => {
+        if (!isFocused) {
+            setJournalSteps(null);
+            return;
+        }
+        setJournalSteps({
+            labels: STEP_LABELS,
+            activeStep,
+            onStepPress: (i: number) => setActiveStep(i),
+        });
+        return () => setJournalSteps(null);
+    }, [activeStep, isFocused, setJournalSteps]);
+
+    // Auto-focus relevant input when arriving on this tab
+    useFocusEffect(
+        useCallback(() => {
+            if (activeStep === 0) {
+                const timer = setTimeout(() => emotionInputRef.current?.focus(), 400);
+                return () => clearTimeout(timer);
+            }
+            if (activeStep === 1 && !isHuntDone) {
+                const timer = setTimeout(() => huntInputRef.current?.focus(), 300);
+                return () => clearTimeout(timer);
+            }
+        }, [activeStep, isHuntDone])
+    );
+
+    // Sync timer into AppHeader context (used by other tabs if navigated away)
+    useEffect(() => {
+        setTimerDisplay({
+            text: `${String(displayMinutes).padStart(2, '0')}:${String(displaySeconds).padStart(2, '0')}`,
+            progress: timerProgress,
+            isRunning: isTimerRunning,
+            onPress: isTimerRunning ? pauseTimer : startTimer,
+        });
+        return () => setTimerDisplay(null);
+    }, [displayMinutes, displaySeconds, timerProgress, isTimerRunning, startTimer, pauseTimer, setTimerDisplay]);
+
     // ── Load ──
     const loadData = useCallback(async () => {
         try {
@@ -213,7 +652,7 @@ export const HuntScreen: React.FC = () => {
             }
 
             if (h.completed) {
-                setActiveStep(prev => Math.max(prev, 1));
+                setActiveStep(prev => Math.max(prev, 2));
             }
 
             const prompt = await selectDailyPrompt(mood, 10);
@@ -233,15 +672,125 @@ export const HuntScreen: React.FC = () => {
 
     useEffect(() => { loadData(); }, [loadData]);
 
-    // ── Derived ──
-    const huntCount = hunt?.entries?.length || 0;
-    const isHuntDone = hunt?.completed || false;
-
     const huntStatus: QuestStatus = isHuntDone ? 'done' : huntCount > 0 ? 'in-progress' : 'todo';
     const promptStatus: QuestStatus = isPromptSaved ? 'done' : 'todo';
     const bonusStatus: QuestStatus = isBonusSaved ? 'done' : 'todo';
 
     // ── Handlers ──
+
+    // Emotion-specific animations on selection
+    useEffect(() => {
+        // Stop & reset all
+        emotionAnimRef.current?.stop();
+        EMOTIONS.forEach(e => {
+            emotionScales[e].setValue(1);
+            emotionTranslateX[e].setValue(0);
+            emotionTranslateY[e].setValue(0);
+        });
+        if (!selectedEmotion) return;
+
+        // Scale pop for the selected one
+        RNAnimated.spring(emotionScales[selectedEmotion], {
+            toValue: 1.15, useNativeDriver: true, friction: 4, tension: 220,
+        }).start();
+
+        let anim: RNAnimated.CompositeAnimation | null = null;
+        const tx = emotionTranslateX[selectedEmotion];
+        const ty = emotionTranslateY[selectedEmotion];
+
+        if (selectedEmotion === 'happy') {
+            // Cheerful bounce jump
+            anim = RNAnimated.loop(RNAnimated.sequence([
+                RNAnimated.timing(ty, { toValue: -14, duration: 180, useNativeDriver: true }),
+                RNAnimated.timing(ty, { toValue: 0,   duration: 180, useNativeDriver: true }),
+                RNAnimated.timing(ty, { toValue: -8,  duration: 130, useNativeDriver: true }),
+                RNAnimated.timing(ty, { toValue: 0,   duration: 130, useNativeDriver: true }),
+                RNAnimated.delay(1500),
+            ]));
+        } else if (selectedEmotion === 'upset') {
+            // Angry rapid shake
+            anim = RNAnimated.loop(RNAnimated.sequence([
+                RNAnimated.timing(tx, { toValue: -7,  duration: 45, useNativeDriver: true }),
+                RNAnimated.timing(tx, { toValue: 7,   duration: 45, useNativeDriver: true }),
+                RNAnimated.timing(tx, { toValue: -7,  duration: 45, useNativeDriver: true }),
+                RNAnimated.timing(tx, { toValue: 7,   duration: 45, useNativeDriver: true }),
+                RNAnimated.timing(tx, { toValue: -5,  duration: 45, useNativeDriver: true }),
+                RNAnimated.timing(tx, { toValue: 0,   duration: 45, useNativeDriver: true }),
+                RNAnimated.delay(2100),
+            ]));
+        } else if (selectedEmotion === 'sad') {
+            // Slow heavy droop and sway
+            anim = RNAnimated.loop(RNAnimated.sequence([
+                RNAnimated.timing(ty, { toValue: 6,  duration: 900, useNativeDriver: true }),
+                RNAnimated.timing(ty, { toValue: 0,  duration: 900, useNativeDriver: true }),
+                RNAnimated.delay(1800),
+            ]));
+        }
+        // bored: just the scale pop, no motion
+
+        if (anim) {
+            emotionAnimRef.current = anim;
+            anim.start();
+        }
+    }, [selectedEmotion]);
+
+    const triggerMascotJump = useCallback(() => {
+        mascotJumpRef.current?.stop();
+        gratitudeMascotY.setValue(0);
+        gratitudeSquishX.setValue(1);
+        gratitudeSquishY.setValue(1);
+
+        const phaseA = RNAnimated.sequence([
+            RNAnimated.parallel([
+                RNAnimated.timing(gratitudeSquishY, { toValue: 0.72, duration: 55, useNativeDriver: true }),
+                RNAnimated.timing(gratitudeSquishX, { toValue: 1.28, duration: 55, useNativeDriver: true }),
+            ]),
+            RNAnimated.parallel([
+                RNAnimated.timing(gratitudeMascotY, { toValue: -80, duration: 165, useNativeDriver: true }),
+                RNAnimated.timing(gratitudeSquishY, { toValue: 1.06, duration: 120, useNativeDriver: true }),
+                RNAnimated.timing(gratitudeSquishX, { toValue: 0.94, duration: 120, useNativeDriver: true }),
+            ]),
+        ]);
+        mascotJumpRef.current = phaseA;
+
+        phaseA.start(({ finished }) => {
+            if (!finished) return;
+            RNAnimated.sequence([
+                RNAnimated.spring(gratitudeMascotY, { toValue: 0, tension: 220, friction: 7, useNativeDriver: true }),
+                RNAnimated.parallel([
+                    RNAnimated.timing(gratitudeSquishY, { toValue: 0.76, duration: 50, useNativeDriver: true }),
+                    RNAnimated.timing(gratitudeSquishX, { toValue: 1.24, duration: 50, useNativeDriver: true }),
+                ]),
+                RNAnimated.parallel([
+                    RNAnimated.spring(gratitudeSquishY, { toValue: 1, tension: 220, friction: 8, useNativeDriver: true }),
+                    RNAnimated.spring(gratitudeSquishX, { toValue: 1, tension: 220, friction: 8, useNativeDriver: true }),
+                ]),
+            ]).start();
+        });
+    }, [gratitudeMascotY, gratitudeSquishX, gratitudeSquishY]);
+
+    const handleMascotTap = useCallback(() => {
+        Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+        triggerMascotJump();
+    }, [triggerMascotJump]);
+
+    const handleSaveEmotion = useCallback(async () => {
+        if (!selectedEmotion) return;
+        Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+        if (emotionNote.trim()) {
+            await saveJournalEntry({
+                id: generateJournalId(),
+                quoteId: -1,
+                quoteText: '',
+                response: emotionNote.trim(),
+                createdAt: Date.now(),
+                date: getTodayDateString(),
+                sentimentTags: ['emotion_check', selectedEmotion],
+            });
+        }
+        setEmotionSaved(true);
+        setActiveStep(prev => Math.max(prev, 1));
+    }, [selectedEmotion, emotionNote]);
 
     const handleAddEntry = useCallback(async (index: number) => {
         const text = huntInputs[index]?.trim();
@@ -253,6 +802,7 @@ export const HuntScreen: React.FC = () => {
 
         setHunt(updated);
         trackEvent('hunt_entry_added', { entry_number: updated.entries?.length || 0 });
+        triggerMascotJump();
 
         if (updated.entries?.length >= 3 && !updated.xpAwarded && progress) {
             const done = { ...updated, xpAwarded: true };
@@ -270,9 +820,9 @@ export const HuntScreen: React.FC = () => {
                     newLevelTitle: result.leveledUp ? LEVEL_TIERS.find(t => t.level === result.progress.level)?.title : undefined,
                 });
             }
-            setTimeout(() => setActiveStep(prev => Math.max(prev, 1)), 700);
+            setTimeout(() => setActiveStep(prev => Math.max(prev, 2)), 700);
         }
-    }, [huntInputs, hunt, huntCount, progress]);
+    }, [huntInputs, hunt, huntCount, progress, triggerMascotJump]);
 
     const handleSavePrompt = useCallback(async () => {
         if (!dailyPrompt || !promptResponse.trim()) return;
@@ -418,402 +968,506 @@ export const HuntScreen: React.FC = () => {
     const canSaveReflection = reflectionText.trim().length >= 3;
     const reflectionWordCount = reflectionText.trim().split(/\s+/).filter(Boolean).length;
 
+    // ── Animated square card when typing (RNAnimated = JS thread → flex recalculates) ──
+    const CARD_W = SCREEN_W - 32;
+    const reflectCardHeight = SCREEN_H - (headerHeight || 80) - (62 + insets.bottom) - 8;
+    const cardH = useRef(new RNAnimated.Value(reflectCardHeight)).current;
+    const cardHStyle = { height: cardH };
+    const kbOpen = useRef(false);
+    const reflectCardHRef = useRef(reflectCardHeight);
+    const headerHeightRef = useRef(headerHeight);
+    const outerScrollRef = useRef<any>(null);
+    useEffect(() => {
+        reflectCardHRef.current = reflectCardHeight;
+        headerHeightRef.current = headerHeight;
+        if (!kbOpen.current) cardH.setValue(reflectCardHeight);
+    }, [reflectCardHeight, headerHeight]);
+    // Lock scroll + snap to card top immediately on focus — before Android auto-scrolls
+    const handleInputFocus = useCallback(() => {
+        outerScrollRef.current?.scrollTo({ y: 0, animated: false });
+    }, []);
+    useEffect(() => {
+        const show = Keyboard.addListener(
+            Platform.OS === 'ios' ? 'keyboardWillShow' : 'keyboardDidShow',
+            (e) => {
+                kbOpen.current = true;
+                outerScrollRef.current?.scrollTo({ y: 0, animated: false });
+                // Cap at actual available space so bottom buttons are never clipped
+                // Android adds extra margin to account for keyboard toolbar (emoji bar etc.)
+                const kbH = e.endCoordinates.height;
+                const hh = headerHeightRef.current || 80;
+                const safetyMargin = Platform.OS === 'android' ? 56 : 8;
+                const availH = SCREEN_H - kbH - hh - safetyMargin;
+                const target = Math.min(CARD_W, availH);
+                RNAnimated.timing(cardH, { toValue: target, duration: 300, useNativeDriver: false }).start();
+            }
+        );
+        const hide = Keyboard.addListener(
+            Platform.OS === 'ios' ? 'keyboardWillHide' : 'keyboardDidHide',
+            () => {
+                kbOpen.current = false;
+                RNAnimated.timing(cardH, { toValue: reflectCardHRef.current, duration: 300, useNativeDriver: false }).start();
+            }
+        );
+        return () => { show.remove(); hide.remove(); };
+    }, []);
+
+    // ── Chat (step 3) init — pre-seeded exchange, no AI needed ──
+    useEffect(() => {
+        if (activeStep !== 3 || chatInitialized || !todayQuote.text) return;
+        setChatInitialized(true);
+        const authorLine = todayQuote.author ? `\n— ${todayQuote.author}` : '';
+        setChatMessages([
+            { id: 'user-0', role: 'user', text: 'Hey Ulbo, what wisdom do you have for me today?' },
+            { id: 'ulbo-0', role: 'ulbo', text: `"${todayQuote.text}"${authorLine}` },
+            { id: 'ulbo-1', role: 'ulbo', text: 'sit with that for a moment. what does it stir up in you?' },
+        ]);
+    }, [activeStep, chatInitialized, todayQuote.text]);
+
+    // ── Send user message & get Ulbo reply ──
+    const handleSendChat = useCallback(async () => {
+        const text = chatInput.trim();
+        if (!text || ulboThinking) return;
+        setChatInput('');
+        const userMsg: ChatMsg = { id: `u-${Date.now()}`, role: 'user', text };
+        const updatedMessages = [...chatMessages, userMsg];
+        setChatMessages(updatedMessages);
+        setTimeout(() => chatScrollRef.current?.scrollToEnd({ animated: true }), 100);
+
+        setUlboThinking(true);
+        const name = await AsyncStorage.getItem('@ulbo_user_name') || 'Friend';
+        try {
+            // Build memory context for richer responses
+            const memory = await buildMemoryContext();
+            const memoryPayload = {
+                mood_trend: memory.mood.trend,
+                dominant_mood: memory.mood.dominantMood,
+                streak: memory.mood.currentStreak,
+                dominant_themes: memory.journal.dominantThemes,
+                sentiment: memory.journal.averageSentiment,
+                days_since_last_entry: memory.journal.daysSinceLastEntry,
+            };
+
+            // Send full conversation + quote + memory to dedicated chat-ulbo edge function
+            const res = await chatWithUlbo(
+                updatedMessages.map(m => ({ role: m.role, text: m.text })),
+                name,
+                { text: todayQuote.text, author: todayQuote.author },
+                memoryPayload
+            );
+            const reply = res?.reply || ULBO_FALLBACKS[Math.floor(Math.random() * ULBO_FALLBACKS.length)];
+            setChatMessages(prev => [...prev, { id: `ulbo-${Date.now()}`, role: 'ulbo', text: reply }]);
+        } catch {
+            setChatMessages(prev => [...prev, {
+                id: `ulbo-${Date.now()}`, role: 'ulbo',
+                text: ULBO_FALLBACKS[Math.floor(Math.random() * ULBO_FALLBACKS.length)],
+            }]);
+        } finally {
+            setUlboThinking(false);
+            setTimeout(() => chatScrollRef.current?.scrollToEnd({ animated: true }), 100);
+        }
+
+        // Award XP on first real reply
+        if (!isBonusSaved && progress) {
+            const result = await awardXP('readQuote', progress);
+            setProgress(result.progress);
+            if (result.xpGained > 0) {
+                setXpToast({ amount: result.xpGained, label: 'Chat saved', leveledUp: result.leveledUp });
+            }
+            setIsBonusSaved(true);
+        }
+    }, [chatInput, chatMessages, ulboThinking, isBonusSaved, progress, todayQuote]);
+
+    // ── Grow Potato handler ──
+    const handleGrowPotato = useCallback(async () => {
+        if (!progress) return;
+        const result = await awardXP('completeHunt', progress);
+        setProgress(result.progress);
+        if (result.xpGained > 0) {
+            setXpToast({
+                amount: result.xpGained,
+                label: 'Potato grown!',
+                leveledUp: result.leveledUp,
+                newLevelTitle: result.leveledUp
+                    ? LEVEL_TIERS.find(t => t.level === result.progress.level)?.title
+                    : undefined,
+            });
+        }
+        setShowTimerDone(false);
+        setPotatoGrown(true);
+    }, [progress]);
+
     // ═══════════ LOADING ═══════════
 
     if (isLoading) {
         return (
-            <SafeAreaView style={styles.container} edges={['top']}>
+            <View style={styles.container}>
                 <View style={styles.loadingWrap}>
-                    <ActivityIndicator size="large" color="#FFE600" />
+                    <ActivityIndicator size="large" color={YELLOW} />
                 </View>
-            </SafeAreaView>
+            </View>
         );
     }
 
     // ═══════════ RENDER ═══════════
 
     return (
-        <SafeAreaView style={styles.container} edges={['top']}>
+        <View style={styles.container}>
 
-            {/* ─── Timer Done Modal ─── */}
-            <Modal
+            {/* ─── Alarm Overlay ─── */}
+            <AlarmOverlay
                 visible={showTimerDone}
-                transparent
-                animationType="fade"
-                onRequestClose={() => setShowTimerDone(false)}
-            >
-                <View style={styles.modalBackdrop}>
-                    <Animated.View entering={FadeIn.duration(300)} style={styles.modalCard}>
-                        <Text style={styles.modalEmoji}>✦</Text>
-                        <Text style={styles.modalTitle}>Time's up!</Text>
-                        <Text style={styles.modalSub}>Great focus session. How do you feel?</Text>
-                        <TouchableOpacity
-                            style={styles.modalBtn}
-                            onPress={() => {
-                                setShowTimerDone(false);
-                                setTimerPreset(timerMinutes);
-                            }}
-                            activeOpacity={0.8}
-                        >
-                            <Text style={styles.modalBtnText}>Keep going</Text>
-                        </TouchableOpacity>
-                        <TouchableOpacity
-                            onPress={() => setShowTimerDone(false)}
-                            activeOpacity={0.6}
-                            style={{ paddingVertical: 12 }}
-                        >
-                            <Text style={styles.modalDismiss}>Done for now</Text>
-                        </TouchableOpacity>
-                    </Animated.View>
-                </View>
-            </Modal>
-
-            {/* ─── Compact Top Bar: Timer + Step Progress ─── */}
-            <Animated.View entering={FadeIn.duration(500)} style={styles.topBar}>
-                <TouchableOpacity
-                    style={styles.timerCompact}
-                    onPress={isTimerRunning ? pauseTimer : startTimer}
-                    activeOpacity={0.7}
-                >
-                    <Svg width={72} height={72} viewBox="0 0 72 72" style={StyleSheet.absoluteFill}>
-                        <Circle cx="36" cy="36" r="30" stroke="#00000010" strokeWidth={4} fill="none" />
-                        <Circle
-                            cx="36" cy="36" r="30"
-                            stroke="#FFE600"
-                            strokeWidth={4}
-                            fill="none"
-                            strokeDasharray={`${2 * Math.PI * 30}`}
-                            strokeDashoffset={`${2 * Math.PI * 30 * (1 - timerProgress)}`}
-                            strokeLinecap="round"
-                            transform="rotate(-90 36 36)"
-                        />
-                    </Svg>
-                    <Text style={styles.timerCompactText}>
-                        {String(displayMinutes).padStart(2, '0')}:{String(displaySeconds).padStart(2, '0')}
-                    </Text>
-                </TouchableOpacity>
-
-                <View style={styles.stepTrack}>
-                    {STEP_LABELS.map((label, i) => (
-                        <TouchableOpacity
-                            key={i}
-                            onPress={() => setActiveStep(i)}
-                            activeOpacity={0.7}
-                            style={styles.stepDotWrap}
-                        >
-                            <View style={[
-                                styles.stepDot,
-                                i === activeStep && styles.stepDotActive,
-                                i < activeStep && styles.stepDotDone,
-                            ]} />
-                            <Text style={[
-                                styles.stepDotLabel,
-                                i === activeStep && styles.stepDotLabelActive,
-                            ]}>{label}</Text>
-                        </TouchableOpacity>
-                    ))}
-                </View>
-            </Animated.View>
+                allTasksDone={isHuntDone}
+                missionsLeft={isHuntDone ? 0 : 1}
+                onKeepGoing={() => { setShowTimerDone(false); setTimerPreset(timerMinutes); }}
+                onStop={() => setShowTimerDone(false)}
+                onGrowPotato={handleGrowPotato}
+            />
 
             <KeyboardAvoidingView
                 style={{ flex: 1 }}
-                behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+                behavior={Platform.OS === 'ios' ? 'padding' : undefined}
                 keyboardVerticalOffset={0}
             >
                 <ScrollView
-                    contentContainerStyle={styles.scroll}
+                    ref={outerScrollRef}
+                    contentContainerStyle={[
+                        styles.scroll,
+                        { paddingTop: headerHeight || 12 },
+                        activeStep === 3 && { paddingBottom: 0 },
+                    ]}
+                    scrollEnabled={false}
                     keyboardShouldPersistTaps="handled"
                     showsVerticalScrollIndicator={false}
                 >
-                    {/* ─── Step 0: Find 3 Good Things ─── */}
+                    {/* ─── Step 0: Emotion Check-In ─── */}
                     {activeStep === 0 && (
-                        <Animated.View entering={FadeInDown.duration(400)}>
-                            <View style={styles.sectionLabel}>
-                                <Text style={styles.sectionTitle}>Find 3 Good Things</Text>
-                            </View>
-                            <QuestCard
-                                title="Today's Gratitude"
-                                subtitle="Notice the small moments"
-                                renderIcon={(c, s) => <SearchIcon color={c} size={s} />}
-                                status={huntStatus}
-                                index={0}
-                                defaultExpanded={true}
-                            >
-                                <View style={styles.cardBody}>
-                                    {[0, 1, 2].map(i => {
-                                        const filled = i < huntCount;
-                                        const current = i === huntCount;
-                                        const locked = i > huntCount;
-                                        return (
-                                            <View key={i} style={styles.entryRow}>
-                                                <View style={[
-                                                    styles.entryNum,
-                                                    filled && styles.entryNumFilled,
-                                                    locked && styles.entryNumLocked,
-                                                ]}>
-                                                    {filled
-                                                        ? <CheckIcon color="#000000" size={14} />
-                                                        : <Text style={[styles.entryNumText, locked && styles.entryNumTextLocked]}>{i + 1}</Text>
+                        <RNAnimated.View style={cardHStyle}>
+                        <Animated.View entering={FadeInDown.duration(400)} style={[styles.reflectCard, { flex: 1 }]}>
+                            {/* Top section */}
+                            <View style={{ paddingHorizontal: 20, paddingTop: 16, paddingBottom: 4 }}>
+                                <Text style={styles.emotionTitle}>HOW DO YOU FEEL TODAY?</Text>
+                                <View style={styles.emotionRow}>
+                                    {EMOTIONS.map(emotion => (
+                                        <Pressable
+                                            key={emotion}
+                                            onPress={() => {
+                                                Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+                                                setSelectedEmotion(emotion);
+                                            }}
+                                            style={styles.emotionBtn}
+                                        >
+                                            <RNAnimated.View style={{
+                                                transform: [
+                                                    { scale: emotionScales[emotion] },
+                                                    { translateX: emotionTranslateX[emotion] },
+                                                    { translateY: emotionTranslateY[emotion] },
+                                                ],
+                                            }}>
+                                                <Image
+                                                    source={
+                                                        selectedEmotion === emotion
+                                                            ? EMOTION_IMAGES[emotion].selected
+                                                            : EMOTION_IMAGES[emotion].unselected
                                                     }
-                                                </View>
-                                                {filled ? (
-                                                    <Text style={styles.filledEntry}>
-                                                        {huntInputs[i] || hunt?.entries[i]?.text}
-                                                    </Text>
-                                                ) : current ? (
-                                                    <View style={styles.entryInputWrap}>
-                                                        <RNTextInput
-                                                            style={styles.entryInput}
-                                                            placeholder={huntPlaceholders[i] || "Something good..."}
-                                                            placeholderTextColor="#AAAAAA"
-                                                            value={huntInputs[i]}
-                                                            onChangeText={t => updateInput(i, t)}
-                                                            onSubmitEditing={() => handleAddEntry(i)}
-                                                            returnKeyType="done"
-                                                        />
-                                                        <TouchableOpacity
-                                                            onPress={() => handleAddEntry(i)}
-                                                            disabled={!huntInputs[i]?.trim()}
-                                                            style={[styles.sendBtn, !huntInputs[i]?.trim() && styles.sendBtnDisabled]}
-                                                            activeOpacity={0.7}
-                                                        >
-                                                            <SendIcon color={huntInputs[i]?.trim() ? '#000000' : '#AAAAAA'} size={16} />
-                                                        </TouchableOpacity>
-                                                    </View>
-                                                ) : (
-                                                    <Text style={styles.lockedEntry}>
-                                                        {i === 2 ? "Almost there..." : "Waiting..."}
-                                                    </Text>
-                                                )}
-                                            </View>
-                                        );
-                                    })}
-                                    {isHuntDone && (
-                                        <Animated.View entering={FadeIn.delay(200)} style={styles.completionMsg}>
-                                            <SparkleIcon color="#000000" size={18} />
-                                            <Text style={styles.completionText}>You found the good things today</Text>
-                                        </Animated.View>
-                                    )}
-                                    {!isHuntDone && (
-                                        <MicTriggerButton
-                                            label="Speak a good thing"
-                                            onPress={() => setVoiceTarget('hunt')}
-                                        />
-                                    )}
+                                                    style={styles.emotionImg}
+                                                    resizeMode="contain"
+                                                />
+                                            </RNAnimated.View>
+                                        </Pressable>
+                                    ))}
                                 </View>
-                            </QuestCard>
-                        </Animated.View>
-                    )}
-
-                    {/* ─── Step 1: Prompt About Today ─── */}
-                    {activeStep === 1 && dailyPrompt && (
-                        <Animated.View entering={FadeInDown.duration(400)}>
-                            <View style={styles.sectionLabel}>
-                                <Text style={styles.sectionTitle}>Prompt About Today</Text>
                             </View>
-                            <QuestCard
-                                title="Reflect"
-                                subtitle={dailyPrompt.category}
-                                renderIcon={(c, s) => <PenIcon color={c} size={s} />}
-                                status={promptStatus}
-                                index={1}
-                                defaultExpanded={true}
+                            <View style={styles.reflectDivider} />
+                            <ScrollView
+                                style={{ flex: 1, paddingHorizontal: 20, paddingTop: 12 }}
+                                showsVerticalScrollIndicator
+                                scrollIndicatorInsets={{ right: 1 }}
+                                keyboardShouldPersistTaps="handled"
+                                nestedScrollEnabled
                             >
-                                <View style={styles.cardBody}>
-                                    <View style={styles.promptHeaderRow}>
-                                        <Text style={[styles.promptText, { flex: 1 }]}>{dailyPrompt.text}</Text>
-                                        <TouchableOpacity
-                                            onPress={handleShufflePrompt}
-                                            style={styles.shuffleBtn}
-                                            activeOpacity={0.7}
-                                            hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
-                                        >
-                                            <ShuffleIcon color="#000000" size={16} />
-                                        </TouchableOpacity>
-                                    </View>
-                                    {isPromptSaved ? (
-                                        <Animated.View entering={FadeIn} style={styles.savedState}>
-                                            <SparkleIcon color="#000000" size={24} />
-                                            <Text style={styles.savedTitle}>Beautifully said.</Text>
-                                            <Text style={styles.savedSub}>Saved to your history</Text>
-                                            <TouchableOpacity
-                                                onPress={() => { setIsPromptSaved(false); setPromptResponse(''); }}
-                                                style={styles.writeAgainBtn}
-                                                activeOpacity={0.6}
-                                            >
-                                                <Text style={styles.writeAgainText}>Write another</Text>
-                                            </TouchableOpacity>
-                                        </Animated.View>
-                                    ) : (
-                                        <>
-                                            <RNTextInput
-                                                style={styles.textArea}
-                                                placeholder="Start writing..."
-                                                placeholderTextColor="#AAAAAA"
-                                                multiline
-                                                value={promptResponse}
-                                                onChangeText={setPromptResponse}
-                                                textAlignVertical="top"
-                                            />
-                                            <MicTriggerButton
-                                                label="Dictate"
-                                                onPress={() => setVoiceTarget('prompt')}
-                                            />
-                                            <TouchableOpacity
-                                                style={[styles.primaryBtn, { opacity: promptResponse.trim() ? 1 : 0.4 }]}
-                                                onPress={handleSavePrompt}
-                                                disabled={!promptResponse.trim()}
-                                                activeOpacity={0.7}
-                                            >
-                                                <Text style={styles.primaryBtnText}>Save to Journal</Text>
-                                            </TouchableOpacity>
-                                        </>
-                                    )}
-                                </View>
-                            </QuestCard>
+                                <RNTextInput
+                                    ref={emotionInputRef}
+                                    style={styles.emotionInput}
+                                    placeholder="What's on your mind?"
+                                    placeholderTextColor="#AAAAAA"
+                                    multiline
+                                    scrollEnabled={false}
+                                    value={emotionNote}
+                                    onChangeText={setEmotionNote}
+                                    textAlignVertical="top"
+                                    onFocus={handleInputFocus}
+                                />
+                            </ScrollView>
+                            {selectedEmotion && (
+                                <Animated.View entering={FadeIn}>
+                                    <View style={styles.reflectDivider} />
+                                    <Pressable
+                                        style={({ pressed }) => [
+                                            styles.reflectSaveBtn,
+                                            pressed && { backgroundColor: YELLOW },
+                                        ]}
+                                        onPress={handleSaveEmotion}
+                                    >
+                                        <Text style={styles.reflectSaveBtnText}>SAVE TO JOURNAL</Text>
+                                    </Pressable>
+                                </Animated.View>
+                            )}
                         </Animated.View>
+                        </RNAnimated.View>
                     )}
 
-                    {/* ─── Step 2: Write a Reflection ─── */}
-                    {activeStep === 2 && (
-                        <Animated.View entering={FadeInDown.duration(400)}>
-                            <View style={styles.sectionLabel}>
-                                <Text style={styles.sectionTitle}>Write a Reflection</Text>
+                    {/* ─── Step 1: Find 3 Good Things ─── */}
+                    {activeStep === 1 && (
+                        <RNAnimated.View style={cardHStyle}>
+                        <Animated.View entering={FadeInDown.duration(400)} style={[styles.contentCard, { flex: 1, overflow: 'hidden' }]}>
+                            {/* Header row: title + counter */}
+                            <View style={styles.gratitudeHeader}>
+                                <Text style={styles.gratitudeTitle}>TODAY'S GRATITUDE</Text>
+                                <Text style={styles.gratitudeCounter}>
+                                    <Text style={styles.gratitudeCountNum}>{huntCount}</Text>
+                                    <Text style={styles.gratitudeCountTotal}>/3</Text>
+                                </Text>
                             </View>
-                            <View style={styles.reflectionCard}>
-                                <View style={styles.reflectionQuoteBox}>
-                                    <View style={styles.reflectionQuoteAccent} />
-                                    <View style={styles.reflectionQuoteContent}>
-                                        <Text style={styles.reflectionQuoteLabel}>today's quote</Text>
-                                        <Text style={styles.reflectionQuoteText}>"{todayQuote.text}"</Text>
-                                        {todayQuote.author && (
-                                            <Text style={styles.reflectionQuoteAuthor}>— {todayQuote.author}</Text>
-                                        )}
+                            <View style={styles.gratitudeDivider} />
+
+                            {/* Entry rows */}
+                            {[0, 1, 2].map(i => {
+                                const filled = i < huntCount;
+                                const current = i === huntCount && !isHuntDone;
+                                const locked = i > huntCount;
+                                return (
+                                    <View key={i}>
+                                        <View style={styles.gratitudeRow}>
+                                            {/* Arrow icon */}
+                                            <ArrowRightIcon
+                                                color={locked ? '#CCCCCC' : filled ? BLACK : BLACK}
+                                                size={18}
+                                            />
+                                            {filled ? (
+                                                <Text style={styles.gratitudeFilled}>
+                                                    {huntInputs[i] || hunt?.entries[i]?.text}
+                                                </Text>
+                                            ) : current ? (
+                                                <>
+                                                    <RNTextInput
+                                                        ref={i === huntCount ? huntInputRef : undefined}
+                                                        style={styles.gratitudeInput}
+                                                        placeholder={huntPlaceholders[i] || 'Something good today...'}
+                                                        placeholderTextColor="#AAAAAA"
+                                                        value={huntInputs[i]}
+                                                        onChangeText={t => updateInput(i, t)}
+                                                        onSubmitEditing={() => handleAddEntry(i)}
+                                                        returnKeyType="done"
+                                                    />
+                                                    <TouchableOpacity
+                                                        onPress={() => handleAddEntry(i)}
+                                                        disabled={!huntInputs[i]?.trim()}
+                                                        style={[styles.sendBtn, !huntInputs[i]?.trim() && styles.sendBtnDisabled]}
+                                                        activeOpacity={0.7}
+                                                    >
+                                                        <SendIcon color={huntInputs[i]?.trim() ? BLACK : '#AAAAAA'} size={16} />
+                                                    </TouchableOpacity>
+                                                </>
+                                            ) : (
+                                                <Text style={styles.gratitudeLocked}>
+                                                    {locked ? 'Add one more thing...' : ''}
+                                                </Text>
+                                            )}
+                                        </View>
+                                        {i < 2 && <View style={styles.gratitudeDivider} />}
                                     </View>
-                                </View>
-                                {reflectionPermSaved ? (
-                                    <Animated.View entering={FadeIn} style={[styles.savedState, { paddingHorizontal: 18 }]}>
-                                        <SparkleIcon color="#000000" size={24} />
-                                        <Text style={styles.savedTitle}>Beautiful reflection!</Text>
-                                        <Text style={styles.savedSub}>Saved to your history</Text>
-                                        <TouchableOpacity
-                                            onPress={() => setReflectionPermSaved(false)}
-                                            style={styles.writeAgainBtn}
-                                            activeOpacity={0.6}
-                                        >
-                                            <Text style={styles.writeAgainText}>Write another</Text>
-                                        </TouchableOpacity>
-                                    </Animated.View>
-                                ) : (
-                                    <>
+                                );
+                            })}
+
+                            {isHuntDone && (
+                                <Animated.View entering={FadeIn.delay(200)} style={styles.completionMsg}>
+                                    <SparkleIcon color={BLACK} size={18} />
+                                    <Text style={styles.completionText}>You found the good things today</Text>
+                                </Animated.View>
+                            )}
+                            {/* Potato mascot — bottom right, tappable */}
+                            {progress && (
+                                <TouchableOpacity
+                                    style={styles.gratitudeMascotWrap}
+                                    onPress={handleMascotTap}
+                                    activeOpacity={0.9}
+                                >
+                                    <RNAnimated.View style={{
+                                        transform: [
+                                            { translateY: gratitudeMascotY },
+                                            { scaleX: gratitudeSquishX },
+                                            { scaleY: gratitudeSquishY },
+                                        ],
+                                    }}>
+                                        <Image
+                                            source={POTATO_IMAGES[Math.min(Math.max(progress.level, 1), 9)]}
+                                            style={styles.gratitudeMascot}
+                                            resizeMode="contain"
+                                        />
+                                    </RNAnimated.View>
+                                </TouchableOpacity>
+                            )}
+                        </Animated.View>
+                        </RNAnimated.View>
+                    )}
+
+
+                    {/* ─── Step 2: Reflect ─── */}
+                    {activeStep === 2 && (
+                        <RNAnimated.View style={cardHStyle}>
+                        <Animated.View entering={FadeInDown.duration(400)} style={[styles.reflectCard, { flex: 1 }]}>
+                            {reflectionPermSaved ? (
+                                /* ── Saved state ── */
+                                <Animated.View entering={FadeIn} style={styles.reflectSavedWrap}>
+                                    <Image source={chatPotatoIcon} style={{ width: 64, height: 64 }} resizeMode="contain" />
+                                    <Text style={styles.reflectSavedTitle}>Beautiful reflection!</Text>
+                                    <Text style={styles.reflectSavedSub}>Saved to your history</Text>
+                                    <TouchableOpacity onPress={() => setReflectionPermSaved(false)} style={styles.writeAgainBtn} activeOpacity={0.6}>
+                                        <Text style={styles.writeAgainText}>Write another</Text>
+                                    </TouchableOpacity>
+                                </Animated.View>
+                            ) : (
+                                <>
+                                    {/* ── Question header ── */}
+                                    <View style={styles.reflectHeader}>
+                                        <Text style={styles.reflectQNum}>01</Text>
+                                        <Text style={styles.reflectQuestion}>
+                                            {dailyPrompt?.text ?? "What's on your mind? What does this quote stir up for you?"}
+                                        </Text>
+                                    </View>
+
+                                    {/* ── Divider ── */}
+                                    <View style={styles.reflectDivider} />
+
+                                    {/* ── Input area ── */}
+                                    <View style={styles.reflectInputWrap}>
                                         <RNTextInput
-                                            style={styles.reflectionInput}
+                                            style={styles.reflectInput}
                                             placeholder="What's on your mind? What does this quote stir up for you?"
                                             placeholderTextColor="#AAAAAA"
                                             multiline
+                                            scrollEnabled
                                             value={reflectionText}
                                             onChangeText={setReflectionText}
                                             textAlignVertical="top"
+                                            onFocus={handleInputFocus}
                                         />
-                                        <View style={{ paddingHorizontal: 18, paddingBottom: 4 }}>
-                                            <MicTriggerButton
-                                                label="Speak your reflection"
-                                                onPress={() => setVoiceTarget('reflection')}
-                                            />
-                                        </View>
-                                        {canSaveReflection && (
-                                            <Animated.View entering={FadeIn} style={styles.reflectionFooter}>
-                                                <Text style={styles.reflectionWordCount}>
-                                                    {reflectionWordCount} {reflectionWordCount === 1 ? 'word' : 'words'}
-                                                </Text>
-                                                <TouchableOpacity
-                                                    style={styles.reflectionSaveBtn}
-                                                    onPress={handleSaveReflection}
-                                                    activeOpacity={0.7}
-                                                >
-                                                    <Text style={styles.reflectionSaveBtnText}>Save</Text>
-                                                </TouchableOpacity>
-                                            </Animated.View>
-                                        )}
-                                    </>
-                                )}
-                            </View>
+                                        {/* Chat potato — voice button */}
+                                        <TouchableOpacity
+                                            style={styles.reflectVoiceBtn}
+                                            onPress={() => setVoiceTarget('reflection')}
+                                            activeOpacity={0.7}
+                                        >
+                                            <Image source={chatModePotatoIcon} style={styles.reflectVoiceIcon} resizeMode="contain" />
+                                        </TouchableOpacity>
+                                    </View>
+
+                                    {/* ── Divider + Save button ── */}
+                                    <View style={styles.reflectDivider} />
+                                    <Pressable
+                                        style={({ pressed }) => [
+                                            styles.reflectSaveBtn,
+                                            !canSaveReflection && { opacity: 0.35 },
+                                            pressed && canSaveReflection && { backgroundColor: YELLOW },
+                                        ]}
+                                        onPress={handleSaveReflection}
+                                        disabled={!canSaveReflection}
+                                    >
+                                        <Text style={styles.reflectSaveBtnText}>SAVE TO JOURNAL</Text>
+                                    </Pressable>
+                                </>
+                            )}
                         </Animated.View>
+                        </RNAnimated.View>
                     )}
 
-                    {/* ─── Step 3: Today's Quote ─── */}
-                    {activeStep === 3 && (
-                        <Animated.View entering={FadeInDown.duration(400)}>
-                            <View style={styles.sectionLabel}>
-                                <Text style={styles.sectionTitle}>Today's Quote</Text>
-                            </View>
-                            <QuestCard
-                                title="Bonus Reflection"
-                                subtitle="Let it sink in"
-                                renderIcon={(c, s) => <ThoughtIcon color={c} size={s} />}
-                                status={bonusStatus}
-                                index={3}
-                                defaultExpanded={true}
-                            >
-                                <View style={styles.cardBody}>
-                                    <View style={styles.quoteBox}>
-                                        <Text style={styles.quoteText}>"{todayQuote.text}"</Text>
-                                        {todayQuote.author && (
-                                            <Text style={styles.quoteAuthor}>— {todayQuote.author}</Text>
-                                        )}
-                                    </View>
-                                    {isBonusSaved ? (
-                                        <Animated.View entering={FadeIn} style={styles.savedState}>
-                                            <SparkleIcon color="#000000" size={24} />
-                                            <Text style={styles.savedTitle}>Nice reflection</Text>
-                                            <Text style={styles.savedSub}>Saved to your history</Text>
-                                        </Animated.View>
-                                    ) : (
-                                        <>
-                                            <RNTextInput
-                                                style={[styles.textArea, { minHeight: 80 }]}
-                                                placeholder="What does this mean to you?"
-                                                placeholderTextColor="#AAAAAA"
-                                                multiline
-                                                value={bonusResponse}
-                                                onChangeText={setBonusResponse}
-                                                textAlignVertical="top"
-                                            />
-                                            <MicTriggerButton
-                                                label="Dictate"
-                                                onPress={() => setVoiceTarget('bonus')}
-                                            />
-                                            <TouchableOpacity
-                                                style={[styles.primaryBtn, { opacity: bonusResponse.trim() ? 1 : 0.4 }]}
-                                                onPress={handleSaveBonus}
-                                                disabled={!bonusResponse.trim()}
-                                                activeOpacity={0.7}
-                                            >
-                                                <Text style={styles.primaryBtnText}>Save Reflection</Text>
-                                            </TouchableOpacity>
-                                        </>
-                                    )}
+                    {/* ─── Step 3: Quote Chat ─── */}
+                    {activeStep === 3 && ((): React.ReactElement => {
+                        const level = Math.min(Math.max(progress?.level ?? 1, 1), 9);
+                        const levelPotato = POTATO_IMAGES[level];
+                        return (
+                            <RNAnimated.View style={cardHStyle}>
+                            <Animated.View entering={FadeInDown.duration(400)} style={[styles.reflectCard, { flex: 1 }]}>
+                                {/* Header */}
+                                <View style={styles.reflectHeader}>
+                                    <Text style={styles.reflectQuestion}>reflect with ulbo on today's wisdom</Text>
                                 </View>
-                            </QuestCard>
+                                <View style={styles.reflectDivider} />
 
-                            {/* ─── Coach Bunny — congratulations ─── */}
-                            <View style={styles.bottomMascot}>
-                                <TouchableOpacity onPress={handleMascotTap} activeOpacity={0.8} style={styles.bottomMascotInner}>
-                                    <View style={styles.heroBubble}>
-                                        <Text style={styles.heroBubbleText}>
-                                            {coachMsgIndex === 0
-                                                ? (mascotIntro || COACH_MESSAGES[0])
-                                                : COACH_MESSAGES[coachMsgIndex]}
-                                        </Text>
-                                    </View>
-                                    <View style={styles.bubbleTailWrap}>
-                                        <View style={styles.bubbleTail} />
-                                    </View>
-                                    <Image source={coachBunny} style={styles.heroImage} resizeMode="contain" />
-                                </TouchableOpacity>
-                            </View>
-                        </Animated.View>
-                    )}
+                                {/* Scrollable chat messages */}
+                                <ScrollView
+                                    ref={chatScrollRef}
+                                    style={styles.chatArea}
+                                    contentContainerStyle={styles.chatContent}
+                                    showsVerticalScrollIndicator={true}
+                                    scrollIndicatorInsets={{ right: 1 }}
+                                    keyboardShouldPersistTaps="handled"
+                                    nestedScrollEnabled={true}
+                                    onContentSizeChange={() => chatScrollRef.current?.scrollToEnd({ animated: true })}
+                                >
+                                    {chatMessages.map(msg => (
+                                        msg.role === 'user' ? (
+                                            <View key={msg.id} style={styles.chatRowRight}>
+                                                <AnimatedAvatar source={levelPotato} />
+                                                <View style={styles.chatBubbleRight}>
+                                                    <Text style={styles.chatBubbleRightText}>{msg.text}</Text>
+                                                </View>
+                                            </View>
+                                        ) : (
+                                            <View key={msg.id} style={styles.chatRowLeft}>
+                                                <AnimatedAvatar source={chatPotatoIcon} />
+                                                <View style={styles.chatBubbleLeft}>
+                                                    <Text style={styles.chatBubbleLeftText}>{msg.text}</Text>
+                                                </View>
+                                            </View>
+                                        )
+                                    ))}
+
+                                    {/* Typing indicator */}
+                                    {ulboThinking && (
+                                        <View style={styles.chatRowLeft}>
+                                            <AnimatedAvatar source={chatPotatoIcon} />
+                                            <View style={styles.chatBubbleLeft}>
+                                                <TypingDots />
+                                            </View>
+                                        </View>
+                                    )}
+                                </ScrollView>
+
+                                {/* Input bar */}
+                                <View style={styles.reflectDivider} />
+                                <View style={styles.chatInputRow}>
+                                    <RNTextInput
+                                        style={styles.chatInput}
+                                        placeholder="Message Ulbo..."
+                                        placeholderTextColor="#AAAAAA"
+                                        multiline
+                                        value={chatInput}
+                                        onChangeText={setChatInput}
+                                        textAlignVertical="top"
+                                        returnKeyType="send"
+                                        onSubmitEditing={handleSendChat}
+                                        blurOnSubmit={false}
+                                        onFocus={handleInputFocus}
+                                    />
+                                    <TouchableOpacity
+                                        style={[styles.chatSendBtn, chatInput.trim() && styles.chatSendBtnActive]}
+                                        onPress={chatInput.trim() ? handleSendChat : () => setVoiceTarget('bonus')}
+                                        activeOpacity={0.7}
+                                        disabled={ulboThinking}
+                                    >
+                                        {chatInput.trim() ? (
+                                            <SendArrowIcon color={BLACK} size={20} />
+                                        ) : (
+                                            <Image source={textPotatoIcon} style={styles.chatSendIcon} resizeMode="contain" />
+                                        )}
+                                    </TouchableOpacity>
+                                </View>
+                            </Animated.View>
+                            </RNAnimated.View>
+                        );
+                    })() as React.ReactElement}
 
                     <View style={{ height: 40 }} />
 
@@ -844,8 +1498,9 @@ export const HuntScreen: React.FC = () => {
                 onClose={() => { setSpiritVisible(false); setSpiritData(null); }}
                 loading={spiritLoading}
                 data={spiritData}
+                level={progress?.level ?? 1}
             />
-        </SafeAreaView>
+        </View>
     );
 };
 
@@ -856,10 +1511,65 @@ export const HuntScreen: React.FC = () => {
 const styles = StyleSheet.create({
     container: {
         flex: 1,
-        backgroundColor: '#FFFFFF',
+        backgroundColor: BLACK,
     },
     scroll: {
-        paddingBottom: 100,
+        paddingHorizontal: 16,
+        paddingTop: 12,
+        paddingBottom: 120,
+    },
+    // ── Emotion Step ──
+    emotionTitle: {
+        fontFamily: 'Inter-SemiBold',
+        fontSize: 25,
+        color: BLACK,
+        marginBottom: 12,
+        letterSpacing: 0.3,
+    },
+    emotionRow: {
+        flexDirection: 'row',
+        justifyContent: 'space-between',
+        marginBottom: 4,
+    },
+    emotionBtn: {
+        flex: 1,
+        alignItems: 'center',
+        paddingVertical: 4,
+        paddingHorizontal: 4,
+    },
+    emotionImg: {
+        width: 64,
+        height: 64,
+    },
+    emotionDivider: {
+        height: 2,
+        backgroundColor: BLACK,
+        marginBottom: 16,
+    },
+    emotionInput: {
+        fontFamily: 'Inter-Medium',
+        fontSize: 16,
+        color: BLACK,
+        minHeight: 80,
+        paddingTop: 4,
+        paddingBottom: 16,
+        lineHeight: 24,
+        textAlignVertical: 'top',
+    },
+
+    contentCard: {
+        backgroundColor: WHITE,
+        borderWidth: 2,
+        borderColor: BLACK,
+        borderRadius: 20,
+        padding: 20,
+        minHeight: 260,
+    },
+    contentTitle: {
+        fontFamily: 'Inter-SemiBold',
+        fontSize: 25,
+        color: BLACK,
+        marginBottom: 20,
     },
     loadingWrap: {
         flex: 1,
@@ -867,28 +1577,16 @@ const styles = StyleSheet.create({
         alignItems: 'center',
     },
 
-    // ── Compact Top Bar ──
+    // ── Timer + Step Card ──
     topBar: {
         flexDirection: 'row',
         alignItems: 'center',
-        paddingHorizontal: 20,
-        paddingTop: 10,
-        paddingBottom: 10,
+        marginHorizontal: 16,
+        marginTop: 16,
+        marginBottom: 16,
+        paddingHorizontal: 8,
+        paddingVertical: 4,
         gap: 16,
-        borderBottomWidth: 1,
-        borderBottomColor: '#00000010',
-    },
-    timerCompact: {
-        width: 72,
-        height: 72,
-        alignItems: 'center',
-        justifyContent: 'center',
-    },
-    timerCompactText: {
-        fontFamily: 'GasoekOne',
-        fontSize: 14,
-        color: '#000000',
-        letterSpacing: 0.5,
     },
     stepTrack: {
         flex: 1,
@@ -903,27 +1601,27 @@ const styles = StyleSheet.create({
         paddingHorizontal: 6,
     },
     stepDot: {
-        width: 10,
-        height: 10,
-        borderRadius: 5,
-        backgroundColor: '#E0E0E0',
+        width: 12,
+        height: 12,
+        borderRadius: 6,
+        backgroundColor: '#DDDDDD',
     },
     stepDotActive: {
-        backgroundColor: '#FFE600',
+        backgroundColor: YELLOW,
         width: 14,
         height: 14,
         borderRadius: 7,
     },
     stepDotDone: {
-        backgroundColor: '#000000',
+        backgroundColor: BLACK,
     },
     stepDotLabel: {
-        fontFamily: 'Carlito-Bold',
+        fontFamily: 'Inter-Medium',
         fontSize: 10,
-        color: '#BBBBBB',
+        color: '#666666',
     },
     stepDotLabelActive: {
-        color: '#000000',
+        color: WHITE,
     },
     heroImage: {
         width: width * 0.35,
@@ -959,7 +1657,7 @@ const styles = StyleSheet.create({
         backgroundColor: '#F0F0F0',
     },
     heroBubbleText: {
-        fontFamily: 'IndieFlower-Regular',
+        fontFamily: 'Inter-SemiBold',
         fontSize: 16,
         lineHeight: 22,
         textAlign: 'center',
@@ -973,65 +1671,200 @@ const styles = StyleSheet.create({
         paddingBottom: 14,
     },
     sectionTitle: {
-        fontFamily: 'Caveat-Bold',
+        fontFamily: 'Inter-Bold',
         fontSize: 32,
         color: '#000000',
     },
 
     // ── Reflection Card ──
-    reflectionCard: {
-        marginHorizontal: 16,
-        borderRadius: 20,
-        backgroundColor: '#FFFFFF',
+    // ── Reflect step (step 2) ──
+    reflectCard: {
+        backgroundColor: WHITE,
         borderWidth: 2,
-        borderColor: '#000000',
+        borderColor: BLACK,
+        borderRadius: 20,
         overflow: 'hidden',
     },
-    reflectionQuoteBox: {
-        flexDirection: 'row',
-        backgroundColor: '#FFE600',
-        paddingVertical: 14,
+    reflectHeader: {
+        paddingHorizontal: 20,
+        paddingTop: 20,
+        paddingBottom: 16,
+        gap: 10,
     },
-    reflectionQuoteAccent: {
-        width: 4,
-        backgroundColor: '#000000',
-        borderRadius: 2,
-        marginLeft: 16,
-        marginRight: 12,
-        flexShrink: 0,
+    reflectQNum: {
+        fontFamily: 'Inter-SemiBold',
+        fontSize: 16,
+        color: BLACK,
     },
-    reflectionQuoteContent: {
+    reflectQuestion: {
+        fontFamily: 'Inter-SemiBold',
+        fontSize: 16,
+        lineHeight: 24,
+        color: BLACK,
+    },
+    reflectDivider: {
+        height: 1.5,
+        backgroundColor: BLACK,
+    },
+    reflectInputWrap: {
         flex: 1,
-        paddingRight: 16,
-        gap: 3,
+        paddingHorizontal: 20,
+        paddingTop: 16,
+        paddingBottom: 16,
     },
-    reflectionQuoteLabel: {
-        fontFamily: 'Carlito-Bold',
-        fontSize: 11,
-        letterSpacing: 1.5,
-        textTransform: 'uppercase',
-        color: '#00000099',
-    },
-    reflectionQuoteText: {
-        fontFamily: 'Carlito-Italic',
-        fontSize: 19,
-        lineHeight: 27,
-        color: '#000000',
-    },
-    reflectionQuoteAuthor: {
-        fontFamily: 'Carlito',
-        fontSize: 12,
-        fontStyle: 'italic',
-        color: '#00000070',
-    },
-    reflectionInput: {
-        fontFamily: 'Carlito',
-        fontSize: 17,
+    reflectInput: {
+        flex: 1,
+        fontFamily: 'Inter-Medium',
+        fontSize: 16,
         lineHeight: 26,
-        minHeight: 130,
-        paddingHorizontal: 18,
-        paddingVertical: 16,
-        color: '#000000',
+        color: BLACK,
+        textAlignVertical: 'top',
+    },
+    reflectVoiceBtn: {
+        position: 'absolute',
+        bottom: 16,
+        right: 16,
+        width: 56,
+        height: 56,
+        alignItems: 'center',
+        justifyContent: 'center',
+        backgroundColor: WHITE,
+        borderRadius: 28,
+    },
+    reflectVoiceIcon: {
+        width: 52,
+        height: 52,
+    },
+    reflectSaveBtn: {
+        paddingVertical: 18,
+        alignItems: 'center',
+        justifyContent: 'center',
+    },
+    reflectSaveBtnText: {
+        fontFamily: 'Inter-SemiBold',
+        fontSize: 16,
+        color: BLACK,
+        letterSpacing: 1,
+    },
+    // ── Chat step (step 3) ──
+    chatArea: {
+        flex: 1,
+    },
+    chatContent: {
+        paddingHorizontal: 16,
+        paddingVertical: 20,
+        gap: 24,
+    },
+    chatRowRight: {
+        alignItems: 'flex-end',
+        gap: 6,
+    },
+    chatRowLeft: {
+        alignItems: 'flex-start',
+        gap: 6,
+    },
+    chatAvatar: {
+        width: 36,
+        height: 36,
+    },
+    chatBubbleRight: {
+        backgroundColor: YELLOW,
+        borderWidth: 2,
+        borderColor: BLACK,
+        borderRadius: 20,
+        borderBottomRightRadius: 4,
+        paddingHorizontal: 16,
+        paddingVertical: 12,
+        maxWidth: '85%',
+    },
+    chatBubbleRightText: {
+        fontFamily: 'Inter-Medium',
+        fontSize: 16,
+        lineHeight: 24,
+        color: BLACK,
+    },
+    chatBubbleLeft: {
+        backgroundColor: '#F0F0F0',
+        borderWidth: 2,
+        borderColor: BLACK,
+        borderRadius: 20,
+        borderBottomLeftRadius: 4,
+        paddingHorizontal: 16,
+        paddingVertical: 12,
+        maxWidth: '85%',
+    },
+    chatBubbleLeftText: {
+        fontFamily: 'Inter-Medium',
+        fontSize: 16,
+        lineHeight: 24,
+        color: BLACK,
+    },
+    chatInputRow: {
+        flexDirection: 'row',
+        alignItems: 'flex-end',
+        paddingHorizontal: 16,
+        paddingVertical: 12,
+        gap: 10,
+    },
+    chatInput: {
+        flex: 1,
+        fontFamily: 'Inter-Medium',
+        fontSize: 16,
+        color: BLACK,
+        minHeight: 44,
+        maxHeight: 120,
+        paddingVertical: 8,
+    },
+    chatSendBtn: {
+        width: 44,
+        height: 44,
+        alignItems: 'center',
+        justifyContent: 'center',
+    },
+    chatSendBtnActive: {
+        backgroundColor: YELLOW,
+        borderRadius: 22,
+        borderWidth: 2,
+        borderColor: BLACK,
+    },
+    chatThinking: {
+        fontFamily: 'Inter-Medium',
+        fontSize: 15,
+        color: '#888888',
+        fontStyle: 'italic',
+    },
+    chatSendIcon: {
+        width: 40,
+        height: 40,
+    },
+    chatDoneRow: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: 8,
+        paddingHorizontal: 20,
+        paddingVertical: 20,
+    },
+    chatDoneText: {
+        fontFamily: 'Inter-Medium',
+        fontSize: 15,
+        color: '#4B5563',
+    },
+
+    reflectSavedWrap: {
+        alignItems: 'center',
+        paddingVertical: 48,
+        paddingHorizontal: 24,
+        gap: 12,
+    },
+    reflectSavedTitle: {
+        fontFamily: 'Inter-SemiBold',
+        fontSize: 20,
+        color: BLACK,
+    },
+    reflectSavedSub: {
+        fontFamily: 'Inter-Medium',
+        fontSize: 15,
+        color: '#4B5563',
     },
     reflectionFooter: {
         flexDirection: 'row',
@@ -1041,9 +1874,9 @@ const styles = StyleSheet.create({
         paddingBottom: 14,
     },
     reflectionWordCount: {
-        fontFamily: 'Carlito',
+        fontFamily: 'Inter-SemiBold',
         fontSize: 12,
-        color: '#AAAAAA',
+        color: '#4B5563',
     },
     reflectionSaveBtn: {
         backgroundColor: '#FFE600',
@@ -1052,7 +1885,7 @@ const styles = StyleSheet.create({
         borderRadius: 20,
     },
     reflectionSaveBtnText: {
-        fontFamily: 'GasoekOne',
+        fontFamily: 'Inter-Bold',
         fontSize: 17,
         color: '#000000',
     },
@@ -1062,57 +1895,73 @@ const styles = StyleSheet.create({
         gap: 12,
     },
 
-    // ── Hunt entries ──
-    entryRow: {
+    // ── Gratitude (Step 1) ──
+    gratitudeHeader: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        justifyContent: 'space-between',
+        marginBottom: 14,
+    },
+    gratitudeTitle: {
+        fontFamily: 'Inter-SemiBold',
+        fontSize: 25,
+        color: BLACK,
+        letterSpacing: 0.3,
+    },
+    gratitudeCounter: {
+        fontSize: 20,
+    },
+    gratitudeCountNum: {
+        fontFamily: 'Inter-SemiBold',
+        fontSize: 20,
+        color: BLACK,
+    },
+    gratitudeCountTotal: {
+        fontFamily: 'Inter-Medium',
+        fontSize: 20,
+        color: '#AAAAAA',
+    },
+    gratitudeDivider: {
+        height: 1,
+        backgroundColor: '#E5E5E5',
+    },
+    gratitudeRow: {
         flexDirection: 'row',
         alignItems: 'center',
         gap: 12,
+        paddingVertical: 14,
+        minHeight: 52,
     },
-    entryNum: {
-        width: 32,
-        height: 32,
-        borderRadius: 16,
-        alignItems: 'center',
-        justifyContent: 'center',
-        backgroundColor: '#00000008',
+    gratitudeFilled: {
+        flex: 1,
+        fontFamily: 'Inter-Medium',
+        fontSize: 16,
+        color: BLACK,
+        lineHeight: 22,
     },
-    entryNumFilled: {
-        backgroundColor: '#FFE600',
+    gratitudeInput: {
+        flex: 1,
+        fontFamily: 'Inter-Medium',
+        fontSize: 16,
+        color: BLACK,
+        paddingVertical: 0,
+        minHeight: 28,
     },
-    entryNumLocked: {
-        backgroundColor: '#F0F0F0',
-    },
-    entryNumText: {
-        fontFamily: 'Carlito-Bold',
-        fontSize: 14,
-        color: '#000000',
-    },
-    entryNumTextLocked: {
+    gratitudeLocked: {
+        flex: 1,
+        fontFamily: 'Inter-Medium',
+        fontSize: 16,
         color: '#CCCCCC',
     },
-    filledEntry: {
-        flex: 1,
-        fontFamily: 'Carlito',
-        fontSize: 17,
-        lineHeight: 24,
-        color: '#000000',
-    },
-    entryInputWrap: {
-        flex: 1,
-        flexDirection: 'row',
+    gratitudeMascotWrap: {
+        position: 'absolute',
+        bottom: 16,
+        right: 16,
         alignItems: 'center',
-        borderRadius: 14,
-        paddingRight: 6,
-        backgroundColor: '#F0F4F8',
     },
-    entryInput: {
-        flex: 1,
-        fontFamily: 'Carlito',
-        fontSize: 16,
-        paddingHorizontal: 14,
-        paddingVertical: 10,
-        minHeight: 44,
-        color: '#000000',
+    gratitudeMascot: {
+        width: 80,
+        height: 80,
     },
     sendBtn: {
         width: 34,
@@ -1120,28 +1969,22 @@ const styles = StyleSheet.create({
         borderRadius: 17,
         alignItems: 'center',
         justifyContent: 'center',
-        backgroundColor: '#FFE600',
+        backgroundColor: YELLOW,
     },
     sendBtnDisabled: {
         backgroundColor: '#F0F0F0',
     },
-    lockedEntry: {
-        flex: 1,
-        fontFamily: 'Carlito-Italic',
-        fontSize: 14,
-        color: '#CCCCCC',
-    },
     completionMsg: {
         flexDirection: 'row',
         alignItems: 'center',
-        justifyContent: 'center',
         gap: 8,
-        paddingTop: 8,
+        paddingTop: 16,
+        paddingRight: 96,
     },
     completionText: {
-        fontFamily: 'IndieFlower-Regular',
-        fontSize: 17,
-        color: '#000000',
+        fontFamily: 'Inter-SemiBold',
+        fontSize: 16,
+        color: BLACK,
     },
 
     // ── Prompt ──
@@ -1161,13 +2004,13 @@ const styles = StyleSheet.create({
         backgroundColor: '#F0F0F0',
     },
     promptText: {
-        fontFamily: 'IndieFlower-Regular',
-        fontSize: 22,
-        lineHeight: 30,
+        fontFamily: 'Inter-SemiBold',
+        fontSize: 16,
+        lineHeight: 24,
         color: '#000000',
     },
     textArea: {
-        fontFamily: 'Carlito',
+        fontFamily: 'Inter-Medium',
         fontSize: 16,
         lineHeight: 24,
         minHeight: 100,
@@ -1184,7 +2027,7 @@ const styles = StyleSheet.create({
     },
     primaryBtnText: {
         color: '#000000',
-        fontFamily: 'GasoekOne',
+        fontFamily: 'Inter-Bold',
         fontSize: 18,
     },
 
@@ -1196,13 +2039,13 @@ const styles = StyleSheet.create({
         backgroundColor: '#F8F8F8',
     },
     quoteText: {
-        fontFamily: 'Carlito-Italic',
+        fontFamily: 'Inter-SemiBold',
         fontSize: 19,
         lineHeight: 28,
         color: '#000000',
     },
     quoteAuthor: {
-        fontFamily: 'Carlito',
+        fontFamily: 'Inter-SemiBold',
         fontSize: 13,
         marginTop: 8,
         textAlign: 'right',
@@ -1225,13 +2068,13 @@ const styles = StyleSheet.create({
         justifyContent: 'center',
     },
     todayPromptBulletText: {
-        fontFamily: 'Carlito-Bold',
+        fontFamily: 'Inter-SemiBold',
         fontSize: 12,
         color: '#000000',
     },
     todayPromptText: {
         flex: 1,
-        fontFamily: 'IndieFlower-Regular',
+        fontFamily: 'Inter-SemiBold',
         fontSize: 18,
         lineHeight: 24,
         color: '#000000',
@@ -1244,13 +2087,13 @@ const styles = StyleSheet.create({
         gap: 4,
     },
     savedTitle: {
-        fontFamily: 'Caveat-Bold',
+        fontFamily: 'Inter-Bold',
         fontSize: 26,
         marginTop: 4,
         color: '#000000',
     },
     savedSub: {
-        fontFamily: 'Carlito',
+        fontFamily: 'Inter-SemiBold',
         fontSize: 14,
         color: '#666666',
     },
@@ -1260,7 +2103,7 @@ const styles = StyleSheet.create({
         paddingHorizontal: 16,
     },
     writeAgainText: {
-        fontFamily: 'Carlito-Bold',
+        fontFamily: 'Inter-SemiBold',
         fontSize: 14,
         color: '#000000',
     },
@@ -1283,18 +2126,18 @@ const styles = StyleSheet.create({
         gap: 8,
     },
     modalEmoji: {
-        fontFamily: 'GasoekOne',
+        fontFamily: 'Inter-Bold',
         fontSize: 36,
         color: '#FFE600',
         marginBottom: 4,
     },
     modalTitle: {
-        fontFamily: 'GasoekOne',
+        fontFamily: 'Inter-Bold',
         fontSize: 36,
         color: '#000000',
     },
     modalSub: {
-        fontFamily: 'Carlito',
+        fontFamily: 'Inter-SemiBold',
         fontSize: 16,
         color: '#666666',
         textAlign: 'center',
@@ -1310,12 +2153,12 @@ const styles = StyleSheet.create({
         alignItems: 'center',
     },
     modalBtnText: {
-        fontFamily: 'GasoekOne',
+        fontFamily: 'Inter-Bold',
         fontSize: 20,
         color: '#000000',
     },
     modalDismiss: {
-        fontFamily: 'Carlito',
+        fontFamily: 'Inter-SemiBold',
         fontSize: 14,
         color: '#999999',
     },

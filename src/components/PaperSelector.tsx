@@ -83,13 +83,13 @@ const styles = StyleSheet.create({
         borderColor: BLACK,
     },
     title: {
-        fontFamily: 'GasoekOne',
+        fontFamily: 'MontserratAlternates-ExtraBoldItalic',
         fontSize: 28,
         marginBottom: 8,
         color: BLACK,
     },
     subtitle: {
-        fontFamily: 'GasoekOne',
+        fontFamily: 'MontserratAlternates-ExtraBoldItalic',
         fontSize: 16,
         marginBottom: 24,
         opacity: 0.7,
@@ -119,7 +119,7 @@ const styles = StyleSheet.create({
         alignItems: 'center',
     },
     paperName: {
-        fontFamily: 'GasoekOne',
+        fontFamily: 'MontserratAlternates-ExtraBoldItalic',
         fontSize: 14,
         textAlign: 'center',
         color: BLACK,

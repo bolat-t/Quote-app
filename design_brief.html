@@ -1,0 +1,957 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>App Design Brief — Screen-by-Screen UX Guide</title>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Fira+Mono:wght@400;500&display=swap');
+
+    :root {
+      --yellow: #FFE600;
+      --black: #000000;
+      --white: #FFFFFF;
+      --gray-50: #FAFAFA;
+      --gray-100: #F4F4F4;
+      --gray-200: #E8E8E8;
+      --gray-400: #999999;
+      --gray-600: #555555;
+      --gray-800: #222222;
+      --radius: 12px;
+      --page-max: 760px;
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: 'Inter', system-ui, sans-serif;
+      background: var(--white);
+      color: var(--black);
+      font-size: 14px;
+      line-height: 1.7;
+      -webkit-print-color-adjust: exact;
+      print-color-adjust: exact;
+    }
+
+    /* ── PAGE LAYOUT ── */
+    .page {
+      max-width: var(--page-max);
+      margin: 0 auto;
+      padding: 56px 48px;
+    }
+
+    /* ── COVER ── */
+    .cover {
+      padding: 72px 48px 56px;
+      border-bottom: 3px solid var(--black);
+      margin-bottom: 56px;
+    }
+
+    .cover-tag {
+      display: inline-block;
+      background: var(--yellow);
+      border: 2px solid var(--black);
+      border-radius: 6px;
+      font-size: 11px;
+      font-weight: 700;
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+      padding: 4px 12px;
+      margin-bottom: 24px;
+    }
+
+    .cover h1 {
+      font-size: 36px;
+      font-weight: 800;
+      line-height: 1.15;
+      letter-spacing: -0.02em;
+      margin-bottom: 16px;
+    }
+
+    .cover-sub {
+      font-size: 15px;
+      color: var(--gray-600);
+      max-width: 540px;
+      line-height: 1.65;
+    }
+
+    .cover-meta {
+      margin-top: 32px;
+      display: flex;
+      gap: 32px;
+      font-size: 12px;
+      color: var(--gray-400);
+      font-weight: 500;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+    }
+
+    /* ── SECTION DIVIDERS ── */
+    .section-label {
+      font-size: 10px;
+      font-weight: 700;
+      letter-spacing: 0.18em;
+      text-transform: uppercase;
+      color: var(--gray-400);
+      margin-bottom: 16px;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+    .section-label::after {
+      content: '';
+      flex: 1;
+      height: 1px;
+      background: var(--gray-200);
+    }
+
+    /* ── DESIGN SYSTEM BLOCK ── */
+    .ds-block {
+      background: var(--gray-50);
+      border: 2px solid var(--black);
+      border-radius: var(--radius);
+      padding: 28px 32px;
+      margin-bottom: 48px;
+    }
+
+    .ds-block h2 {
+      font-size: 13px;
+      font-weight: 700;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      margin-bottom: 20px;
+    }
+
+    .token-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr 1fr;
+      gap: 12px;
+      margin-bottom: 20px;
+    }
+
+    .token-card {
+      border: 2px solid var(--black);
+      border-radius: 8px;
+      overflow: hidden;
+    }
+
+    .token-swatch {
+      height: 40px;
+      border-bottom: 2px solid var(--black);
+    }
+
+    .token-info {
+      padding: 10px 12px;
+    }
+
+    .token-name {
+      font-size: 11px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+    }
+
+    .token-hex {
+      font-family: 'Fira Mono', monospace;
+      font-size: 11px;
+      color: var(--gray-600);
+      margin-bottom: 4px;
+    }
+
+    .token-usage {
+      font-size: 10.5px;
+      color: var(--gray-600);
+      line-height: 1.4;
+    }
+
+    .ds-rules {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 10px;
+      margin-top: 16px;
+    }
+
+    .ds-rule {
+      background: var(--white);
+      border: 1.5px solid var(--gray-200);
+      border-radius: 8px;
+      padding: 10px 14px;
+      font-size: 12px;
+      line-height: 1.5;
+    }
+
+    .ds-rule strong {
+      display: block;
+      font-size: 10.5px;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      color: var(--gray-400);
+      font-weight: 600;
+      margin-bottom: 2px;
+    }
+
+    /* ── NAV BAR ── */
+    .nav-bar {
+      display: flex;
+      border: 2.5px solid var(--black);
+      border-radius: 12px;
+      overflow: hidden;
+      margin-bottom: 56px;
+    }
+
+    .nav-tab {
+      flex: 1;
+      text-align: center;
+      padding: 14px 8px;
+      font-size: 12px;
+      font-weight: 600;
+      border-right: 2px solid var(--black);
+      background: var(--white);
+    }
+
+    .nav-tab:last-child { border-right: none; }
+
+    .nav-tab.home {
+      background: var(--yellow);
+    }
+
+    .nav-tab-label {
+      font-size: 9px;
+      font-weight: 500;
+      color: var(--gray-400);
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      margin-top: 2px;
+    }
+
+    /* ── SCREEN CARDS ── */
+    .screen-card {
+      border: 2.5px solid var(--black);
+      border-radius: 16px;
+      overflow: hidden;
+      margin-bottom: 32px;
+      page-break-inside: avoid;
+      break-inside: avoid;
+    }
+
+    .screen-header {
+      display: flex;
+      align-items: flex-start;
+      gap: 16px;
+      padding: 24px 28px;
+      border-bottom: 2px solid var(--black);
+      background: var(--white);
+    }
+
+    .screen-number {
+      width: 36px;
+      height: 36px;
+      background: var(--yellow);
+      border: 2px solid var(--black);
+      border-radius: 8px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 15px;
+      font-weight: 800;
+      flex-shrink: 0;
+      margin-top: 1px;
+    }
+
+    .screen-title-group { flex: 1; }
+
+    .screen-name {
+      font-size: 18px;
+      font-weight: 800;
+      letter-spacing: -0.01em;
+      line-height: 1.2;
+    }
+
+    .screen-route {
+      font-size: 11px;
+      color: var(--gray-400);
+      font-weight: 500;
+      margin-top: 3px;
+    }
+
+    .screen-type-badge {
+      font-size: 10px;
+      font-weight: 700;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      border: 1.5px solid var(--black);
+      border-radius: 5px;
+      padding: 3px 9px;
+      margin-left: auto;
+      margin-top: 2px;
+      flex-shrink: 0;
+      white-space: nowrap;
+    }
+
+    .badge-main { background: var(--yellow); }
+    .badge-modal { background: var(--gray-100); }
+
+    .screen-body { padding: 24px 28px; }
+
+    /* Essence quote */
+    .essence {
+      border-left: 3px solid var(--yellow);
+      background: var(--gray-50);
+      border-radius: 0 8px 8px 0;
+      padding: 14px 18px;
+      margin-bottom: 20px;
+      font-size: 13.5px;
+      font-style: italic;
+      color: var(--gray-800);
+      line-height: 1.6;
+    }
+
+    /* Three pillars row */
+    .pillars {
+      display: grid;
+      grid-template-columns: 1fr 1fr 1fr;
+      gap: 10px;
+      margin-bottom: 20px;
+    }
+
+    .pillar {
+      border: 1.5px solid var(--gray-200);
+      border-radius: 8px;
+      padding: 12px 14px;
+    }
+
+    .pillar-label {
+      font-size: 9.5px;
+      font-weight: 700;
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+      color: var(--gray-400);
+      margin-bottom: 5px;
+    }
+
+    .pillar-value {
+      font-size: 12.5px;
+      font-weight: 600;
+      line-height: 1.45;
+      color: var(--black);
+    }
+
+    /* UX goal */
+    .ux-goal {
+      margin-bottom: 20px;
+    }
+
+    .ux-goal-label {
+      font-size: 10px;
+      font-weight: 700;
+      letter-spacing: 0.14em;
+      text-transform: uppercase;
+      color: var(--gray-400);
+      margin-bottom: 8px;
+    }
+
+    .ux-goal p {
+      font-size: 13px;
+      line-height: 1.65;
+      color: var(--gray-800);
+    }
+
+    /* Emphasis list */
+    .emphasis-section { margin-bottom: 0; }
+
+    .emphasis-label {
+      font-size: 10px;
+      font-weight: 700;
+      letter-spacing: 0.14em;
+      text-transform: uppercase;
+      color: var(--gray-400);
+      margin-bottom: 10px;
+    }
+
+    .emphasis-list {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+
+    .emphasis-item {
+      display: flex;
+      align-items: flex-start;
+      gap: 10px;
+      font-size: 12.5px;
+      line-height: 1.6;
+    }
+
+    .emphasis-dot {
+      width: 6px;
+      height: 6px;
+      background: var(--yellow);
+      border: 1.5px solid var(--black);
+      border-radius: 50%;
+      flex-shrink: 0;
+      margin-top: 6px;
+    }
+
+    .emphasis-item strong {
+      font-weight: 700;
+    }
+
+    /* ── FEELING FOOTER ── */
+    .feeling-row {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      margin-top: 16px;
+      padding-top: 16px;
+      border-top: 1.5px solid var(--gray-200);
+    }
+
+    .feeling-label {
+      font-size: 9.5px;
+      font-weight: 700;
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+      color: var(--gray-400);
+      flex-shrink: 0;
+    }
+
+    .feeling-tags {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px;
+    }
+
+    .feeling-tag {
+      background: var(--yellow);
+      border: 1.5px solid var(--black);
+      border-radius: 100px;
+      padding: 3px 10px;
+      font-size: 11px;
+      font-weight: 600;
+    }
+
+    /* ── SUMMARY TABLE ── */
+    .summary-section {
+      margin-top: 56px;
+      page-break-before: auto;
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      border: 2px solid var(--black);
+      border-radius: 12px;
+      overflow: hidden;
+      font-size: 12.5px;
+    }
+
+    thead tr {
+      background: var(--black);
+      color: var(--white);
+    }
+
+    thead th {
+      padding: 12px 16px;
+      text-align: left;
+      font-size: 10.5px;
+      font-weight: 700;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+    }
+
+    tbody tr:nth-child(odd) { background: var(--gray-50); }
+    tbody tr:nth-child(even) { background: var(--white); }
+
+    tbody td {
+      padding: 11px 16px;
+      border-top: 1px solid var(--gray-200);
+      vertical-align: top;
+      line-height: 1.5;
+    }
+
+    tbody td:first-child { font-weight: 700; }
+
+    .feeling-cell {
+      font-style: italic;
+      color: var(--gray-600);
+    }
+
+    /* ── PRINT ── */
+    @media print {
+      body { font-size: 13px; }
+      .page { padding: 48px 40px; }
+      .screen-card { page-break-inside: avoid; break-inside: avoid; }
+      .summary-section { page-break-before: always; }
+    }
+  </style>
+</head>
+<body>
+<div class="page">
+
+  <!-- COVER -->
+  <div class="cover">
+    <span class="cover-tag">Design Brief</span>
+    <h1>App Design Brief —<br>Screen-by-Screen UX Guide</h1>
+    <p class="cover-sub">
+      This document describes the core essence and UX priority of each screen in the app.
+      Use it to understand what <em>feeling</em> each screen should evoke, what the user's primary goal is,
+      and where to focus your visual and interaction design energy.
+    </p>
+    <div class="cover-meta">
+      <span>For the designer</span>
+      <span>5 main screens · 3 modal screens</span>
+    </div>
+  </div>
+
+  <!-- DESIGN SYSTEM -->
+  <div class="section-label">Design System Reference</div>
+  <div class="ds-block">
+    <h2>Color Tokens</h2>
+    <div class="token-grid">
+      <div class="token-card">
+        <div class="token-swatch" style="background:#FFE600;"></div>
+        <div class="token-info">
+          <div class="token-name">Yellow</div>
+          <div class="token-hex">#FFE600</div>
+          <div class="token-usage">Active states, CTAs, selected items, highlights</div>
+        </div>
+      </div>
+      <div class="token-card">
+        <div class="token-swatch" style="background:#000000;"></div>
+        <div class="token-info">
+          <div class="token-name" style="color:#fff;">Black</div>
+          <div class="token-hex" style="color:#aaa;">#000000</div>
+          <div class="token-usage" style="color:#aaa;">Borders, text, icons, strokes</div>
+        </div>
+      </div>
+      <div class="token-card">
+        <div class="token-swatch" style="background:#FFFFFF; border-bottom:2px solid #000;"></div>
+        <div class="token-info">
+          <div class="token-name">White</div>
+          <div class="token-hex">#FFFFFF</div>
+          <div class="token-usage">Backgrounds, card surfaces</div>
+        </div>
+      </div>
+    </div>
+    <div class="ds-rules">
+      <div class="ds-rule"><strong>Cards</strong>2–2.5px black border · 16–24px radius · white fill · no shadows (flat)</div>
+      <div class="ds-rule"><strong>Active / Selected</strong>Yellow fill + black border</div>
+      <div class="ds-rule"><strong>Heading Font</strong>Caveat-Bold (display, handwritten feel)</div>
+      <div class="ds-rule"><strong>Body Font</strong>Carlito (readable, clean)</div>
+    </div>
+  </div>
+
+  <!-- NAV -->
+  <div class="section-label">Bottom Tab Navigation</div>
+  <div class="nav-bar" style="margin-bottom: 56px;">
+    <div class="nav-tab">
+      <div>Canvas</div>
+      <div class="nav-tab-label">Tab 1</div>
+    </div>
+    <div class="nav-tab">
+      <div>Journal</div>
+      <div class="nav-tab-label">Tab 2</div>
+    </div>
+    <div class="nav-tab home">
+      <div>Home</div>
+      <div class="nav-tab-label">Tab 3 · Center</div>
+    </div>
+    <div class="nav-tab">
+      <div>History</div>
+      <div class="nav-tab-label">Tab 4</div>
+    </div>
+    <div class="nav-tab">
+      <div>Vision</div>
+      <div class="nav-tab-label">Tab 5</div>
+    </div>
+  </div>
+
+  <!-- ══════════════════════════════════════════════ -->
+  <div class="section-label">Main Screens</div>
+
+  <!-- 1. HOME -->
+  <div class="screen-card">
+    <div class="screen-header">
+      <div class="screen-number">1</div>
+      <div class="screen-title-group">
+        <div class="screen-name">Home Screen (Hub)</div>
+        <div class="screen-route">Center tab · Tab 3</div>
+      </div>
+      <span class="screen-type-badge badge-main">Main Tab</span>
+    </div>
+    <div class="screen-body">
+      <div class="essence">
+        "This is the user's daily check-in with their virtual companion."
+      </div>
+      <div class="pillars">
+        <div class="pillar">
+          <div class="pillar-label">Core Action</div>
+          <div class="pillar-value">Check in daily, earn XP, grow mascot</div>
+        </div>
+        <div class="pillar">
+          <div class="pillar-label">Primary Feeling</div>
+          <div class="pillar-value">Cozy, motivating, alive</div>
+        </div>
+        <div class="pillar">
+          <div class="pillar-label">Retention Hook</div>
+          <div class="pillar-value">Mascot evolves with user level</div>
+        </div>
+      </div>
+      <div class="ux-goal">
+        <div class="ux-goal-label">Primary UX Goal</div>
+        <p>Make the user feel rewarded for showing up. The mascot + XP bar should make progress feel <strong>tangible and delightful</strong>, not like a chore checklist. The whole screen should feel warm and alive — like greeting a pet or a friend.</p>
+      </div>
+      <div class="emphasis-section">
+        <div class="emphasis-label">What to Emphasize</div>
+        <div class="emphasis-list">
+          <div class="emphasis-item">
+            <div class="emphasis-dot"></div>
+            <span><strong>The Mascot (Ulbo):</strong> This is the emotional heart of the screen. Large, charming, animated. The user taps it and it reacts (jump + haptic). It should feel like a living creature, not a static image. It's the visual centerpiece — everything else supports it.</span>
+          </div>
+          <div class="emphasis-item">
+            <div class="emphasis-dot"></div>
+            <span><strong>XP Progress Bar:</strong> Sits below the mascot. Should feel satisfying to see fill up — not a dry stat bar but something that communicates "you're growing." Level title should be readable at a glance.</span>
+          </div>
+          <div class="emphasis-item">
+            <div class="emphasis-dot"></div>
+            <span><strong>Quest Cards (5 daily tasks):</strong> These guide the user's day. Each card clearly shows the XP reward and whether it's done. Completed cards disappear — that disappearing should feel satisfying, animated out, not just hidden.</span>
+          </div>
+          <div class="emphasis-item">
+            <div class="emphasis-dot"></div>
+            <span><strong>Greeting Text:</strong> Personalized time-of-day greeting. Should feel human, not boilerplate.</span>
+          </div>
+        </div>
+      </div>
+      <div class="feeling-row">
+        <span class="feeling-label">Evoke</span>
+        <div class="feeling-tags">
+          <span class="feeling-tag">Cozy</span>
+          <span class="feeling-tag">Motivating</span>
+          <span class="feeling-tag">Alive</span>
+          <span class="feeling-tag">Morning ritual</span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 2. CANVAS -->
+  <div class="screen-card">
+    <div class="screen-header">
+      <div class="screen-number">2</div>
+      <div class="screen-title-group">
+        <div class="screen-name">Canvas Screen</div>
+        <div class="screen-route">Leftmost tab · Tab 1</div>
+      </div>
+      <span class="screen-type-badge badge-main">Main Tab</span>
+    </div>
+    <div class="screen-body">
+      <div class="essence">
+        "The user's daily creative reflection — a mini art journal paired with today's quote."
+      </div>
+      <div class="pillars">
+        <div class="pillar">
+          <div class="pillar-label">Core Action</div>
+          <div class="pillar-value">Draw & reflect on today's quote</div>
+        </div>
+        <div class="pillar">
+          <div class="pillar-label">Primary Feeling</div>
+          <div class="pillar-value">Creative, calm, personal</div>
+        </div>
+        <div class="pillar">
+          <div class="pillar-label">Retention Hook</div>
+          <div class="pillar-value">Fresh quote + blank canvas each day</div>
+        </div>
+      </div>
+      <div class="ux-goal">
+        <div class="ux-goal-label">Primary UX Goal</div>
+        <p>Minimise friction between "I want to express something" and actually doing it. The interface should <strong>disappear</strong> and let the creative act take over. Every tap to draw should feel immediate and satisfying.</p>
+      </div>
+      <div class="emphasis-section">
+        <div class="emphasis-label">What to Emphasize</div>
+        <div class="emphasis-list">
+          <div class="emphasis-item">
+            <div class="emphasis-dot"></div>
+            <span><strong>The Canvas Surface:</strong> The paper texture is what makes this feel like journaling, not just scribbling. The daily quote should be elegantly placed and readable — not like an afterthought on top of the drawing.</span>
+          </div>
+          <div class="emphasis-item">
+            <div class="emphasis-dot"></div>
+            <span><strong>Drawing Controls (sidebar):</strong> Undo, color, clear — unobtrusive but always reachable. They must never visually compete with the canvas itself.</span>
+          </div>
+          <div class="emphasis-item">
+            <div class="emphasis-dot"></div>
+            <span><strong>Drag-to-Delete Zone:</strong> When dragging a text/image box to the footer, a trash zone appears. Should be obvious and satisfying — clear visual feedback that the item will be deleted.</span>
+          </div>
+          <div class="emphasis-item">
+            <div class="emphasis-dot"></div>
+            <span><strong>"Done" Flow:</strong> Saving is a meaningful moment. The overlay after tapping Done should feel celebratory — this is the user completing their daily creative act. Not a generic "saving…" spinner.</span>
+          </div>
+        </div>
+      </div>
+      <div class="feeling-row">
+        <span class="feeling-label">Evoke</span>
+        <div class="feeling-tags">
+          <span class="feeling-tag">Creative</span>
+          <span class="feeling-tag">Calm</span>
+          <span class="feeling-tag">Personal</span>
+          <span class="feeling-tag">Quality journal</span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 3. JOURNAL -->
+  <div class="screen-card">
+    <div class="screen-header">
+      <div class="screen-number">3</div>
+      <div class="screen-title-group">
+        <div class="screen-name">Journal Tab</div>
+        <div class="screen-route">Second tab · Tab 2</div>
+      </div>
+      <span class="screen-type-badge badge-main">Main Tab</span>
+    </div>
+    <div class="screen-body">
+      <div class="essence">
+        "A daily gratitude quest — users find positive things from their day."
+      </div>
+      <div class="pillars">
+        <div class="pillar">
+          <div class="pillar-label">Core Action</div>
+          <div class="pillar-value">Fill 4 prompts, earn AI response</div>
+        </div>
+        <div class="pillar">
+          <div class="pillar-label">Primary Feeling</div>
+          <div class="pillar-value">Playful, purposeful, rewarding</div>
+        </div>
+        <div class="pillar">
+          <div class="pillar-label">Retention Hook</div>
+          <div class="pillar-value">Mascot reads and responds daily</div>
+        </div>
+      </div>
+      <div class="ux-goal">
+        <div class="ux-goal-label">Primary UX Goal</div>
+        <p>Make filling out all 4 entries feel easy and rewarding. The first prompt warms up the user with small things, then prompts deepen. It's structured like a <strong>journey, not homework</strong> — the UI should reinforce that sense of discovery.</p>
+      </div>
+      <div class="emphasis-section">
+        <div class="emphasis-label">What to Emphasize</div>
+        <div class="emphasis-list">
+          <div class="emphasis-item">
+            <div class="emphasis-dot"></div>
+            <span><strong>The 4 Journal Entries:</strong> Each entry slot should feel distinct and inviting. As entries fill in, completed ones animate in (reveal effect). The visual progression from 0/4 → 4/4 should be immediately readable — a sense of momentum.</span>
+          </div>
+          <div class="emphasis-item">
+            <div class="emphasis-dot"></div>
+            <span><strong>Status Indicators:</strong> Pending vs. completed items need a clear visual language. Completed entries should celebrate — checkmark animation, color shift, something that acknowledges the small win.</span>
+          </div>
+          <div class="emphasis-item">
+            <div class="emphasis-dot"></div>
+            <span><strong>"Mark as Done" Button:</strong> The culmination of the exercise. Should feel like finishing a quest — not just submitting a form.</span>
+          </div>
+          <div class="emphasis-item">
+            <div class="emphasis-dot"></div>
+            <span><strong>Spirit Response (AI mascot reply):</strong> After completing, Ulbo responds with personalized encouragement. This reveal should be a delightful moment — the mascot "reading" the entries and responding. Make it feel alive, not like a notification pop-up.</span>
+          </div>
+        </div>
+      </div>
+      <div class="feeling-row">
+        <span class="feeling-label">Evoke</span>
+        <div class="feeling-tags">
+          <span class="feeling-tag">Playful</span>
+          <span class="feeling-tag">Purposeful</span>
+          <span class="feeling-tag">Rewarding</span>
+          <span class="feeling-tag">Mini-adventure</span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 4. HISTORY -->
+  <div class="screen-card">
+    <div class="screen-header">
+      <div class="screen-number">4</div>
+      <div class="screen-title-group">
+        <div class="screen-name">Journal / History Screen</div>
+        <div class="screen-route">Fourth tab · Tab 4</div>
+      </div>
+      <span class="screen-type-badge badge-main">Main Tab</span>
+    </div>
+    <div class="screen-body">
+      <div class="essence">
+        "A mood calendar and timeline — users look back at their emotional journey over time."
+      </div>
+      <div class="pillars">
+        <div class="pillar">
+          <div class="pillar-label">Core Action</div>
+          <div class="pillar-value">Browse past entries by date</div>
+        </div>
+        <div class="pillar">
+          <div class="pillar-label">Primary Feeling</div>
+          <div class="pillar-value">Reflective, insightful, nostalgic</div>
+        </div>
+        <div class="pillar">
+          <div class="pillar-label">Retention Hook</div>
+          <div class="pillar-value">Mood history builds over time</div>
+        </div>
+      </div>
+      <div class="ux-goal">
+        <div class="ux-goal-label">Primary UX Goal</div>
+        <p>Make it effortless to navigate time and find meaning in patterns. The mood calendar is the primary navigation tool — it should be <strong>beautiful and immediately communicative</strong>. A glance at the month should show emotional ups and downs, like a personal heat map.</p>
+      </div>
+      <div class="emphasis-section">
+        <div class="emphasis-label">What to Emphasize</div>
+        <div class="emphasis-list">
+          <div class="emphasis-item">
+            <div class="emphasis-dot"></div>
+            <span><strong>Mood Calendar (hero element):</strong> Each day cell shows a mood face (5 levels: rough → great). The month view should let the user instantly "feel" their emotional trends. Mood face icons must be expressive and distinct even at small sizes — this is more heat map than calendar.</span>
+          </div>
+          <div class="emphasis-item">
+            <div class="emphasis-dot"></div>
+            <span><strong>Selected Day State:</strong> When tapping a date, content below updates to that day. The selected date must be unmistakably highlighted (yellow fill, black border) — it's the primary navigation act.</span>
+          </div>
+          <div class="emphasis-item">
+            <div class="emphasis-dot"></div>
+            <span><strong>Timeline Entries:</strong> A chronological feed for the selected day — journal entries, hunt results, vision activity each need their own visual "card type." Scannable and distinct.</span>
+          </div>
+          <div class="emphasis-item">
+            <div class="emphasis-dot"></div>
+            <span><strong>Activity Rings (top, optional):</strong> Entry count, streak, average mood at a glance. Visually striking but not overwhelming — secondary to the calendar.</span>
+          </div>
+        </div>
+      </div>
+      <div class="feeling-row">
+        <span class="feeling-label">Evoke</span>
+        <div class="feeling-tags">
+          <span class="feeling-tag">Reflective</span>
+          <span class="feeling-tag">Insightful</span>
+          <span class="feeling-tag">Nostalgic</span>
+          <span class="feeling-tag">Seeing growth</span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 5. VISION BOARD -->
+  <div class="screen-card">
+    <div class="screen-header">
+      <div class="screen-number">5</div>
+      <div class="screen-title-group">
+        <div class="screen-name">Vision Board Screen</div>
+        <div class="screen-route">Fifth tab · Tab 5</div>
+      </div>
+      <span class="screen-type-badge badge-main">Main Tab</span>
+    </div>
+    <div class="screen-body">
+      <div class="essence">
+        "A personal inspiration collage — users curate images and affirmations that represent their goals and dreams."
+      </div>
+      <div class="pillars">
+        <div class="pillar">
+          <div class="pillar-label">Core Action</div>
+          <div class="pillar-value">Build and arrange a vision collage</div>
+        </div>
+        <div class="pillar">
+          <div class="pillar-label">Primary Feeling</div>
+          <div class="pillar-value">Aspirational, personal, beautiful</div>
+        </div>
+        <div class="pillar">
+          <div class="pillar-label">Retention Hook</div>
+          <div class="pillar-value">Daily theme changes to spark new boards</div>
+        </div>
+      </div>
+      <div class="ux-goal">
+        <div class="ux-goal-label">Primary UX Goal</div>
+        <p>Let users build something that feels genuinely <em>theirs</em>. The board should look beautiful with minimal effort — layout presets and curated image collections do the heavy lifting, so users <strong>feel like a designer without needing to be one</strong>. A daily changing theme encourages returning to build something new each day.</p>
+      </div>
+      <div class="emphasis-section">
+        <div class="emphasis-label">What to Emphasize</div>
+        <div class="emphasis-list">
+          <div class="emphasis-item">
+            <div class="emphasis-dot"></div>
+            <span><strong>The Board Canvas:</strong> Items should feel tactile — drag them, scale them (pinch), feel them settle into place. The board background theme sets the entire mood. This is the main surface — it should feel like a real canvas.</span>
+          </div>
+          <div class="emphasis-item">
+            <div class="emphasis-dot"></div>
+            <span><strong>Image Browser:</strong> Browse by category → subcategory → thumbnail grid. Should feel like scrolling through inspiring Pinterest content. Fast loading, good placeholders, curated not random.</span>
+          </div>
+          <div class="emphasis-item">
+            <div class="emphasis-dot"></div>
+            <span><strong>Text Affirmations:</strong> Style editor with font, color, background options. Text on a vision board must feel intentional and beautiful — not a plain label. Style options should be immediately visual (show previews, not just label names).</span>
+          </div>
+          <div class="emphasis-item">
+            <div class="emphasis-dot"></div>
+            <span><strong>Layout Presets:</strong> One-tap arrangement (Grid, Scattered, Column, Mosaic). For users overwhelmed by manual placement — makes the board look polished instantly. Preset names should communicate the visual result clearly.</span>
+          </div>
+          <div class="emphasis-item">
+            <div class="emphasis-dot"></div>
+            <span><strong>Export / Share:</strong> Sharing the vision board is a proud moment. The share flow should feel like presenting something you'd hang on your wall — not a standard OS share sheet.</span>
+          </div>
+        </div>
+      </div>
+      <div class="feeling-row">
+        <span class="feeling-label">Evoke</span>
+        <div class="feeling-tags">
+          <span class="feeling-tag">Aspirational</span>
+          <span class="feeling-tag">Personal</span>
+          <span class="feeling-tag">Beautiful</span>
+          <span class="feeling-tag">Worth sharing</span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ══════════════════════════════════════════════ -->
+  <!-- SUMMARY TABLE -->
+  <div class="summary-section">
+    <div class="section-label">Quick Reference</div>
+    <table>
+      <thead>
+        <tr>
+          <th>#</th>
+          <th>Screen</th>
+          <th>Route</th>
+          <th>Core Action</th>
+          <th>Feeling to Evoke</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td>1</td>
+          <td>Home (Hub)</td>
+          <td>Center tab</td>
+          <td>Check in, earn XP, grow mascot</td>
+          <td class="feeling-cell">Warm, alive, motivating</td>
+        </tr>
+        <tr>
+          <td>2</td>
+          <td>Canvas</td>
+          <td>Tab 1</td>
+          <td>Draw + reflect on daily quote</td>
+          <td class="feeling-cell">Creative, calm, personal</td>
+        </tr>
+        <tr>
+          <td>3</td>
+          <td>Journal</td>
+          <td>Tab 2</td>
+          <td>Fill 4 gratitude prompts</td>
+          <td class="feeling-cell">Playful, rewarding, purposeful</td>
+        </tr>
+        <tr>
+          <td>4</td>
+          <td>History</td>
+          <td>Tab 4</td>
+          <td>Browse mood calendar &amp; timeline</td>
+          <td class="feeling-cell">Reflective, nostalgic, insightful</td>
+        </tr>
+        <tr>
+          <td>5</td>
+          <td>Vision Board</td>
+          <td>Tab 5</td>
+          <td>Build inspiration collage</td>
+          <td class="feeling-cell">Aspirational, beautiful, personal</td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+
+</div>
+</body>
+</html>

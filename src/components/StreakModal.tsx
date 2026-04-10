@@ -264,13 +264,13 @@ const styles = StyleSheet.create({
         backgroundColor: YELLOW + '30',
     },
     streakNumber: {
-        fontFamily: 'GasoekOne',
+        fontFamily: 'MontserratAlternates-ExtraBoldItalic',
         fontSize: 64,
         lineHeight: 78,
         includeFontPadding: false,
     },
     streakLabel: {
-        fontFamily: 'GasoekOne',
+        fontFamily: 'MontserratAlternates-ExtraBoldItalic',
         fontSize: 15,
     },
 
@@ -291,11 +291,11 @@ const styles = StyleSheet.create({
         alignItems: 'center',
     },
     milestoneLabel: {
-        fontFamily: 'GasoekOne',
+        fontFamily: 'MontserratAlternates-ExtraBoldItalic',
         fontSize: 13,
     },
     milestoneValue: {
-        fontFamily: 'GasoekOne',
+        fontFamily: 'MontserratAlternates-ExtraBoldItalic',
         fontSize: 13,
         fontWeight: '700',
     },
@@ -335,13 +335,13 @@ const styles = StyleSheet.create({
         borderRadius: 4,
     },
     dayLabel: {
-        fontFamily: 'GasoekOne',
+        fontFamily: 'MontserratAlternates-ExtraBoldItalic',
         fontSize: 11,
     },
 
     // ── Message ──
     message: {
-        fontFamily: 'GasoekOne',
+        fontFamily: 'MontserratAlternates-ExtraBoldItalic',
         fontSize: 14,
         textAlign: 'center',
         lineHeight: 21,
@@ -361,7 +361,7 @@ const styles = StyleSheet.create({
         shadowRadius: 8,
     },
     actionBtnText: {
-        fontFamily: 'GasoekOne',
+        fontFamily: 'MontserratAlternates-ExtraBoldItalic',
         fontSize: 15,
         fontWeight: '600',
         color: BLACK,

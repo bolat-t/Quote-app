@@ -38,16 +38,10 @@ export const useMascotState = () => {
             // Gentle nudge: only sad in the evening if no journal entry
             setMood('sad');
         } else {
-            // Default: based on dominant mood from memory if available?
-            // For now stick to original logic: idle during day unless recent mood is sad?
-            // If dominant recent mood is sad/tired, maybe reflect that?
-            if (memory.mood.dominantMood === 'sad' || memory.mood.dominantMood === 'tired') {
-                // Occasional validation of user's general state?
-                // Let's keep it simple for now and stick to time/activity based.
-                setMood('idle');
-            } else {
-                setMood('idle');
-            }
+            // Daytime with no entry yet — reflect dominant mood from memory if available
+            const dominantMood = memory.mood.dominantMood as MascotMood | undefined;
+            const validMoods: MascotMood[] = ['happy', 'sad', 'excited', 'anxious', 'tired', 'idle'];
+            setMood(dominantMood && validMoods.includes(dominantMood) ? dominantMood : 'idle');
         }
         setIsLoaded(true);
     }, []);

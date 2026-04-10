@@ -10,19 +10,28 @@ const WHITE = '#FFFFFF';
 
 interface CanvasHeaderProps {
     onClose?: () => void;
+    onHome?: () => void;
     onDone: () => void;
     title?: string;
 }
 
 export const CanvasHeader: React.FC<CanvasHeaderProps> = ({
     onClose,
+    onHome,
     onDone,
     title = 'Canvas',
 }) => {
     return (
         <View style={styles.header}>
-            {/* Left: Close or spacer */}
-            {onClose ? (
+            {/* Left: Home or Close or spacer */}
+            {onHome ? (
+                <TouchableOpacity style={styles.sideSlot} onPress={onHome} activeOpacity={0.7}>
+                    <Svg width={22} height={22} viewBox="0 0 24 24" fill="none">
+                        <SvgPath d="M3 12L12 4l9 8" stroke={BLACK} strokeWidth={2.2} strokeLinecap="round" strokeLinejoin="round" />
+                        <SvgPath d="M5 10v9a1 1 0 001 1h4v-4h4v4h4a1 1 0 001-1v-9" stroke={BLACK} strokeWidth={2.2} strokeLinecap="round" strokeLinejoin="round" />
+                    </Svg>
+                </TouchableOpacity>
+            ) : onClose ? (
                 <TouchableOpacity style={styles.sideSlot} onPress={onClose} activeOpacity={0.7}>
                     <Svg width={22} height={22} viewBox="0 0 24 24" fill="none">
                         <SvgPath
@@ -70,9 +79,8 @@ const styles = StyleSheet.create({
         justifyContent: 'center',
     },
     title: {
-        fontFamily: 'GasoekOne',
-        fontSize: 20,
-        letterSpacing: 0.5,
+        fontFamily: 'MontserratAlternates-ExtraBoldItalic',
+        fontSize: 18,
         color: BLACK,
     },
 
@@ -90,10 +98,8 @@ const styles = StyleSheet.create({
         shadowRadius: 4,
     },
     doneText: {
-        fontFamily: 'GasoekOne',
-        fontSize: 17,
-        fontWeight: '700',
-        letterSpacing: 0.5,
+        fontFamily: 'MontserratAlternates-Bold',
+        fontSize: 15,
         color: BLACK,
     },
 });

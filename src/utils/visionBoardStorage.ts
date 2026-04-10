@@ -77,6 +77,7 @@ export const addVisionItem = async (
             position_y: initialPos?.y ?? Math.random() * 300,
             rotation: initialPos?.rotation ?? (Math.random() - 0.5) * 20,
             scale: initialPos?.scale ?? 1,
+            created_at: new Date().toISOString(),
         };
 
         const { data, error } = await supabase

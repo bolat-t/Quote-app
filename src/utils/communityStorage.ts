@@ -5,12 +5,14 @@ import * as FileSystem from 'expo-file-system';
 export interface SharedReflection {
     id: string;
     user_id: string;
-    quote_id: string;
+    quote_id: string; // stored as string; normalize with String() before insert
     reflection_text: string | null;
     canvas_image_url: string | null;
     likes_count: number;
     created_at: string;
-    user_email?: string; // Joined from auth.users (if we had a profile table, for now fetch email separately or use a view)
+    // profile join fields (populated when profiles table is joined)
+    username?: string;
+    avatar_url?: string;
     is_liked_by_user?: boolean;
 }
 
@@ -18,17 +20,23 @@ export const fetchCommunityFeed = async (limit = 20, offset = 0): Promise<Shared
     try {
         const { data: { user } } = await supabase.auth.getUser();
 
-        // 1. Fetch raw reflections
+        // 1. Fetch reflections with profile join for display names
         const { data: reflections, error } = await supabase
             .from('shared_reflections')
-            .select('*')
+            .select('*, profiles(username, avatar_url)')
             .order('created_at', { ascending: false })
             .range(offset, offset + limit - 1);
 
         if (error) throw error;
         if (!reflections || reflections.length === 0) return [];
 
-        let items = reflections as SharedReflection[];
+        // Flatten the profiles join into the top-level object
+        let items: SharedReflection[] = (reflections as any[]).map((r) => ({
+            ...r,
+            username: r.profiles?.username ?? null,
+            avatar_url: r.profiles?.avatar_url ?? null,
+            profiles: undefined,
+        }));
 
         // 2. If user is logged in, fetch their likes for these reflections
         if (user) {
@@ -88,7 +96,7 @@ export const uploadCommunityImage = async (imageUri: string): Promise<string | n
 };
 
 export const postReflectionToCommunity = async (
-    quoteId: string,
+    quoteId: string | number,  // accepts both — Quote.id is number, community stores as string
     reflectionText?: string,
     canvasImageUrl?: string
 ): Promise<boolean> => {
@@ -100,7 +108,7 @@ export const postReflectionToCommunity = async (
             .from('shared_reflections')
             .insert({
                 user_id: user.id,
-                quote_id: quoteId,
+                quote_id: String(quoteId),  // normalize to string
                 reflection_text: reflectionText,
                 canvas_image_url: canvasImageUrl,
             });

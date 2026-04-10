@@ -19,6 +19,8 @@ export const AuthModal: React.FC<AuthModalProps> = ({ visible, onClose }) => {
     const [password, setPassword] = useState('');
     const [isSignUp, setIsSignUp] = useState(false);
     const [loading, setLoading] = useState(false);
+    const [emailFocused, setEmailFocused] = useState(false);
+    const [passwordFocused, setPasswordFocused] = useState(false);
 
     const handleAuth = async () => {
         if (!email || !password) {
@@ -61,7 +63,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({ visible, onClose }) => {
                         <Text style={styles.modalTitle}>
                             {isSignUp ? 'Join Ulbo' : 'Welcome Back'}
                         </Text>
-                        <TouchableOpacity onPress={onClose} style={styles.closeButton}>
+                        <TouchableOpacity onPress={onClose} style={styles.closeButton} accessibilityLabel="Close" accessibilityRole="button">
                             <Svg width={24} height={24} viewBox="0 0 24 24" fill="none">
                                 <Path d="M18 6L6 18M6 6L18 18" stroke={BLACK} strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" />
                             </Svg>
@@ -76,21 +78,27 @@ export const AuthModal: React.FC<AuthModalProps> = ({ visible, onClose }) => {
 
                     <View style={styles.inputContainer}>
                         <TextInput
-                            style={styles.input}
+                            style={[styles.input, emailFocused && styles.inputFocused]}
                             placeholder="Email"
                             placeholderTextColor={BLACK + '50'}
                             value={email}
                             onChangeText={setEmail}
                             autoCapitalize="none"
                             keyboardType="email-address"
+                            onFocus={() => setEmailFocused(true)}
+                            onBlur={() => setEmailFocused(false)}
+                            accessibilityLabel="Email address"
                         />
                         <TextInput
-                            style={styles.input}
+                            style={[styles.input, passwordFocused && styles.inputFocused]}
                             placeholder="Password"
                             placeholderTextColor={BLACK + '50'}
                             value={password}
                             onChangeText={setPassword}
                             secureTextEntry
+                            onFocus={() => setPasswordFocused(true)}
+                            onBlur={() => setPasswordFocused(false)}
+                            accessibilityLabel="Password"
                         />
                     </View>
 
@@ -98,6 +106,9 @@ export const AuthModal: React.FC<AuthModalProps> = ({ visible, onClose }) => {
                         style={[styles.authButton, loading && styles.authButtonDisabled]}
                         onPress={handleAuth}
                         disabled={loading}
+                        accessibilityLabel={isSignUp ? 'Create account' : 'Sign in'}
+                        accessibilityRole="button"
+                        accessibilityState={{ disabled: loading }}
                     >
                         {loading ? (
                             <ActivityIndicator color={BLACK} />
@@ -111,6 +122,8 @@ export const AuthModal: React.FC<AuthModalProps> = ({ visible, onClose }) => {
                     <TouchableOpacity
                         style={styles.switchButton}
                         onPress={() => setIsSignUp(!isSignUp)}
+                        accessibilityLabel={isSignUp ? 'Switch to sign in' : 'Switch to create account'}
+                        accessibilityRole="button"
                     >
                         <Text style={styles.switchText}>
                             {isSignUp ? 'Already have an account? Sign In' : "Don't have an account? Sign Up"}
@@ -152,14 +165,14 @@ const styles = StyleSheet.create({
     },
     modalTitle: {
         fontSize: 28,
-        fontFamily: 'GasoekOne',
+        fontFamily: 'MontserratAlternates-ExtraBoldItalic',
         color: BLACK,
     },
     closeButton: {
         padding: 4,
     },
     subtitle: {
-        fontFamily: 'GasoekOne',
+        fontFamily: 'MontserratAlternates-ExtraBoldItalic',
         fontSize: 16,
         marginBottom: 24,
         color: BLACK + '80',
@@ -169,17 +182,25 @@ const styles = StyleSheet.create({
         marginBottom: 24,
     },
     input: {
-        height: 50,
-        borderRadius: 12,
+        height: 52,
+        borderRadius: 16,
         paddingHorizontal: 16,
-        fontFamily: 'GasoekOne',
+        fontFamily: 'MontserratAlternates-ExtraBoldItalic',
         fontSize: 18,
         color: BLACK,
         backgroundColor: '#F0F4F8',
+        borderWidth: 2,
+        borderColor: 'transparent',
+    },
+    inputFocused: {
+        borderColor: YELLOW,
+        backgroundColor: WHITE,
     },
     authButton: {
-        height: 50,
-        borderRadius: 12,
+        height: 52,
+        borderRadius: 16,
+        borderWidth: 2,
+        borderColor: BLACK,
         backgroundColor: YELLOW,
         justifyContent: 'center',
         alignItems: 'center',
@@ -194,7 +215,7 @@ const styles = StyleSheet.create({
         opacity: 0.7,
     },
     authButtonText: {
-        fontFamily: 'GasoekOne',
+        fontFamily: 'MontserratAlternates-ExtraBoldItalic',
         fontSize: 22,
         color: BLACK,
     },
@@ -203,7 +224,7 @@ const styles = StyleSheet.create({
         padding: 8,
     },
     switchText: {
-        fontFamily: 'GasoekOne',
+        fontFamily: 'MontserratAlternates-ExtraBoldItalic',
         fontSize: 16,
         textDecorationLine: 'underline',
         color: BLACK,

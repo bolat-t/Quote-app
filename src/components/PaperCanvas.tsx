@@ -256,6 +256,11 @@ export const PaperCanvas: React.FC<PaperCanvasProps> = ({
                     <Text style={[styles.quoteText, { color: textColor }]}>
                         {quote.text}
                     </Text>
+                    {quote.author ? (
+                        <Text style={[styles.quoteText, { color: textColor, fontSize: 14, opacity: 0.4, marginTop: 8 }]}>
+                            — {quote.author}
+                        </Text>
+                    ) : null}
                     {/* Decorative line */}
                     <View style={[styles.quoteLine, { backgroundColor: YELLOW + '60' }]} />
                 </View>
@@ -323,7 +328,7 @@ const styles = StyleSheet.create({
         zIndex: 20,
     },
     quoteText: {
-        fontFamily: 'GasoekOne',
+        fontFamily: 'MontserratAlternates-ExtraBoldItalic',
         fontSize: 22,
         lineHeight: 30,
         textAlign: 'center',
@@ -349,7 +354,7 @@ const styles = StyleSheet.create({
         pointerEvents: 'none',
     },
     emptyStateText: {
-        fontFamily: 'GasoekOne',
+        fontFamily: 'MontserratAlternates-ExtraBoldItalic',
         fontSize: 14,
         marginTop: 8,
     },

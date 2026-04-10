@@ -23,24 +23,40 @@ const YELLOW = '#FFE600';
 const BLACK  = '#000000';
 const WHITE  = '#FFFFFF';
 
+const formatDate = (dateStr: string) =>
+    new Date(dateStr).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+
 export const CommunityScreen: React.FC = () => {
     const { user } = useAuth();
     const [reflections, setReflections] = useState<SharedReflection[]>([]);
     const [loading, setLoading] = useState(true);
     const [refreshing, setRefreshing] = useState(false);
+    const [error, setError] = useState<string | null>(null);
 
     const loadReflections = async () => {
         setLoading(true);
-        const data = await fetchCommunityFeed();
-        setReflections(data);
-        setLoading(false);
+        setError(null);
+        try {
+            const data = await fetchCommunityFeed();
+            setReflections(data);
+        } catch {
+            setError('Could not load the community feed. Pull down to try again.');
+        } finally {
+            setLoading(false);
+        }
     };
 
     const handleRefresh = async () => {
         setRefreshing(true);
-        const data = await fetchCommunityFeed();
-        setReflections(data);
-        setRefreshing(false);
+        setError(null);
+        try {
+            const data = await fetchCommunityFeed();
+            setReflections(data);
+        } catch {
+            setError('Could not refresh. Try again.');
+        } finally {
+            setRefreshing(false);
+        }
     };
 
     useFocusEffect(
@@ -74,7 +90,7 @@ export const CommunityScreen: React.FC = () => {
         <View style={styles.card}>
             {/* Header/Date */}
             <Text style={styles.date}>
-                {new Date(item.created_at).toLocaleDateString()}
+                {formatDate(item.created_at)}
             </Text>
 
             {/* Quote ID */}
@@ -99,6 +115,9 @@ export const CommunityScreen: React.FC = () => {
                 <TouchableOpacity
                     style={styles.likeButton}
                     onPress={() => handleLike(item.id, item.likes_count, !!item.is_liked_by_user)}
+                    accessibilityLabel={item.is_liked_by_user ? `Unlike, ${item.likes_count} likes` : `Like, ${item.likes_count} likes`}
+                    accessibilityRole="button"
+                    accessibilityState={{ selected: !!item.is_liked_by_user }}
                 >
                     <Svg width={24} height={24} viewBox="0 0 24 24" fill={item.is_liked_by_user ? YELLOW : 'none'}>
                         <Path
@@ -122,7 +141,19 @@ export const CommunityScreen: React.FC = () => {
             </View>
 
             {loading ? (
-                <ActivityIndicator style={{ marginTop: 20 }} color={YELLOW} />
+                <ActivityIndicator style={{ marginTop: 40 }} color={BLACK} />
+            ) : error ? (
+                <View style={styles.errorContainer}>
+                    <Text style={styles.errorText}>{error}</Text>
+                    <TouchableOpacity
+                        style={styles.retryBtn}
+                        onPress={loadReflections}
+                        accessibilityLabel="Retry loading community feed"
+                        accessibilityRole="button"
+                    >
+                        <Text style={styles.retryText}>Try Again</Text>
+                    </TouchableOpacity>
+                </View>
             ) : (
                 <FlatList
                     data={reflections}
@@ -130,7 +161,7 @@ export const CommunityScreen: React.FC = () => {
                     keyExtractor={item => item.id}
                     contentContainerStyle={styles.listContent}
                     refreshControl={
-                        <RefreshControl refreshing={refreshing} onRefresh={handleRefresh} tintColor={YELLOW} />
+                        <RefreshControl refreshing={refreshing} onRefresh={handleRefresh} tintColor={BLACK} />
                     }
                     ListEmptyComponent={
                         <View style={styles.emptyContainer}>
@@ -156,7 +187,7 @@ const styles = StyleSheet.create({
         borderBottomColor: BLACK,
     },
     title: {
-        fontFamily: 'GasoekOne',
+        fontFamily: 'MontserratAlternates-ExtraBoldItalic',
         fontSize: 32,
         color: BLACK,
     },
@@ -172,19 +203,19 @@ const styles = StyleSheet.create({
         borderColor: BLACK,
     },
     date: {
-        fontFamily: 'GasoekOne',
+        fontFamily: 'MontserratAlternates-ExtraBoldItalic',
         fontSize: 12,
         marginBottom: 4,
         color: BLACK + '60',
     },
     quoteId: {
-        fontFamily: 'GasoekOne',
+        fontFamily: 'MontserratAlternates-ExtraBoldItalic',
         fontSize: 12,
         marginBottom: 12,
         color: BLACK + '40',
     },
     reflectionText: {
-        fontFamily: 'GasoekOne',
+        fontFamily: 'MontserratAlternates-ExtraBoldItalic',
         fontSize: 18,
         lineHeight: 26,
         marginBottom: 12,
@@ -212,7 +243,7 @@ const styles = StyleSheet.create({
         padding: 4,
     },
     likeCount: {
-        fontFamily: 'GasoekOne',
+        fontFamily: 'MontserratAlternates-ExtraBoldItalic',
         fontSize: 16,
     },
     emptyContainer: {
@@ -221,8 +252,35 @@ const styles = StyleSheet.create({
         paddingTop: 60,
     },
     emptyText: {
-        fontFamily: 'GasoekOne',
+        fontFamily: 'MontserratAlternates-ExtraBoldItalic',
         fontSize: 18,
         color: BLACK + '60',
+    },
+    errorContainer: {
+        alignItems: 'center',
+        justifyContent: 'center',
+        paddingTop: 60,
+        paddingHorizontal: 32,
+        gap: 16,
+    },
+    errorText: {
+        fontFamily: 'MontserratAlternates-ExtraBoldItalic',
+        fontSize: 16,
+        color: BLACK,
+        opacity: 0.6,
+        textAlign: 'center',
+    },
+    retryBtn: {
+        backgroundColor: YELLOW,
+        borderWidth: 2,
+        borderColor: BLACK,
+        borderRadius: 16,
+        paddingVertical: 12,
+        paddingHorizontal: 28,
+    },
+    retryText: {
+        fontFamily: 'MontserratAlternates-ExtraBoldItalic',
+        fontSize: 15,
+        color: BLACK,
     },
 });

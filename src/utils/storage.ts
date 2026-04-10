@@ -24,7 +24,7 @@ export const getTheme = async (): Promise<ThemeMode | null> => {
     }
 };
 
-// Alias for ThemeContext compatibility
+/** @deprecated Use getTheme directly */
 export const loadTheme = getTheme;
 
 // Drawing Storage
@@ -35,9 +35,6 @@ export const saveDrawings = async (drawings: Drawing[]): Promise<void> => {
         console.error('Error saving drawings:', error);
     }
 };
-
-// Alias for backward compatibility (singular form)
-export const saveDrawing = saveDrawings;
 
 export const getDrawings = async (): Promise<Drawing[]> => {
     try {
@@ -87,10 +84,6 @@ export const saveDrawingAsImage = async (
 
         // Copy temp file to permanent location
         await FileSystem.copyAsync({ from: sourceUri, to: destUri });
-
-        // Verify the file was saved
-        const fileInfo = await FileSystem.getInfoAsync(destUri);
-        console.log('Image saved to:', destUri, 'exists:', fileInfo.exists, 'size:', (fileInfo as any).size);
 
         return destUri;
     } catch (error) {
