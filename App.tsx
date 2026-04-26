@@ -27,6 +27,7 @@ import { TimerProvider } from './src/context/TimerContext';
 import { JournalStepsProvider } from './src/context/JournalStepsContext';
 import { CommitmentProvider } from './src/context/CommitmentContext';
 import { TimerSecondsProvider } from './src/context/TimerSecondsContext';
+import { HistoryCalendarProvider } from './src/context/HistoryCalendarContext';
 import { useFonts } from 'expo-font';
 
 const Tab = createBottomTabNavigator<RootTabParamList>();
@@ -66,12 +67,11 @@ const BottomTabsInner = () => {
                     top: 0, left: 0, right: 0,
                     zIndex: 100,
                     paddingTop: insets.top,
-                    paddingHorizontal: 16,
                     paddingBottom: 16,
                 }}
                 onLayout={e => setHeaderHeight(e.nativeEvent.layout.height)}
             >
-                <AppHeader title={headerInfo.title} subtitle={headerInfo.subtitle} />
+                <AppHeader title={headerInfo.title} subtitle={headerInfo.subtitle} currentRoute={currentRoute} />
             </View>
         <Tab.Navigator
             initialRouteName="Home"
@@ -96,8 +96,8 @@ const BottomTabsInner = () => {
                 tabBarBackground: () => (
                     <View style={{
                         position: 'absolute',
-                        left: 16,
-                        right: 16,
+                        left: 0,
+                        right: 0,
                         top: 0,
                         bottom: 0,
                         backgroundColor: '#212121',
@@ -140,7 +140,9 @@ const BottomTabs = () => (
             <JournalStepsProvider>
                 <CommitmentProvider>
                     <TimerSecondsProvider>
-                        <BottomTabsInner />
+                        <HistoryCalendarProvider>
+                            <BottomTabsInner />
+                        </HistoryCalendarProvider>
                     </TimerSecondsProvider>
                 </CommitmentProvider>
             </JournalStepsProvider>

@@ -4,7 +4,6 @@ import {
     Text,
     Image,
     StyleSheet,
-    ScrollView,
     TouchableOpacity,
     TouchableWithoutFeedback,
     Pressable,
@@ -152,6 +151,8 @@ const weekStyles = StyleSheet.create({
 interface MainCardProps {
     level: number;
     currentTitle: string;
+    xpInCurrentLevel: number;
+    xpNeededForNext: number;
     onPressLevel: () => void;
     getJumpHeight?: () => number;
     onPeak?: () => void;
@@ -165,20 +166,27 @@ interface MainCardProps {
 }
 
 const MainCard: React.FC<MainCardProps> = ({
-    level, currentTitle,
+    level, currentTitle, xpInCurrentLevel, xpNeededForNext,
     onPressLevel, getJumpHeight, onPeak,
     actions, dailyActions, brokenTasks, breakAnims,
     cardLayouts, onNavigate, completedCount,
 }) => {
+
+    const xpPct = xpNeededForNext > 0 ? Math.min(1, xpInCurrentLevel / xpNeededForNext) : 0;
 
     return (
         <View style={mainCardStyles.card}>
             {/* ── Level info row ── */}
             <TouchableOpacity onPress={onPressLevel} activeOpacity={0.7} style={mainCardStyles.levelRow}>
                 <Text style={mainCardStyles.levelTitle}>POTATO</Text>
-                <Text style={mainCardStyles.levelSubtitle}>{currentTitle.toUpperCase().replace(/ /g, '\n')}</Text>
+                <View style={{ alignItems: 'flex-end' }}>
+                    <Text style={mainCardStyles.levelSubtitle}>{currentTitle.toUpperCase().replace(/ /g, '\n')}</Text>
+                    <Text style={mainCardStyles.xpLabel}>
+                        <Text style={mainCardStyles.xpCurrent}>{xpInCurrentLevel}</Text>
+                        <Text style={mainCardStyles.xpMax}>/{xpNeededForNext}</Text>
+                    </Text>
+                </View>
             </TouchableOpacity>
-
 
             {/* ── Mascot ── */}
             <View style={mainCardStyles.mascotArea}>
@@ -262,6 +270,10 @@ const MainCard: React.FC<MainCardProps> = ({
                     </Animated.View>
                 );
             })}
+
+            {/* ── Closing divider + bottom padding ── */}
+            <View style={mainCardStyles.rowDivider} />
+            <View style={{ height: 24 }} />
         </View>
     );
 };
@@ -272,16 +284,16 @@ const mainCardStyles = StyleSheet.create({
         borderWidth: 2,
         borderColor: BLACK,
         borderRadius: 20,
-        paddingTop: 12,
-        marginBottom: 16,
+        flex: 1,
         overflow: 'hidden',
     },
     levelRow: {
         flexDirection: 'row',
         justifyContent: 'space-between',
         alignItems: 'flex-start',
-        marginBottom: 4,
-        paddingHorizontal: 20,
+        paddingTop: 24,
+        paddingBottom: 16,
+        paddingHorizontal: 24,
     },
     levelTitle: {
         fontFamily: 'Inter-Bold',
@@ -292,41 +304,19 @@ const mainCardStyles = StyleSheet.create({
     levelSubtitle: {
         fontFamily: 'Inter-Bold',
         fontSize: 20,
-        color: '#4B5563',
+        color: '#F0F0F0',
         letterSpacing: 0.3,
         textAlign: 'right',
     },
-    barRow: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        gap: 10,
-        paddingHorizontal: 20,
-        marginBottom: 2,
-    },
-    progressTrack: {
-        flex: 1,
-        height: 20,
-        backgroundColor: 'transparent',
-        borderRadius: 10,
-        overflow: 'hidden',
-    },
-    progressFill: {
-        height: 20,
-        backgroundColor: YELLOW,
-        borderRadius: 10,
-        borderWidth: 2,
-        borderColor: BLACK,
-    },
-    xpLabel: { flexShrink: 0 },
-    xpCurrent: { fontFamily: 'Inter-Bold', fontSize: 20, color: BLACK },
-    xpMax:     { fontFamily: 'Inter-Medium', fontSize: 20, color: '#4B5563' },
+    xpLabel: { flexShrink: 0, marginTop: 4 },
+    xpCurrent: { fontFamily: 'Inter-Bold', fontSize: 16, color: BLACK },
+    xpMax:     { fontFamily: 'Inter-Bold', fontSize: 16, color: '#F0F0F0' },
     mascotArea: {
+        flex: 1,
         alignItems: 'center',
-        height: 180,
         justifyContent: 'flex-end',
+        paddingBottom: 16,
         overflow: 'hidden',
-        marginTop: 10,
-        marginBottom: 10,
     },
     // TODAY'S ACTIONS banner
     actionsHeader: {
@@ -334,9 +324,9 @@ const mainCardStyles = StyleSheet.create({
         justifyContent: 'space-between',
         alignItems: 'center',
         backgroundColor: WHITE,
-        paddingHorizontal: 20,
-        paddingTop: 2,
-        paddingBottom: 6,
+        paddingHorizontal: 24,
+        paddingTop: 16,
+        paddingBottom: 10,
     },
     actionsHeaderLabel: {
         fontFamily: 'Inter-Bold',
@@ -351,8 +341,8 @@ const mainCardStyles = StyleSheet.create({
     actionRow: {
         flexDirection: 'row',
         alignItems: 'center',
-        paddingHorizontal: 16,
-        paddingVertical: 8,
+        paddingHorizontal: 24,
+        paddingVertical: 10,
         gap: 12,
     },
     actionIcon: {
@@ -383,11 +373,11 @@ const mainCardStyles = StyleSheet.create({
     rowDivider: {
         height: 1.5,
         backgroundColor: '#CCCCCC',
-        marginHorizontal: 16,
+        marginHorizontal: 24,
     },
     speechBox: {
-        paddingHorizontal: 20,
-        paddingVertical: 16,
+        paddingHorizontal: 24,
+        paddingVertical: 24,
     },
     speechText: {
         fontFamily: 'Gaegu-Bold',
@@ -739,19 +729,20 @@ export const HubScreen: React.FC = () => {
 
     return (
         <View style={styles.container}>
-            <ScrollView
-                style={styles.scrollView}
-                showsVerticalScrollIndicator={false}
-                contentContainerStyle={[styles.scrollContent, { paddingTop: headerHeight || 12 }]}
-            >
-                {/* ── Week Strip ── */}
-                <WeekStrip />
-
+            <View style={[
+                styles.scrollContent,
+                {
+                    paddingTop: headerHeight || 12,
+                    paddingBottom: 62 + insets.bottom + 16,
+                },
+            ]}>
                 {/* ── Main Card (mascot + actions combined) ── */}
                 {xpProgress && currentTier && (
                     <MainCard
                         level={progress.level}
                         currentTitle={currentTier.title}
+                        xpInCurrentLevel={xpProgress.xpInCurrentLevel}
+                        xpNeededForNext={xpProgress.xpNeededForNext}
                         onPressLevel={() => setIsLevelModalVisible(true)}
                         getJumpHeight={getJumpHeight}
                         onPeak={handlePotatoPeak}
@@ -764,23 +755,7 @@ export const HubScreen: React.FC = () => {
                         completedCount={completedCount}
                     />
                 )}
-
-                {/* ── Today's Reflection card ── */}
-                <Pressable
-                    style={({ pressed }) => [
-                        styles.reflectionCard,
-                        pressed && { backgroundColor: '#E6E500', borderWidth: 2.5 },
-                    ]}
-                    onPress={() => navigation.navigate('Journal' as any)}
-                >
-                    <Text style={styles.reflectionLabel}>TODAY'S  REFLECTION</Text>
-                    {false && (
-                        <Text style={styles.reflectionSub}>You wrote today — tap to revisit</Text>
-                    )}
-                </Pressable>
-
-                <View style={{ height: 62 + insets.bottom + 16 }} />
-            </ScrollView>
+            </View>
 
             {/* ── Modals ── */}
             <StreakModal
@@ -820,12 +795,9 @@ const styles = StyleSheet.create({
         flex: 1,
         backgroundColor: BLACK,
     },
-    scrollView: {
-        flex: 1,
-    },
     scrollContent: {
+        flex: 1,
         paddingHorizontal: 16,
-        paddingBottom: 16,
     },
     headerCard: {
         backgroundColor: WHITE,

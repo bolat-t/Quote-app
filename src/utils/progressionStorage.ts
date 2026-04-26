@@ -219,6 +219,33 @@ export const loadDailyHunt = async (date?: string): Promise<DailyHunt> => {
     return { date: day, entries: [], completed: false, xpAwarded: false };
 };
 
+// Bulk-load every daily hunt the user has saved, keyed by date (YYYY-MM-DD).
+// Used by the History screen so we don't fire one AsyncStorage call per day card.
+export const loadAllDailyHunts = async (): Promise<Record<string, DailyHunt>> => {
+    try {
+        const allKeys = await AsyncStorage.getAllKeys();
+        const huntKeys = allKeys.filter(k => k.startsWith(HUNT_KEY_PREFIX));
+        if (huntKeys.length === 0) return {};
+        const pairs = await AsyncStorage.multiGet(huntKeys);
+        const result: Record<string, DailyHunt> = {};
+        for (const [key, raw] of pairs) {
+            if (!raw) continue;
+            try {
+                const parsed = JSON.parse(raw);
+                if (!parsed.entries) parsed.entries = [];
+                const date = key.slice(HUNT_KEY_PREFIX.length);
+                result[date] = parsed;
+            } catch {
+                // skip corrupted
+            }
+        }
+        return result;
+    } catch (error) {
+        console.error('[Progression] Error bulk-loading hunts:', error);
+        return {};
+    }
+};
+
 export const saveDailyHunt = async (hunt: DailyHunt): Promise<void> => {
     try {
         await AsyncStorage.setItem(HUNT_KEY_PREFIX + hunt.date, JSON.stringify(hunt));

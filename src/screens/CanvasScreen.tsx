@@ -1,560 +1,511 @@
-import React, { useState, useCallback, useRef, useEffect } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import {
-    View, Text, StyleSheet, ScrollView,
-    TouchableOpacity, Dimensions, Alert, Image,
+    StyleSheet,
+    View,
+    ScrollView,
+    TouchableOpacity,
+    Image,
+    Dimensions,
+    TextInput as RNTextInput,
+    Keyboard,
+    Platform,
+    KeyboardAvoidingView,
+    Animated as RNAnimated,
 } from 'react-native';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import Svg, { Path as SvgPath } from 'react-native-svg';
-import { captureRef } from 'react-native-view-shot';
 import * as Haptics from 'expo-haptics';
-import AsyncStorage from '@react-native-async-storage/async-storage';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { Text } from 'react-native-paper';
+import Animated, { FadeInDown } from 'react-native-reanimated';
+import Svg, { Path } from 'react-native-svg';
 
-import { Stroke, Point } from '../types';
-import { generateId } from '../utils/dateHelpers';
-import { saveDrawingAsImage } from '../utils/storage';
-import { useHeaderHeight } from '../context/HeaderHeightContext';
-import { awardXP, loadProgress } from '../utils/progressionStorage';
+import { UserProgress } from '../types';
+import { loadProgress, awardXP } from '../utils/progressionStorage';
+import { LEVEL_TIERS } from '../data/progressionConfig';
 import { XPToast } from '../components/XPToast';
+import { useDailyQuote } from '../hooks/useDailyQuote';
+import { chatWithUlbo } from '../utils/journalStorage';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import { buildMemoryContext } from '../memory/MemorySystem';
+import { useHeaderHeight } from '../context/HeaderHeightContext';
+import { VoiceSheet } from '../components/VoiceSheet';
 
+// ── Animated avatar — pops on tap ─────────────────────────────────────────
+const AnimatedAvatar: React.FC<{ source: any; size?: number }> = ({ source, size = 36 }) => {
+    const scale = useRef(new RNAnimated.Value(1)).current;
+    const pop = () => {
+        RNAnimated.sequence([
+            RNAnimated.spring(scale, { toValue: 1.4, useNativeDriver: true, friction: 3, tension: 320 }),
+            RNAnimated.spring(scale, { toValue: 1,   useNativeDriver: true, friction: 5, tension: 200 }),
+        ]).start();
+    };
+    return (
+        <TouchableOpacity onPress={pop} activeOpacity={1}>
+            <RNAnimated.View style={{ transform: [{ scale }] }}>
+                <Image source={source} style={{ width: size, height: size }} resizeMode="contain" />
+            </RNAnimated.View>
+        </TouchableOpacity>
+    );
+};
+
+// ── Typing dots animation ──────────────────────────────────────────────────
+const TypingDots: React.FC = () => {
+    const dots = [
+        useRef(new RNAnimated.Value(0)).current,
+        useRef(new RNAnimated.Value(0)).current,
+        useRef(new RNAnimated.Value(0)).current,
+    ];
+
+    useEffect(() => {
+        const anims = dots.map((dot, i) =>
+            RNAnimated.loop(
+                RNAnimated.sequence([
+                    RNAnimated.delay(i * 200),
+                    RNAnimated.timing(dot, { toValue: 1, duration: 300, useNativeDriver: true }),
+                    RNAnimated.timing(dot, { toValue: 0, duration: 300, useNativeDriver: true }),
+                    RNAnimated.delay((dots.length - i) * 200),
+                ])
+            )
+        );
+        anims.forEach(a => a.start());
+        return () => anims.forEach(a => a.stop());
+    }, []);
+
+    return (
+        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 5, paddingVertical: 4 }}>
+            {dots.map((dot, i) => (
+                <RNAnimated.View
+                    key={i}
+                    style={{
+                        width: 8, height: 8, borderRadius: 4,
+                        backgroundColor: '#888888',
+                        opacity: dot,
+                        transform: [{ scale: dot.interpolate({ inputRange: [0, 1], outputRange: [0.6, 1] }) }],
+                    }}
+                />
+            ))}
+        </View>
+    );
+};
+
+// Assets
+const chatPotatoIcon = require('../../assets/chat_potato.png');
+const textPotatoIcon = require('../../assets/mascot/text_mode_potato_icon.png');
+
+const POTATO_IMAGES: Record<number, any> = {
+    1: require('../../assets/mascot/potato_levels/level_1_potato.png'),
+    2: require('../../assets/mascot/potato_levels/level_2_potato.png'),
+    3: require('../../assets/mascot/potato_levels/level_3_potato.png'),
+    4: require('../../assets/mascot/potato_levels/level_4_potato.png'),
+    5: require('../../assets/mascot/potato_levels/level_5_potato.png'),
+    6: require('../../assets/mascot/potato_levels/level_6_potato.png'),
+    7: require('../../assets/mascot/potato_levels/level_7_potato.png'),
+    8: require('../../assets/mascot/potato_levels/level_8_potato.png'),
+    9: require('../../assets/mascot/potato_levels/level_9_potato.png'),
+};
+
+const YELLOW = '#FFE600';
 const BLACK  = '#000000';
 const WHITE  = '#FFFFFF';
-const YELLOW = '#FFE600';
 
-const { width: SCREEN_W, height: SCREEN_H } = Dimensions.get('window');
-const CANVAS_W = SCREEN_W - 32;
+const SCREEN_W = Dimensions.get('window').width;
+const SCREEN_H = Dimensions.get('window').height;
 
-type BrushType = 'pencil' | 'crayon';
+// ─── Custom SVG: Send arrow ───
+const SendArrowIcon = ({ color = BLACK, size = 20 }: { color?: string; size?: number }) => (
+    <Svg width={size} height={size} viewBox="0 0 24 24" fill="none">
+        <Path d="M22 2L11 13M22 2l-7 20-4-9-9-4 20-7z" stroke={color} strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" />
+    </Svg>
+);
 
-const BRUSHES: Record<BrushType, { strokeWidth: number; opacity: number }> = {
-    pencil: { strokeWidth: 2,  opacity: 0.92 },
-    crayon: { strokeWidth: 12, opacity: 0.52 },
-};
+type ChatMsg = { id: string; role: 'user' | 'ulbo'; text: string };
 
-const COLORS = ['#1C1C1C', '#2C4A6E', '#4A7C3F', '#8B3A3A', '#996600', '#6B4226', '#7B3F7A', '#E87040'];
-
-const STAMPS_KEY = '@ulbo_stamps';
-
-export interface StampEntry {
-    id:   string;
-    uri:  string;
-    date: string;
-}
-
-const pointsToPath = (pts: Point[], dx = 0, dy = 0) => {
-    if (!pts.length) return '';
-    if (pts.length === 1) return `M ${pts[0].x + dx} ${pts[0].y + dy} L ${pts[0].x + dx} ${pts[0].y + dy}`;
-    let d = `M ${pts[0].x + dx} ${pts[0].y + dy}`;
-    for (let i = 1; i < pts.length; i++) d += ` L ${pts[i].x + dx} ${pts[i].y + dy}`;
-    return d;
-};
-
-// Multi-layer offsets — heavy charcoal/pencil grain texture
-const PENCIL_LAYERS = [
-    // Core strokes (dense center)
-    { dx: 0,    dy: 0,    op: 0.80, w: 3.0 },
-    { dx: 0,    dy: 0,    op: 0.40, w: 5.5 },
-    // Near grain
-    { dx: 0.7,  dy: 0.3,  op: 0.38, w: 2.0 },
-    { dx: -0.7, dy: 0.5,  op: 0.35, w: 1.8 },
-    { dx: 0.5,  dy: -0.8, op: 0.30, w: 1.6 },
-    { dx: -0.5, dy: -0.6, op: 0.28, w: 1.4 },
-    { dx: 0.9,  dy: -0.3, op: 0.24, w: 1.2 },
-    { dx: -0.9, dy: 0.8,  op: 0.22, w: 1.0 },
-    // Mid scatter
-    { dx: 1.8,  dy: 0.4,  op: 0.16, w: 1.0 },
-    { dx: -1.6, dy: 0.9,  op: 0.15, w: 0.9 },
-    { dx: 1.3,  dy: -1.5, op: 0.14, w: 0.8 },
-    { dx: -1.5, dy: -1.2, op: 0.12, w: 0.7 },
-    { dx: 2.1,  dy: -0.7, op: 0.10, w: 0.6 },
-    { dx: -2.0, dy: 1.3,  op: 0.09, w: 0.6 },
-    // Far grain scatter
-    { dx: 2.8,  dy: 0.9,  op: 0.07, w: 0.5 },
-    { dx: -2.7, dy: -1.6, op: 0.06, w: 0.5 },
-    { dx: 1.5,  dy: 2.5,  op: 0.05, w: 0.4 },
-    { dx: -1.7, dy: 2.7,  op: 0.05, w: 0.4 },
-    { dx: 3.2,  dy: -1.2, op: 0.04, w: 0.4 },
-    { dx: -3.0, dy: 1.8,  op: 0.04, w: 0.3 },
+const ULBO_FALLBACKS = [
+    "That's worth sitting with. Sometimes the heaviest thoughts are the ones closest to something real.",
+    "Hmm. What part of that feels like it's trying to teach you something?",
+    "There's something deeper underneath that thought... can you feel it? What lives beneath the surface?",
+    "You know, Nietzsche said the most spiritual people experience the most painful truths. The fact that you're thinking this deeply already says something about you.",
+    "Interesting. Most people run from that kind of honesty. But you're leaning in. That takes a quiet kind of strength.",
+    "Sometimes the discomfort IS the transformation happening. What would it mean to sit with this instead of solving it?",
 ];
 
 export const CanvasScreen: React.FC = () => {
     const headerHeight = useHeaderHeight();
     const insets = useSafeAreaInsets();
-    // Canvas fills the gap between toolbar and tab bar exactly
-    const CANVAS_H = SCREEN_H - headerHeight - (62 + insets.bottom) - 58 - 6 - 14 - 14;
+    const { quote: todayQuote } = useDailyQuote();
 
-    const [strokes,       setStrokes]       = useState<Stroke[]>([]);
-    const [currentStroke, setCurrentStroke] = useState<Point[]>([]);
-    const [history,       setHistory]       = useState<Stroke[][]>([]);
-    const [redoStack,     setRedoStack]     = useState<Stroke[][]>([]);
-    const [isDrawing,     setIsDrawing]     = useState(false);
+    // ── Chat state ──
+    const [chatMessages, setChatMessages] = useState<ChatMsg[]>([]);
+    const [chatInput, setChatInput] = useState('');
+    const [ulboThinking, setUlboThinking] = useState(false);
+    const [chatInitialized, setChatInitialized] = useState(false);
+    const chatScrollRef = useRef<any>(null);
 
-    const [brushType,   setBrushType]   = useState<BrushType>('pencil');
-    const [color,       setColor]       = useState(COLORS[0]);
-    const [showColors,  setShowColors]  = useState(false);
+    // ── Voice ──
+    const [voiceOpen, setVoiceOpen] = useState(false);
 
-    const [stamps,  setStamps]  = useState<StampEntry[]>([]);
-    const [saving,  setSaving]  = useState(false);
-    const [xpToast, setXpToast] = useState<{ amount: number; label?: string } | null>(null);
+    // ── Progression / XP ──
+    const [progress, setProgress] = useState<UserProgress | null>(null);
+    const [xpToast, setXpToast] = useState<{ amount: number; label?: string; leveledUp?: boolean; newLevelTitle?: string } | null>(null);
+    const [hasAwardedXP, setHasAwardedXP] = useState(false);
 
-    const canvasRef = useRef<View>(null);
-    // Screen-absolute origin of the canvas view — used to convert pageX/pageY to canvas coords
-    const canvasOrigin = useRef({ x: 0, y: 0 });
+    useEffect(() => { loadProgress().then(setProgress); }, []);
+
+    // ── Animated card height when keyboard opens ──
+    const TAB_BAR_H = 66;
+    const cardHeight = SCREEN_H - (headerHeight || 80) - (62 + insets.bottom) - 8 - TAB_BAR_H;
+    const cardH = useRef(new RNAnimated.Value(cardHeight)).current;
+    const cardHRef = useRef(cardHeight);
+    const headerHeightRef = useRef(headerHeight);
+    const kbOpen = useRef(false);
+    const outerScrollRef = useRef<any>(null);
 
     useEffect(() => {
-        AsyncStorage.getItem(STAMPS_KEY).then(v => {
-            if (v) setStamps(JSON.parse(v));
-        });
+        cardHRef.current = cardHeight;
+        headerHeightRef.current = headerHeight;
+        if (!kbOpen.current) cardH.setValue(cardHeight);
+    }, [cardHeight, headerHeight]);
+
+    const handleInputFocus = useCallback(() => {
+        outerScrollRef.current?.scrollTo({ y: 0, animated: false });
     }, []);
 
-    const handleTouchStart = useCallback((e: any) => {
-        setIsDrawing(true);
-        const { locationX, locationY, pageX, pageY } = e.nativeEvent;
-        // Canvas is always the responder on grant — locationX/Y are accurate here.
-        // Derive canvas screen origin so subsequent moves stay in the same coord space.
-        canvasOrigin.current = { x: pageX - locationX, y: pageY - locationY };
-        setCurrentStroke([{ x: locationX, y: locationY }]);
+    useEffect(() => {
+        const show = Keyboard.addListener(
+            Platform.OS === 'ios' ? 'keyboardWillShow' : 'keyboardDidShow',
+            (e) => {
+                kbOpen.current = true;
+                outerScrollRef.current?.scrollTo({ y: 0, animated: false });
+                const kbH = e.endCoordinates.height;
+                const hh = headerHeightRef.current || 80;
+                const safetyMargin = Platform.OS === 'android' ? 56 : 8;
+                const availH = SCREEN_H - kbH - hh - safetyMargin;
+                const target = Math.min(SCREEN_W - 32, availH);
+                RNAnimated.timing(cardH, { toValue: target, duration: 300, useNativeDriver: false }).start();
+            }
+        );
+        const hide = Keyboard.addListener(
+            Platform.OS === 'ios' ? 'keyboardWillHide' : 'keyboardDidHide',
+            () => {
+                kbOpen.current = false;
+                RNAnimated.timing(cardH, { toValue: cardHRef.current, duration: 300, useNativeDriver: false }).start();
+            }
+        );
+        return () => { show.remove(); hide.remove(); };
     }, []);
 
-    const handleTouchMove = useCallback((e: any) => {
-        if (!isDrawing) return;
-        const { pageX, pageY } = e.nativeEvent;
-        // Use screen-absolute coords minus the origin captured on touch start
-        const x = Math.max(0, Math.min(CANVAS_W, pageX - canvasOrigin.current.x));
-        const y = Math.max(0, Math.min(CANVAS_H, pageY - canvasOrigin.current.y));
-        setCurrentStroke(prev => [...prev, { x, y }]);
-    }, [isDrawing, CANVAS_H]);
+    // ── Chat init: pre-seeded opening exchange (no AI needed) ──
+    useEffect(() => {
+        if (chatInitialized || !todayQuote.text) return;
+        setChatInitialized(true);
+        const authorLine = todayQuote.author ? `\n— ${todayQuote.author}` : '';
+        setChatMessages([
+            { id: 'user-0', role: 'user', text: 'Hey Ulbo, what wisdom do you have for me today?' },
+            { id: 'ulbo-0', role: 'ulbo', text: `"${todayQuote.text}"${authorLine}` },
+            { id: 'ulbo-1', role: 'ulbo', text: 'sit with that for a moment. what does it stir up in you?' },
+        ]);
+    }, [chatInitialized, todayQuote.text]);
 
-    const handleTouchEnd = useCallback(() => {
-        if (currentStroke.length > 0) {
-            const { strokeWidth, opacity } = BRUSHES[brushType];
-            const stroke: Stroke = {
-                id:      generateId(),
-                points:  currentStroke,
-                color,
-                width:   strokeWidth,
-                opacity,
-            };
-            setHistory(prev => [...prev, strokes]);
-            setStrokes(prev => [...prev, stroke]);
-            setRedoStack([]);
-        }
-        setCurrentStroke([]);
-        setIsDrawing(false);
-    }, [currentStroke, strokes, color, brushType]);
+    // ── Send user message and fetch Ulbo's reply ──
+    const handleSendChat = useCallback(async () => {
+        const text = chatInput.trim();
+        if (!text || ulboThinking) return;
+        setChatInput('');
+        const userMsg: ChatMsg = { id: `u-${Date.now()}`, role: 'user', text };
+        const updated = [...chatMessages, userMsg];
+        setChatMessages(updated);
+        setTimeout(() => chatScrollRef.current?.scrollToEnd({ animated: true }), 100);
 
-    const handleUndo = () => {
-        if (!history.length) return;
-        setRedoStack(prev => [...prev, strokes]);
-        setStrokes(history[history.length - 1]);
-        setHistory(prev => prev.slice(0, -1));
-        Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-    };
-
-    const handleRedo = () => {
-        if (!redoStack.length) return;
-        setHistory(prev => [...prev, strokes]);
-        setStrokes(redoStack[redoStack.length - 1]);
-        setRedoStack(prev => prev.slice(0, -1));
-        Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-    };
-
-    const handleClear = () => {
-        if (!strokes.length) return;
-        setHistory(prev => [...prev, strokes]);
-        setStrokes([]);
-        setRedoStack([]);
-        Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
-    };
-
-    const handleStamp = async () => {
-        if (!strokes.length) {
-            Alert.alert('Draw something first!');
-            return;
-        }
-        setSaving(true);
+        setUlboThinking(true);
+        const name = await AsyncStorage.getItem('@ulbo_user_name') || 'Friend';
         try {
-            Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-            let tmpUri = await captureRef(canvasRef, { format: 'png', quality: 1 });
-            if (!tmpUri.startsWith('file://')) tmpUri = 'file://' + tmpUri;
-            const uri = await saveDrawingAsImage(tmpUri, `stamp-${Date.now()}`);
-            if (!uri) throw new Error('save failed');
-
-            const date  = new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
-            const entry = { id: generateId(), uri, date };
-            const updated = [entry, ...stamps];
-            setStamps(updated);
-            await AsyncStorage.setItem(STAMPS_KEY, JSON.stringify(updated));
-
-            const progress = await loadProgress();
-            const result   = await awardXP('saveCanvas', progress);
-            if (result.xpGained > 0) setXpToast({ amount: result.xpGained, label: 'Stamp saved!' });
-
-            setStrokes([]);
-            setHistory([]);
-            setRedoStack([]);
+            const memory = await buildMemoryContext();
+            const memoryPayload = {
+                mood_trend:           memory.mood.trend,
+                dominant_mood:        memory.mood.dominantMood,
+                streak:               memory.mood.currentStreak,
+                dominant_themes:      memory.journal.dominantThemes,
+                sentiment:            memory.journal.averageSentiment,
+                days_since_last_entry: memory.journal.daysSinceLastEntry,
+            };
+            const res = await chatWithUlbo(
+                updated.map(m => ({ role: m.role, text: m.text })),
+                name,
+                { text: todayQuote.text, author: todayQuote.author },
+                memoryPayload
+            );
+            const reply = res?.reply || ULBO_FALLBACKS[Math.floor(Math.random() * ULBO_FALLBACKS.length)];
+            setChatMessages(prev => [...prev, { id: `ulbo-${Date.now()}`, role: 'ulbo', text: reply }]);
         } catch {
-            Alert.alert('Could not save stamp');
+            setChatMessages(prev => [...prev, {
+                id:   `ulbo-${Date.now()}`,
+                role: 'ulbo',
+                text: ULBO_FALLBACKS[Math.floor(Math.random() * ULBO_FALLBACKS.length)],
+            }]);
         } finally {
-            setSaving(false);
+            setUlboThinking(false);
+            setTimeout(() => chatScrollRef.current?.scrollToEnd({ animated: true }), 100);
         }
-    };
 
-    const { strokeWidth, opacity: brushOpacity } = BRUSHES[brushType];
-    const muted = (active: boolean) => active ? BLACK : BLACK + '28';
+        // First real reply earns XP once per day
+        if (!hasAwardedXP && progress) {
+            const result = await awardXP('readQuote', progress);
+            setProgress(result.progress);
+            if (result.xpGained > 0) {
+                setXpToast({
+                    amount:   result.xpGained,
+                    label:    'Chat saved',
+                    leveledUp: result.leveledUp,
+                    newLevelTitle: result.leveledUp
+                        ? LEVEL_TIERS.find(t => t.level === result.progress.level)?.title
+                        : undefined,
+                });
+            }
+            setHasAwardedXP(true);
+        }
+    }, [chatInput, chatMessages, ulboThinking, hasAwardedXP, progress, todayQuote]);
+
+    const handleVoiceTranscription = useCallback((text: string) => {
+        setChatInput(prev => prev ? `${prev} ${text}` : text);
+        setVoiceOpen(false);
+    }, []);
+
+    const level = Math.min(Math.max(progress?.level ?? 1, 1), 9);
+    const levelPotato = POTATO_IMAGES[level];
 
     return (
-        <View style={[st.screen, { paddingTop: headerHeight }]}>
-            <ScrollView
-                showsVerticalScrollIndicator={false}
-                contentContainerStyle={[st.scroll, { paddingBottom: 62 + insets.bottom + 24 }]}
-                scrollEnabled={!isDrawing}
+        <View style={styles.container}>
+            <KeyboardAvoidingView
+                style={{ flex: 1 }}
+                behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+                keyboardVerticalOffset={0}
             >
-
-                {/* ── Tool card ─────────────────────────────────── */}
-                <View style={st.toolCard}>
-                    {/* Single toolbar row */}
-                    <View style={st.toolRow}>
-
-                        {/* Brush: pencil */}
-                        <TouchableOpacity
-                            style={[st.brushBtn, brushType === 'pencil' && st.brushActive]}
-                            onPress={() => setBrushType('pencil')}
-                            activeOpacity={0.7}
-                        >
-                            <Svg width={18} height={18} viewBox="0 0 24 24" fill="none">
-                                <SvgPath d="M12 20h9M16.5 3.5a2.12 2.12 0 013 3L7 19l-4 1 1-4L16.5 3.5z"
-                                    stroke={brushType === 'pencil' ? BLACK : BLACK + '55'} strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" />
-                            </Svg>
-                        </TouchableOpacity>
-
-                        {/* Brush: crayon */}
-                        <TouchableOpacity
-                            style={[st.brushBtn, brushType === 'crayon' && st.brushActive]}
-                            onPress={() => setBrushType('crayon')}
-                            activeOpacity={0.7}
-                        >
-                            <Svg width={18} height={18} viewBox="0 0 24 24" fill="none">
-                                <SvgPath d="M5 16l-1 4 4-1L20 7l-3-3L5 16zM14 5l3 3"
-                                    stroke={brushType === 'crayon' ? BLACK : BLACK + '55'} strokeWidth={2.2} strokeLinecap="round" strokeLinejoin="round" />
-                            </Svg>
-                        </TouchableOpacity>
-
-                        <View style={st.sep} />
-
-                        {/* Color dot — tap to toggle palette */}
-                        <TouchableOpacity
-                            style={[st.activeDot, { backgroundColor: color }]}
-                            onPress={() => setShowColors(v => !v)}
-                            activeOpacity={0.7}
-                        />
-
-                        <View style={st.sep} />
-
-                        {/* Undo */}
-                        <TouchableOpacity style={st.iconBtn} onPress={handleUndo} disabled={!history.length} activeOpacity={0.7}>
-                            <Svg width={18} height={18} viewBox="0 0 24 24" fill="none">
-                                <SvgPath d="M3 10H14C16.21 10 18 11.79 18 14s-1.79 4-4 4h-1"
-                                    stroke={muted(!!history.length)} strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" />
-                                <SvgPath d="M7 6L3 10l4 4"
-                                    stroke={muted(!!history.length)} strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" />
-                            </Svg>
-                        </TouchableOpacity>
-
-                        {/* Redo */}
-                        <TouchableOpacity style={st.iconBtn} onPress={handleRedo} disabled={!redoStack.length} activeOpacity={0.7}>
-                            <Svg width={18} height={18} viewBox="0 0 24 24" fill="none">
-                                <SvgPath d="M21 10H10C7.79 10 6 11.79 6 14s1.79 4 4 4h1"
-                                    stroke={muted(!!redoStack.length)} strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" />
-                                <SvgPath d="M17 6l4 4-4 4"
-                                    stroke={muted(!!redoStack.length)} strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" />
-                            </Svg>
-                        </TouchableOpacity>
-
-                        {/* Clear */}
-                        <TouchableOpacity style={st.iconBtn} onPress={handleClear} activeOpacity={0.7}>
-                            <Svg width={18} height={18} viewBox="0 0 24 24" fill="none">
-                                <SvgPath
-                                    d="M21 5.98C17.67 5.65 14.32 5.48 10.98 5.48 9 5.48 7.02 5.58 5.04 5.78L3 5.98M8.5 4.97l.22-1.31C8.88 2.71 9 2 10.69 2h2.62C15 2 15.13 2.75 15.28 3.67l.22 1.3M18.85 9.14l-.65 10.07C18.09 20.78 18 22 15.21 22H8.79C6 22 5.91 20.78 5.8 19.21L5.15 9.14"
-                                    stroke="#D32F2F" strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round"
-                                />
-                            </Svg>
-                        </TouchableOpacity>
-                    </View>
-
-                    {/* Expanded color palette */}
-                    {showColors && (
-                        <View style={st.palette}>
-                            {COLORS.map(c => (
-                                <TouchableOpacity
-                                    key={c}
-                                    style={[st.paletteDot, { backgroundColor: c }, color === c && st.paletteDotActive]}
-                                    onPress={() => { setColor(c); setShowColors(false); Haptics.selectionAsync(); }}
-                                    activeOpacity={0.7}
-                                />
-                            ))}
-                        </View>
-                    )}
-                </View>
-
-                {/* ── Drawing canvas ─────────────────────────────── */}
-                <View
-                    ref={canvasRef}
-                    style={[st.canvas, { height: CANVAS_H }]}
-                    onStartShouldSetResponder={() => true}
-                    onMoveShouldSetResponder={() => true}
-                    onResponderGrant={handleTouchStart}
-                    onResponderMove={handleTouchMove}
-                    onResponderRelease={handleTouchEnd}
-                    onResponderTerminationRequest={() => false}
+                <ScrollView
+                    ref={outerScrollRef}
+                    contentContainerStyle={[
+                        styles.scroll,
+                        { paddingTop: headerHeight || 12 },
+                    ]}
+                    scrollEnabled={false}
+                    keyboardShouldPersistTaps="handled"
+                    showsVerticalScrollIndicator={false}
                 >
-                    <Svg style={StyleSheet.absoluteFill}>
-                        {strokes.map(s => {
-                            const isPencil = s.width <= 3;
-                            if (isPencil) {
-                                // Multi-layer offset rendering for pencil grain texture
-                                return PENCIL_LAYERS.map((layer, li) => (
-                                    <SvgPath
-                                        key={`${s.id}-${li}`}
-                                        d={pointsToPath(s.points, layer.dx, layer.dy)}
-                                        stroke={s.color}
-                                        strokeWidth={layer.w}
-                                        strokeOpacity={layer.op}
-                                        strokeLinecap="round"
-                                        strokeLinejoin="round"
-                                        fill="none"
-                                    />
-                                ));
-                            }
-                            return (
-                                <SvgPath
-                                    key={s.id}
-                                    d={pointsToPath(s.points)}
-                                    stroke={s.color}
-                                    strokeWidth={s.width}
-                                    strokeOpacity={s.opacity ?? 1}
-                                    strokeLinecap="round"
-                                    strokeLinejoin="round"
-                                    fill="none"
-                                />
-                            );
-                        })}
-                        {/* Live stroke while drawing */}
-                        {currentStroke.length > 0 && (brushType === 'pencil' ? (
-                            PENCIL_LAYERS.map((layer, li) => (
-                                <SvgPath
-                                    key={`live-${li}`}
-                                    d={pointsToPath(currentStroke, layer.dx, layer.dy)}
-                                    stroke={color}
-                                    strokeWidth={layer.w}
-                                    strokeOpacity={layer.op}
-                                    strokeLinecap="round"
-                                    strokeLinejoin="round"
-                                    fill="none"
-                                />
-                            ))
-                        ) : (
-                            <SvgPath
-                                key="live"
-                                d={pointsToPath(currentStroke)}
-                                stroke={color}
-                                strokeWidth={strokeWidth}
-                                strokeOpacity={brushOpacity}
-                                strokeLinecap="round"
-                                strokeLinejoin="round"
-                                fill="none"
-                            />
-                        ))}
-                    </Svg>
-                </View>
+                    <RNAnimated.View style={{ height: cardH }}>
+                        <Animated.View entering={FadeInDown.duration(400)} style={[styles.reflectCard, { flex: 1 }]}>
+                            {/* Header */}
+                            <View style={styles.reflectHeader}>
+                                <Text style={styles.reflectQuestion}>reflect with ulbo on today's wisdom</Text>
+                            </View>
+                            <View style={styles.reflectDivider} />
 
-                {/* ── Stamp it + collection (below the fold) ────── */}
-                <View style={st.belowFold}>
-                    <TouchableOpacity
-                        style={[st.stampBtn, saving && st.stampBtnDisabled]}
-                        onPress={handleStamp}
-                        disabled={saving}
-                        activeOpacity={0.85}
-                    >
-                        <Text style={st.stampBtnTxt}>{saving ? 'stamping...' : 'stamp it'}</Text>
-                    </TouchableOpacity>
-
-                    {stamps.length > 0 && (
-                        <View style={st.collection}>
-                            <Text style={st.collectionTitle}>my stamps</Text>
+                            {/* Scrollable chat messages */}
                             <ScrollView
-                                horizontal
-                                showsHorizontalScrollIndicator={false}
-                                contentContainerStyle={st.collectionRow}
+                                ref={chatScrollRef}
+                                style={styles.chatArea}
+                                contentContainerStyle={styles.chatContent}
+                                showsVerticalScrollIndicator
+                                scrollIndicatorInsets={{ right: 1 }}
+                                keyboardShouldPersistTaps="handled"
+                                nestedScrollEnabled
+                                onContentSizeChange={() => chatScrollRef.current?.scrollToEnd({ animated: true })}
                             >
-                                {stamps.map(s => (
-                                    <View key={s.id} style={st.thumbWrap}>
-                                        <Image source={{ uri: s.uri }} style={st.thumbImg} resizeMode="cover" />
-                                        <Text style={st.thumbDate}>{s.date}</Text>
-                                    </View>
+                                {chatMessages.map(msg => (
+                                    msg.role === 'user' ? (
+                                        <View key={msg.id} style={styles.chatRowRight}>
+                                            <AnimatedAvatar source={levelPotato} />
+                                            <View style={styles.chatBubbleRight}>
+                                                <Text style={styles.chatBubbleRightText}>{msg.text}</Text>
+                                            </View>
+                                        </View>
+                                    ) : (
+                                        <View key={msg.id} style={styles.chatRowLeft}>
+                                            <AnimatedAvatar source={chatPotatoIcon} />
+                                            <View style={styles.chatBubbleLeft}>
+                                                <Text style={styles.chatBubbleLeftText}>{msg.text}</Text>
+                                            </View>
+                                        </View>
+                                    )
                                 ))}
-                            </ScrollView>
-                        </View>
-                    )}
-                </View>
 
-            </ScrollView>
+                                {ulboThinking && (
+                                    <View style={styles.chatRowLeft}>
+                                        <AnimatedAvatar source={chatPotatoIcon} />
+                                        <View style={styles.chatBubbleLeft}>
+                                            <TypingDots />
+                                        </View>
+                                    </View>
+                                )}
+                            </ScrollView>
+
+                            {/* Input bar */}
+                            <View style={styles.reflectDivider} />
+                            <View style={styles.chatInputRow}>
+                                <RNTextInput
+                                    style={styles.chatInput}
+                                    placeholder="Message Ulbo..."
+                                    placeholderTextColor="#AAAAAA"
+                                    multiline
+                                    value={chatInput}
+                                    onChangeText={setChatInput}
+                                    textAlignVertical="top"
+                                    returnKeyType="send"
+                                    onSubmitEditing={handleSendChat}
+                                    blurOnSubmit={false}
+                                    onFocus={handleInputFocus}
+                                />
+                                <TouchableOpacity
+                                    style={[styles.chatSendBtn, chatInput.trim() && styles.chatSendBtnActive]}
+                                    onPress={chatInput.trim() ? handleSendChat : () => {
+                                        Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                                        setVoiceOpen(true);
+                                    }}
+                                    activeOpacity={0.7}
+                                    disabled={ulboThinking}
+                                >
+                                    {chatInput.trim() ? (
+                                        <SendArrowIcon color={BLACK} size={20} />
+                                    ) : (
+                                        <Image source={textPotatoIcon} style={styles.chatSendIcon} resizeMode="contain" />
+                                    )}
+                                </TouchableOpacity>
+                            </View>
+                        </Animated.View>
+                    </RNAnimated.View>
+                </ScrollView>
+            </KeyboardAvoidingView>
 
             <XPToast
                 xpAmount={xpToast?.amount ?? 0}
                 label={xpToast?.label}
+                leveledUp={xpToast?.leveledUp}
+                newLevelTitle={xpToast?.newLevelTitle}
                 visible={!!xpToast}
                 onDismiss={() => setXpToast(null)}
+            />
+
+            <VoiceSheet
+                visible={voiceOpen}
+                onDismiss={() => setVoiceOpen(false)}
+                onTranscriptionComplete={handleVoiceTranscription}
+                maxSeconds={120}
             />
         </View>
     );
 };
 
-const st = StyleSheet.create({
-    screen: {
+const styles = StyleSheet.create({
+    container: {
         flex: 1,
         backgroundColor: BLACK,
     },
     scroll: {
+        flexGrow: 1,
         paddingHorizontal: 16,
-        paddingTop: 6,
-        alignItems: 'center',
-        gap: 14,
     },
 
-    // ── Toolbar card ────────────────────────────────
-    toolCard: {
-        width:             '100%',
-        backgroundColor:   WHITE,
-        borderRadius:      20,
-        borderWidth:       2,
-        borderColor:       BLACK,
-        paddingHorizontal: 14,
-        paddingVertical:   10,
-        gap:               8,
-    },
-    toolRow: {
-        flexDirection:  'row',
-        alignItems:     'center',
-        justifyContent: 'space-between',
-    },
-
-    // Brush icon buttons
-    brushBtn: {
-        width:          38,
-        height:         38,
-        alignItems:     'center',
-        justifyContent: 'center',
-        borderRadius:   10,
-    },
-    brushActive: {
-        backgroundColor: YELLOW,
-    },
-
-    sep: {
-        width:  1,
-        height: 20,
-        backgroundColor: BLACK + '15',
-        marginHorizontal: 2,
-    },
-
-    // Active color dot
-    activeDot: {
-        width:        30,
-        height:       30,
-        borderRadius: 15,
-        borderWidth:  2,
-        borderColor:  BLACK,
-    },
-
-    // Icon buttons (undo/redo/clear)
-    iconBtn: {
-        width:          38,
-        height:         38,
-        alignItems:     'center',
-        justifyContent: 'center',
-        borderRadius:   8,
-    },
-
-    // Expanded palette
-    palette: {
-        flexDirection:  'row',
-        gap:            10,
-        paddingTop:     4,
-        paddingBottom:  2,
-        paddingHorizontal: 2,
-        flexWrap:       'wrap',
-    },
-    paletteDot: {
-        width:        30,
-        height:       30,
-        borderRadius: 15,
-    },
-    paletteDotActive: {
-        borderWidth: 3,
-        borderColor: BLACK,
-    },
-
-    // ── Canvas ──────────────────────────────────────
-    canvas: {
-        width:           CANVAS_W,
+    // ── Card (matches the reflect card on Journal) ──
+    reflectCard: {
         backgroundColor: WHITE,
-        borderRadius:    20,
-        borderWidth:     2.5,
-        borderColor:     BLACK,
-        overflow:        'hidden',
+        borderWidth: 2,
+        borderColor: BLACK,
+        borderRadius: 20,
+        overflow: 'hidden',
     },
-
-    // ── Below fold ──────────────────────────────────
-    belowFold: {
-        width:     '100%',
-        marginTop: 24,
-        gap:       20,
-    },
-    stampBtn: {
-        width:           '100%',
-        backgroundColor: YELLOW,
-        borderRadius:    16,
-        paddingVertical: 18,
-        alignItems:      'center',
-        borderWidth:     2,
-        borderColor:     BLACK,
-    },
-    stampBtnDisabled: { opacity: 0.5 },
-    stampBtnTxt: {
-        fontFamily: 'MontserratAlternates-Bold',
-        fontSize:   17,
-        color:      BLACK,
-    },
-
-    // ── Collection ────────────────────────────────
-    collection: {
+    reflectHeader: {
+        paddingHorizontal: 20,
+        paddingTop: 20,
+        paddingBottom: 16,
         gap: 10,
     },
-    collectionTitle: {
-        fontFamily: 'MontserratAlternates-ExtraBoldItalic',
-        fontSize:   18,
-        color:      WHITE,
+    reflectQuestion: {
+        fontFamily: 'Inter-SemiBold',
+        fontSize: 16,
+        lineHeight: 24,
+        color: BLACK,
     },
-    collectionRow: {
-        gap:          12,
-        paddingRight: 8,
+    reflectDivider: {
+        height: 1.5,
+        backgroundColor: BLACK,
     },
-    thumbWrap: {
-        gap:        5,
+
+    // ── Chat ──
+    chatArea: {
+        flex: 1,
+    },
+    chatContent: {
+        paddingHorizontal: 16,
+        paddingVertical: 20,
+        gap: 24,
+    },
+    chatRowRight: {
+        alignItems: 'flex-end',
+        gap: 6,
+    },
+    chatRowLeft: {
+        alignItems: 'flex-start',
+        gap: 6,
+    },
+    chatBubbleRight: {
+        backgroundColor: YELLOW,
+        borderWidth: 2,
+        borderColor: BLACK,
+        borderRadius: 20,
+        borderBottomRightRadius: 4,
+        paddingHorizontal: 16,
+        paddingVertical: 12,
+        maxWidth: '85%',
+    },
+    chatBubbleRightText: {
+        fontFamily: 'Inter-Medium',
+        fontSize: 16,
+        lineHeight: 24,
+        color: BLACK,
+    },
+    chatBubbleLeft: {
+        backgroundColor: '#F0F0F0',
+        borderWidth: 2,
+        borderColor: BLACK,
+        borderRadius: 20,
+        borderBottomLeftRadius: 4,
+        paddingHorizontal: 16,
+        paddingVertical: 12,
+        maxWidth: '85%',
+    },
+    chatBubbleLeftText: {
+        fontFamily: 'Inter-Medium',
+        fontSize: 16,
+        lineHeight: 24,
+        color: BLACK,
+    },
+    chatInputRow: {
+        flexDirection: 'row',
+        alignItems: 'flex-end',
+        paddingHorizontal: 16,
+        paddingVertical: 12,
+        gap: 10,
+    },
+    chatInput: {
+        flex: 1,
+        fontFamily: 'Inter-Medium',
+        fontSize: 16,
+        color: BLACK,
+        minHeight: 44,
+        maxHeight: 120,
+        paddingVertical: 8,
+    },
+    chatSendBtn: {
+        width: 44,
+        height: 44,
         alignItems: 'center',
+        justifyContent: 'center',
     },
-    thumbImg: {
-        width:        90,
-        height:       66,
-        borderRadius: 8,
-        borderWidth:  1.5,
-        borderColor:  WHITE + '30',
+    chatSendBtnActive: {
+        backgroundColor: YELLOW,
+        borderRadius: 22,
+        borderWidth: 2,
+        borderColor: BLACK,
     },
-    thumbDate: {
-        fontFamily: 'OpenSans-SemiBold',
-        fontSize:   10,
-        color:      WHITE + '70',
+    chatSendIcon: {
+        width: 40,
+        height: 40,
     },
 });
-
-export default CanvasScreen;

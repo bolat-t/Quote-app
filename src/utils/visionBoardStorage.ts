@@ -170,6 +170,31 @@ export const getVisionActivity = async (date: string): Promise<VisionActivity[]>
     }
 };
 
+// Bulk-load every day's vision activity, keyed by date.
+// Used by the History screen so we don't fire one AsyncStorage call per day card.
+export const loadAllVisionActivities = async (): Promise<Record<string, VisionActivity[]>> => {
+    try {
+        const allKeys = await AsyncStorage.getAllKeys();
+        const visionKeys = allKeys.filter(k => k.startsWith(VISION_LOG_PREFIX));
+        if (visionKeys.length === 0) return {};
+        const pairs = await AsyncStorage.multiGet(visionKeys);
+        const result: Record<string, VisionActivity[]> = {};
+        for (const [key, raw] of pairs) {
+            if (!raw) continue;
+            try {
+                const date = key.slice(VISION_LOG_PREFIX.length);
+                result[date] = JSON.parse(raw);
+            } catch {
+                // skip corrupted
+            }
+        }
+        return result;
+    } catch (e) {
+        console.error('Error bulk-loading vision activities:', e);
+        return {};
+    }
+};
+
 export const deleteVisionItem = async (id: string): Promise<void> => {
     try {
         const { error } = await supabase

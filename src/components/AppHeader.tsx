@@ -10,8 +10,6 @@ import {
     ActivityIndicator,
 } from 'react-native';
 import Svg, { Path, Circle } from 'react-native-svg';
-import { useTimerDisplay } from '../context/TimerContext';
-import { useJournalSteps } from '../context/JournalStepsContext';
 import { useCommitmentMins, useSetCommitmentMins } from '../context/CommitmentContext';
 import { useSetTimerSecs } from '../context/TimerSecondsContext';
 import AsyncStorage from '@react-native-async-storage/async-storage';
@@ -21,6 +19,7 @@ import type { RootStackParamList } from '../types';
 
 import { useAuth } from '../context/AuthContext';
 import { usePurchase } from '../context/PurchaseContext';
+import { useHistoryCalendar } from '../context/HistoryCalendarContext';
 import { requestNotificationPermissions, scheduleDailyReminder } from '../utils/notifications';
 import { exportJournalData } from '../utils/journalStorage';
 import { clearMemory } from '../memory/MemorySystem';
@@ -47,6 +46,25 @@ const CloseIcon = () => (
     </Svg>
 );
 
+const CalendarIcon = () => (
+    <Svg width={24} height={24} viewBox="0 0 24 24" fill="none">
+        <Path
+            d="M19 4H5a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6a2 2 0 0 0-2-2z"
+            stroke={BLACK}
+            strokeWidth={2}
+            strokeLinecap="round"
+            strokeLinejoin="round"
+        />
+        <Path
+            d="M16 2v4M8 2v4M3 10h18"
+            stroke={BLACK}
+            strokeWidth={2}
+            strokeLinecap="round"
+            strokeLinejoin="round"
+        />
+    </Svg>
+);
+
 const ArrowIcon = () => (
     <Svg width={20} height={20} viewBox="0 0 24 24" fill="none">
         <Path d="M5 12h14M13 6l6 6-6 6" stroke={BLACK} strokeWidth={2.2} strokeLinecap="round" strokeLinejoin="round" />
@@ -58,6 +76,7 @@ const ArrowIcon = () => (
 interface AppHeaderProps {
     title: string;
     subtitle?: string;
+    currentRoute?: string;
 }
 
 // ─── Row helpers ──────────────────────────────────────────────────────────────
@@ -97,15 +116,15 @@ const FOCUS_OPTIONS: { mins: 5 | 10 | 15 | 20; label: string }[] = [
 
 // ─── Component ────────────────────────────────────────────────────────────────
 
-export const AppHeader: React.FC<AppHeaderProps> = ({ title, subtitle }) => {
-    const timerDisplay = useTimerDisplay();
-    const journalSteps = useJournalSteps();
+export const AppHeader: React.FC<AppHeaderProps> = ({ title, subtitle, currentRoute }) => {
     const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList>>();
     const { user, signOut } = useAuth();
     const { isPremium } = usePurchase();
     const commitmentMins    = useCommitmentMins();
     const setCommitmentMins = useSetCommitmentMins();
     const setTimerSecs      = useSetTimerSecs();
+    const { expanded: calExpanded, toggle: toggleCal } = useHistoryCalendar();
+    const isHistory = currentRoute === 'History';
     // focusMins drives which pill is highlighted — derived from shared context so it
     // updates immediately when FocusTimerPickerScreen saves a new value.
     const focusMins = commitmentMins as 5 | 10 | 20;
@@ -149,76 +168,34 @@ export const AppHeader: React.FC<AppHeaderProps> = ({ title, subtitle }) => {
                     {subtitle ? <Text style={styles.titleLine}>{subtitle}</Text> : null}
                 </View>
                 <View style={styles.headerTopRight}>
-                    {journalSteps ? (
-                        /* Journal tab — step dots */
-                        <View style={styles.stepTrack}>
-                            {journalSteps.labels.map((label, i) => (
-                                <TouchableOpacity
-                                    key={i}
-                                    onPress={() => journalSteps.onStepPress(i)}
-                                    style={styles.stepDotWrap}
-                                    hitSlop={{ top: 6, bottom: 6, left: 6, right: 6 }}
-                                    accessibilityLabel={`Step ${i + 1}: ${label}`}
-                                    accessibilityRole="tab"
-                                    accessibilityState={{ selected: i === journalSteps.activeStep }}
-                                >
-                                    <View style={[
-                                        styles.stepDot,
-                                        i === journalSteps.activeStep && styles.stepDotActive,
-                                        i < journalSteps.activeStep && styles.stepDotDone,
-                                    ]} />
-                                    <Text style={[
-                                        styles.stepDotLabel,
-                                        i === journalSteps.activeStep && styles.stepDotLabelActive,
-                                    ]}>{label}</Text>
-                                </TouchableOpacity>
-                            ))}
-                        </View>
+                    {isHistory ? (
+                        <TouchableOpacity
+                            onPress={toggleCal}
+                            hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+                            style={styles.hamburgerBtn}
+                            accessibilityLabel={calExpanded ? 'Hide calendar' : 'Show calendar'}
+                            accessibilityRole="button"
+                            accessibilityState={{ expanded: calExpanded }}
+                        >
+                            <CalendarIcon />
+                        </TouchableOpacity>
                     ) : (
-                        /* All other tabs — timer + hamburger */
-                        <>
-                            {timerDisplay && (
-                                <TouchableOpacity
-                                    style={styles.timerPill}
-                                    onPress={timerDisplay.onPress}
-                                    activeOpacity={0.7}
-                                    hitSlop={{ top: 6, bottom: 6, left: 6, right: 6 }}
-                                    accessibilityLabel={`Focus timer: ${timerDisplay.text}`}
-                                    accessibilityRole="button"
-                                >
-                                    <Svg width={40} height={40} viewBox="0 0 40 40" style={{ position: 'absolute' }}>
-                                        <Circle cx="20" cy="20" r="16" stroke="#00000015" strokeWidth={3} fill="none" />
-                                        <Circle
-                                            cx="20" cy="20" r="16"
-                                            stroke={YELLOW}
-                                            strokeWidth={3}
-                                            fill="none"
-                                            strokeDasharray={`${2 * Math.PI * 16}`}
-                                            strokeDashoffset={`${2 * Math.PI * 16 * (1 - timerDisplay.progress)}`}
-                                            strokeLinecap="round"
-                                            transform="rotate(-90 20 20)"
-                                        />
-                                    </Svg>
-                                    <Text style={styles.timerPillText}>{timerDisplay.text}</Text>
-                                </TouchableOpacity>
-                            )}
-                            <TouchableOpacity
-                                onPress={() => setIsExpanded(v => !v)}
-                                hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
-                                style={styles.hamburgerBtn}
-                                accessibilityLabel={isExpanded ? 'Close settings' : 'Open settings'}
-                                accessibilityRole="button"
-                                accessibilityState={{ expanded: isExpanded }}
-                            >
-                                {isExpanded ? <CloseIcon /> : <HamburgerIcon />}
-                            </TouchableOpacity>
-                        </>
+                        <TouchableOpacity
+                            onPress={() => setIsExpanded(v => !v)}
+                            hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+                            style={styles.hamburgerBtn}
+                            accessibilityLabel={isExpanded ? 'Close settings' : 'Open settings'}
+                            accessibilityRole="button"
+                            accessibilityState={{ expanded: isExpanded }}
+                        >
+                            {isExpanded ? <CloseIcon /> : <HamburgerIcon />}
+                        </TouchableOpacity>
                     )}
                 </View>
             </View>
 
             {/* ── Settings Panel ── */}
-            {isExpanded && !journalSteps && (
+            {isExpanded && (
                 <View style={styles.settingsPanel}>
                     <View style={styles.divider} />
 
@@ -382,8 +359,10 @@ export const AppHeader: React.FC<AppHeaderProps> = ({ title, subtitle }) => {
 const styles = StyleSheet.create({
     headerCard: {
         backgroundColor: WHITE,
-        borderRadius: 20,
-        paddingHorizontal: 16,
+        borderTopLeftRadius: 0,
+        borderTopRightRadius: 0,
+        borderBottomLeftRadius: 20,
+        borderBottomRightRadius: 20,
         paddingTop: 14,
         paddingBottom: 14,
         shadowColor: '#000',
@@ -397,6 +376,7 @@ const styles = StyleSheet.create({
         alignItems: 'center',
         justifyContent: 'space-between',
         minHeight: 60,
+        paddingHorizontal: 32,
     },
     titleArea: {
         flex: 1,
@@ -469,6 +449,7 @@ const styles = StyleSheet.create({
     },
     settingsPanel: {
         marginTop: 4,
+        paddingHorizontal: 16,
     },
     divider: {
         height: 1,

@@ -24,87 +24,26 @@ import { UserProgress, DailyHunt } from '../types';
 import { loadProgress, awardXP, loadDailyHunt, addHuntEntry, saveDailyHunt } from '../utils/progressionStorage';
 import { LEVEL_TIERS } from '../data/progressionConfig';
 import { XPToast } from '../components/XPToast';
-import { QuestCard, QuestStatus, SearchIcon, PenIcon, ThoughtIcon, CheckIcon, SparkleIcon } from '../components/QuestCard';
+import { SparkleIcon } from '../components/QuestCard';
 import { trackEvent } from '../lib/analytics';
 import { useDailyQuote } from '../hooks/useDailyQuote';
 import { useMascotState } from '../hooks/useMascotState';
 import { selectDailyPrompt, getMascotIntro, recordPromptUsage } from '../utils/promptSystem';
 import { GratitudePrompt } from '../data/gratitudePrompts';
-import { getTodayDateString, saveJournalEntry, generateJournalId, analyzeJournalEntry, chatWithUlbo, updateEntryWithAI } from '../utils/journalStorage';
+import { getTodayDateString, saveJournalEntry, generateJournalId, analyzeJournalEntry, updateEntryWithAI } from '../utils/journalStorage';
 import { SpiritResponseModal } from '../components/SpiritResponseModal';
 import { HUNT_PLACEHOLDERS } from '../data/gratitudePrompts';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { buildMemoryContext } from '../memory/MemorySystem';
 import { useHeaderHeight } from '../context/HeaderHeightContext';
-import { useIsFocused, useFocusEffect } from '@react-navigation/native';
+import { useFocusEffect } from '@react-navigation/native';
 import { useSetTimerDisplay } from '../context/TimerContext';
 import { useSetJournalSteps } from '../context/JournalStepsContext';
 import { useTimerSecs } from '../context/TimerSecondsContext';
-import { VoiceSheet, MicTriggerButton } from '../components/VoiceSheet';
-
-// ── Animated avatar — pops on tap ─────────────────────────────────────────
-const AnimatedAvatar: React.FC<{ source: any; size?: number }> = ({ source, size = 36 }) => {
-    const scale = useRef(new RNAnimated.Value(1)).current;
-    const pop = () => {
-        RNAnimated.sequence([
-            RNAnimated.spring(scale, { toValue: 1.4, useNativeDriver: true, friction: 3, tension: 320 }),
-            RNAnimated.spring(scale, { toValue: 1,   useNativeDriver: true, friction: 5, tension: 200 }),
-        ]).start();
-    };
-    return (
-        <TouchableOpacity onPress={pop} activeOpacity={1}>
-            <RNAnimated.View style={{ transform: [{ scale }] }}>
-                <Image source={source} style={{ width: size, height: size }} resizeMode="contain" />
-            </RNAnimated.View>
-        </TouchableOpacity>
-    );
-};
-
-// ── Typing dots animation ──────────────────────────────────────────────────
-const TypingDots: React.FC = () => {
-    const dots = [
-        useRef(new RNAnimated.Value(0)).current,
-        useRef(new RNAnimated.Value(0)).current,
-        useRef(new RNAnimated.Value(0)).current,
-    ];
-
-    useEffect(() => {
-        const anims = dots.map((dot, i) =>
-            RNAnimated.loop(
-                RNAnimated.sequence([
-                    RNAnimated.delay(i * 200),
-                    RNAnimated.timing(dot, { toValue: 1, duration: 300, useNativeDriver: true }),
-                    RNAnimated.timing(dot, { toValue: 0, duration: 300, useNativeDriver: true }),
-                    RNAnimated.delay((dots.length - i) * 200),
-                ])
-            )
-        );
-        anims.forEach(a => a.start());
-        return () => anims.forEach(a => a.stop());
-    }, []);
-
-    return (
-        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 5, paddingVertical: 4 }}>
-            {dots.map((dot, i) => (
-                <RNAnimated.View
-                    key={i}
-                    style={{
-                        width: 8, height: 8, borderRadius: 4,
-                        backgroundColor: '#888888',
-                        opacity: dot,
-                        transform: [{ scale: dot.interpolate({ inputRange: [0, 1], outputRange: [0.6, 1] }) }],
-                    }}
-                />
-            ))}
-        </View>
-    );
-};
+import { VoiceSheet } from '../components/VoiceSheet';
 
 // Assets
-const coachBunny = require('../../assets/mascot/coach_bunny.png');
 const chatPotatoIcon     = require('../../assets/chat_potato.png');
 const chatModePotatoIcon = require('../../assets/mascot/chat_mode_potato_icon.png');
-const textPotatoIcon     = require('../../assets/mascot/text_mode_potato_icon.png');
 const { width } = Dimensions.get('window');
 
 // Level-based potato images
@@ -155,8 +94,7 @@ const COACH_MESSAGES = [
     "you're building a beautiful habit",
 ];
 
-const STEP_LABELS = ['Emotion', '3 things', 'reflect', 'quote'];
-const STEP_TITLES = ['How Do You Feel?', 'Find 3 Good Things', 'Write a Reflection', "Today's Quote"];
+const STEP_LABELS = ['Emotion', '3things', 'Reflect'];
 
 const YELLOW = '#FFE600';
 const BLACK  = '#000000';
@@ -171,46 +109,12 @@ const SPIRIT_FALLBACK = (name: string) => ({
 });
 
 
-// ─── Custom SVG: Arrow/Send ───
-const SendArrowIcon = ({ color = BLACK, size = 20 }: { color?: string; size?: number }) => (
-    <Svg width={size} height={size} viewBox="0 0 24 24" fill="none">
-        <Path d="M22 2L11 13M22 2l-7 20-4-9-9-4 20-7z" stroke={color} strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" />
-    </Svg>
-);
-
-type ChatMsg = { id: string; role: 'user' | 'ulbo'; text: string };
-
-const ULBO_FALLBACKS = [
-    "That's worth sitting with. Sometimes the heaviest thoughts are the ones closest to something real.",
-    "Hmm. What part of that feels like it's trying to teach you something?",
-    "There's something deeper underneath that thought... can you feel it? What lives beneath the surface?",
-    "You know, Nietzsche said the most spiritual people experience the most painful truths. The fact that you're thinking this deeply already says something about you.",
-    "Interesting. Most people run from that kind of honesty. But you're leaning in. That takes a quiet kind of strength.",
-    "Sometimes the discomfort IS the transformation happening. What would it mean to sit with this instead of solving it?",
-];
 
 const ArrowRightIcon = ({ color, size = 18 }: { color: string; size?: number }) => (
     <Svg width={size} height={size} viewBox="0 0 24 24" fill="none">
         <Path d="M5 12h14M13 6l6 6-6 6" stroke={color} strokeWidth={2.2} strokeLinecap="round" strokeLinejoin="round" />
     </Svg>
 );
-
-const SendIcon = ({ color, size = 18 }: { color: string; size?: number }) => (
-    <Svg width={size} height={size} viewBox="0 0 24 24" fill="none">
-        <Path d="M22 2L11 13" stroke={color} strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" />
-        <Path d="M22 2l-7 20-4-9-9-4 20-7z" stroke={color} strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" />
-    </Svg>
-);
-
-const ShuffleIcon = ({ color, size = 18 }: { color: string; size?: number }) => (
-    <Svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
-        <Path d="M2 18h1.4c1.3 0 2.5-.6 3.3-1.7l14.2-12.6c.8-1.1 2-1.7 3.3-1.7H22" />
-        <Path d="M2 6h1.4c1.3 0 2.5.6 3.3 1.7l14.2 12.6c.8 1.1 2 1.7 3.3 1.7H22" />
-        <Path d="M16 3h5v5" />
-        <Path d="M16 21h5v-5" />
-    </Svg>
-);
-
 
 // ═══════════════════════════════════════════════
 // Confetti Rain
@@ -219,6 +123,13 @@ const ShuffleIcon = ({ color, size = 18 }: { color: string; size?: number }) => 
 const CONFETTI_COLORS = ['#FFFF01', '#FF4757', '#2ED573', '#1E90FF', '#FF6B81', '#FFFFFF'];
 const SCREEN_W = Dimensions.get('window').width;
 const SCREEN_H = Dimensions.get('window').height;
+
+// Tab bar slider geometry:
+//   scroll paddingHorizontal 16px × 2 = 32px
+//   tab bar inner padding 4px × 2     =  8px
+//   content area width = SCREEN_W - 40
+//   each of 3 equal tabs = (SCREEN_W - 40) / 3
+const TAB_SLIDER_W = (SCREEN_W - 40) / 3;
 
 const ConfettiRain: React.FC<{ active: boolean }> = ({ active }) => {
     const pieces = useRef(
@@ -457,20 +368,12 @@ export const HuntScreen: React.FC = () => {
     const insets = useSafeAreaInsets();
     const setTimerDisplay = useSetTimerDisplay();
     const setJournalSteps = useSetJournalSteps();
-    const isFocused = useIsFocused();
     const { quote: todayQuote } = useDailyQuote();
     const { mood } = useMascotState();
 
     // Refs for auto-focusing inputs
     const emotionInputRef = useRef<any>(null);
     const huntInputRef = useRef<any>(null);
-    const chatScrollRef = useRef<any>(null);
-
-    // ── Chat state (step 3) ──
-    const [chatMessages, setChatMessages] = useState<ChatMsg[]>([]);
-    const [chatInput, setChatInput] = useState('');
-    const [ulboThinking, setUlboThinking] = useState(false);
-    const [chatInitialized, setChatInitialized] = useState(false);
 
     // ── Data ──
     const [progress, setProgress] = useState<UserProgress | null>(null);
@@ -485,9 +388,7 @@ export const HuntScreen: React.FC = () => {
     // ── Inputs ──
     const [huntInputs, setHuntInputs] = useState(['', '', '']);
     const [promptResponse, setPromptResponse] = useState('');
-    const [bonusResponse, setBonusResponse] = useState('');
     const [isPromptSaved, setIsPromptSaved] = useState(false);
-    const [isBonusSaved, setIsBonusSaved] = useState(false);
 
     // ── Coach messages ──
     const [coachMsgIndex, setCoachMsgIndex] = useState(0);
@@ -530,6 +431,18 @@ export const HuntScreen: React.FC = () => {
     const [activeStep, setActiveStep] = useState(0);
     const [reflectionPermSaved, setReflectionPermSaved] = useState(false);
 
+    // ── Tab slide animation ──
+    const slideAnim = useRef(new RNAnimated.Value(0)).current;
+
+    useEffect(() => {
+        RNAnimated.spring(slideAnim, {
+            toValue: activeStep * TAB_SLIDER_W,
+            useNativeDriver: true,
+            tension: 300,
+            friction: 26,
+        }).start();
+    }, [activeStep, slideAnim]);
+
     // ── Today's Reflection (journal writing) ──
     const [reflectionText, setReflectionText] = useState('');
 
@@ -539,7 +452,7 @@ export const HuntScreen: React.FC = () => {
     const [spiritData, setSpiritData] = useState<{ reply: string; mood: number; tags: string[]; followUp?: string } | null>(null);
 
     // ── Voice sheet ──
-    type VoiceTarget = 'hunt' | 'prompt' | 'reflection' | 'bonus';
+    type VoiceTarget = 'hunt' | 'prompt' | 'reflection' | 'emotion';
     const [voiceTarget, setVoiceTarget] = useState<VoiceTarget | null>(null);
 
     // ── XP Toast ──
@@ -599,19 +512,10 @@ export const HuntScreen: React.FC = () => {
     const huntCount = hunt?.entries?.length || 0;
     const isHuntDone = hunt?.completed || false;
 
-    // Sync journal step dots into AppHeader — only when this tab is focused
+    // Clean up journal steps on unmount
     useEffect(() => {
-        if (!isFocused) {
-            setJournalSteps(null);
-            return;
-        }
-        setJournalSteps({
-            labels: STEP_LABELS,
-            activeStep,
-            onStepPress: (i: number) => setActiveStep(i),
-        });
         return () => setJournalSteps(null);
-    }, [activeStep, isFocused, setJournalSteps]);
+    }, [setJournalSteps]);
 
     // Auto-focus relevant input when arriving on this tab
     useFocusEffect(
@@ -672,9 +576,6 @@ export const HuntScreen: React.FC = () => {
 
     useEffect(() => { loadData(); }, [loadData]);
 
-    const huntStatus: QuestStatus = isHuntDone ? 'done' : huntCount > 0 ? 'in-progress' : 'todo';
-    const promptStatus: QuestStatus = isPromptSaved ? 'done' : 'todo';
-    const bonusStatus: QuestStatus = isBonusSaved ? 'done' : 'todo';
 
     // ── Handlers ──
 
@@ -867,31 +768,6 @@ export const HuntScreen: React.FC = () => {
         }
     }, [dailyPrompt, promptResponse, todayQuote, progress]);
 
-    const handleSaveBonus = useCallback(async () => {
-        if (!bonusResponse.trim()) return;
-        Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-
-        await saveJournalEntry({
-            id: generateJournalId(),
-            quoteId: todayQuote.id,
-            quoteText: todayQuote.text,
-            response: bonusResponse.trim(),
-            createdAt: Date.now(),
-            date: getTodayDateString(),
-            sentimentTags: ['reflection', 'bonus'],
-        });
-        setIsBonusSaved(true);
-        Keyboard.dismiss();
-
-        if (progress) {
-            const result = await awardXP('readQuote', progress);
-            setProgress(result.progress);
-            if (result.xpGained > 0) {
-                setXpToast({ amount: result.xpGained, label: 'Saved', leveledUp: result.leveledUp, newLevelTitle: result.leveledUp ? LEVEL_TIERS.find(t => t.level === result.progress.level)?.title : undefined });
-            }
-        }
-    }, [bonusResponse, todayQuote, progress]);
-
     // ── Save today's reflection ──
     const handleSaveReflection = useCallback(async () => {
         const text = reflectionText.trim();
@@ -911,7 +787,6 @@ export const HuntScreen: React.FC = () => {
         setReflectionText('');
         setReflectionPermSaved(true);
         Keyboard.dismiss();
-        setTimeout(() => setActiveStep(prev => Math.max(prev, 3)), 700);
 
         // Show Ulbo's real-time AI response
         setSpiritVisible(true);
@@ -947,8 +822,8 @@ export const HuntScreen: React.FC = () => {
             setPromptResponse(prev => prev ? `${prev} ${text}` : text);
         } else if (voiceTarget === 'reflection') {
             setReflectionText(prev => prev ? `${prev} ${text}` : text);
-        } else if (voiceTarget === 'bonus') {
-            setBonusResponse(prev => prev ? `${prev} ${text}` : text);
+        } else if (voiceTarget === 'emotion') {
+            setEmotionNote(prev => prev ? `${prev} ${text}` : text);
         }
         setVoiceTarget(null);
     }, [voiceTarget, huntInputs]);
@@ -970,7 +845,8 @@ export const HuntScreen: React.FC = () => {
 
     // ── Animated square card when typing (RNAnimated = JS thread → flex recalculates) ──
     const CARD_W = SCREEN_W - 32;
-    const reflectCardHeight = SCREEN_H - (headerHeight || 80) - (62 + insets.bottom) - 8;
+    const TAB_BAR_H = 66; // tab bar height (~50px outer) + marginBottom (16px)
+    const reflectCardHeight = SCREEN_H - (headerHeight || 80) - (62 + insets.bottom) - 8 - TAB_BAR_H;
     const cardH = useRef(new RNAnimated.Value(reflectCardHeight)).current;
     const cardHStyle = { height: cardH };
     const kbOpen = useRef(false);
@@ -993,10 +869,12 @@ export const HuntScreen: React.FC = () => {
                 kbOpen.current = true;
                 outerScrollRef.current?.scrollTo({ y: 0, animated: false });
                 // Cap at actual available space so bottom buttons are never clipped
-                // Android adds extra margin to account for keyboard toolbar (emoji bar etc.)
+                // Extra margin reserves visible black padding between card and keyboard
+                // Android: kb height usually excludes the IME toolbar (suggestions/clipboard
+                // bar above the keys), so we reserve extra space for it.
                 const kbH = e.endCoordinates.height;
                 const hh = headerHeightRef.current || 80;
-                const safetyMargin = Platform.OS === 'android' ? 56 : 8;
+                const safetyMargin = Platform.OS === 'android' ? 140 : 32;
                 const availH = SCREEN_H - kbH - hh - safetyMargin;
                 const target = Math.min(CARD_W, availH);
                 RNAnimated.timing(cardH, { toValue: target, duration: 300, useNativeDriver: false }).start();
@@ -1011,72 +889,6 @@ export const HuntScreen: React.FC = () => {
         );
         return () => { show.remove(); hide.remove(); };
     }, []);
-
-    // ── Chat (step 3) init — pre-seeded exchange, no AI needed ──
-    useEffect(() => {
-        if (activeStep !== 3 || chatInitialized || !todayQuote.text) return;
-        setChatInitialized(true);
-        const authorLine = todayQuote.author ? `\n— ${todayQuote.author}` : '';
-        setChatMessages([
-            { id: 'user-0', role: 'user', text: 'Hey Ulbo, what wisdom do you have for me today?' },
-            { id: 'ulbo-0', role: 'ulbo', text: `"${todayQuote.text}"${authorLine}` },
-            { id: 'ulbo-1', role: 'ulbo', text: 'sit with that for a moment. what does it stir up in you?' },
-        ]);
-    }, [activeStep, chatInitialized, todayQuote.text]);
-
-    // ── Send user message & get Ulbo reply ──
-    const handleSendChat = useCallback(async () => {
-        const text = chatInput.trim();
-        if (!text || ulboThinking) return;
-        setChatInput('');
-        const userMsg: ChatMsg = { id: `u-${Date.now()}`, role: 'user', text };
-        const updatedMessages = [...chatMessages, userMsg];
-        setChatMessages(updatedMessages);
-        setTimeout(() => chatScrollRef.current?.scrollToEnd({ animated: true }), 100);
-
-        setUlboThinking(true);
-        const name = await AsyncStorage.getItem('@ulbo_user_name') || 'Friend';
-        try {
-            // Build memory context for richer responses
-            const memory = await buildMemoryContext();
-            const memoryPayload = {
-                mood_trend: memory.mood.trend,
-                dominant_mood: memory.mood.dominantMood,
-                streak: memory.mood.currentStreak,
-                dominant_themes: memory.journal.dominantThemes,
-                sentiment: memory.journal.averageSentiment,
-                days_since_last_entry: memory.journal.daysSinceLastEntry,
-            };
-
-            // Send full conversation + quote + memory to dedicated chat-ulbo edge function
-            const res = await chatWithUlbo(
-                updatedMessages.map(m => ({ role: m.role, text: m.text })),
-                name,
-                { text: todayQuote.text, author: todayQuote.author },
-                memoryPayload
-            );
-            const reply = res?.reply || ULBO_FALLBACKS[Math.floor(Math.random() * ULBO_FALLBACKS.length)];
-            setChatMessages(prev => [...prev, { id: `ulbo-${Date.now()}`, role: 'ulbo', text: reply }]);
-        } catch {
-            setChatMessages(prev => [...prev, {
-                id: `ulbo-${Date.now()}`, role: 'ulbo',
-                text: ULBO_FALLBACKS[Math.floor(Math.random() * ULBO_FALLBACKS.length)],
-            }]);
-        } finally {
-            setUlboThinking(false);
-            setTimeout(() => chatScrollRef.current?.scrollToEnd({ animated: true }), 100);
-        }
-
-        // Award XP on first real reply
-        if (!isBonusSaved && progress) {
-            const result = await awardXP('readQuote', progress);
-            setProgress(result.progress);
-            if (result.xpGained > 0) {
-                setXpToast({ amount: result.xpGained, label: 'Chat saved', leveledUp: result.leveledUp });
-            }
-            setIsBonusSaved(true);
-        }
-    }, [chatInput, chatMessages, ulboThinking, isBonusSaved, progress, todayQuote]);
 
     // ── Grow Potato handler ──
     const handleGrowPotato = useCallback(async () => {
@@ -1134,12 +946,34 @@ export const HuntScreen: React.FC = () => {
                     contentContainerStyle={[
                         styles.scroll,
                         { paddingTop: headerHeight || 12 },
-                        activeStep === 3 && { paddingBottom: 0 },
                     ]}
                     scrollEnabled={false}
                     keyboardShouldPersistTaps="handled"
                     showsVerticalScrollIndicator={false}
                 >
+                    {/* ─── Tab Bar ─── */}
+                    <View style={styles.tabBar}>
+                        {/* Sliding yellow indicator — sits behind the text labels */}
+                        <RNAnimated.View
+                            style={[
+                                styles.tabSlider,
+                                { width: TAB_SLIDER_W, transform: [{ translateX: slideAnim }] },
+                            ]}
+                        />
+                        {STEP_LABELS.map((label, i) => (
+                            <TouchableOpacity
+                                key={i}
+                                style={styles.tabPill}
+                                onPress={() => setActiveStep(i)}
+                                activeOpacity={0.75}
+                            >
+                                <Text style={[styles.tabPillText, i === activeStep && styles.tabPillTextActive]}>
+                                    {label}
+                                </Text>
+                            </TouchableOpacity>
+                        ))}
+                    </View>
+
                     {/* ─── Step 0: Emotion Check-In ─── */}
                     {activeStep === 0 && (
                         <RNAnimated.View style={cardHStyle}>
@@ -1201,16 +1035,24 @@ export const HuntScreen: React.FC = () => {
                             </ScrollView>
                             {selectedEmotion && (
                                 <Animated.View entering={FadeIn}>
-                                    <View style={styles.reflectDivider} />
-                                    <Pressable
-                                        style={({ pressed }) => [
-                                            styles.reflectSaveBtn,
-                                            pressed && { backgroundColor: YELLOW },
-                                        ]}
-                                        onPress={handleSaveEmotion}
-                                    >
-                                        <Text style={styles.reflectSaveBtnText}>SAVE TO JOURNAL</Text>
-                                    </Pressable>
+                                    <View style={styles.emotionSaveRow}>
+                                        <Pressable
+                                            style={({ pressed }) => [
+                                                styles.emotionSaveBtn,
+                                                pressed && { backgroundColor: YELLOW },
+                                            ]}
+                                            onPress={handleSaveEmotion}
+                                        >
+                                            <Text style={styles.emotionSaveBtnText}>SAVE TO REFLECT</Text>
+                                        </Pressable>
+                                        <TouchableOpacity
+                                            style={styles.emotionVoiceBtn}
+                                            onPress={() => setVoiceTarget('emotion')}
+                                            activeOpacity={0.7}
+                                        >
+                                            <Image source={chatModePotatoIcon} style={styles.emotionVoiceIcon} resizeMode="contain" />
+                                        </TouchableOpacity>
+                                    </View>
                                 </Animated.View>
                             )}
                         </Animated.View>
@@ -1249,26 +1091,17 @@ export const HuntScreen: React.FC = () => {
                                                     {huntInputs[i] || hunt?.entries[i]?.text}
                                                 </Text>
                                             ) : current ? (
-                                                <>
-                                                    <RNTextInput
-                                                        ref={i === huntCount ? huntInputRef : undefined}
-                                                        style={styles.gratitudeInput}
-                                                        placeholder={huntPlaceholders[i] || 'Something good today...'}
-                                                        placeholderTextColor="#AAAAAA"
-                                                        value={huntInputs[i]}
-                                                        onChangeText={t => updateInput(i, t)}
-                                                        onSubmitEditing={() => handleAddEntry(i)}
-                                                        returnKeyType="done"
-                                                    />
-                                                    <TouchableOpacity
-                                                        onPress={() => handleAddEntry(i)}
-                                                        disabled={!huntInputs[i]?.trim()}
-                                                        style={[styles.sendBtn, !huntInputs[i]?.trim() && styles.sendBtnDisabled]}
-                                                        activeOpacity={0.7}
-                                                    >
-                                                        <SendIcon color={huntInputs[i]?.trim() ? BLACK : '#AAAAAA'} size={16} />
-                                                    </TouchableOpacity>
-                                                </>
+                                                <RNTextInput
+                                                    ref={i === huntCount ? huntInputRef : undefined}
+                                                    style={styles.gratitudeInput}
+                                                    placeholder={huntPlaceholders[i] || 'Something good today...'}
+                                                    placeholderTextColor="#AAAAAA"
+                                                    value={huntInputs[i]}
+                                                    onChangeText={t => updateInput(i, t)}
+                                                    onSubmitEditing={() => handleAddEntry(i)}
+                                                    returnKeyType="done"
+                                                    blurOnSubmit={false}
+                                                />
                                             ) : (
                                                 <Text style={styles.gratitudeLocked}>
                                                     {locked ? 'Add one more thing...' : ''}
@@ -1331,7 +1164,6 @@ export const HuntScreen: React.FC = () => {
                                 <>
                                     {/* ── Question header ── */}
                                     <View style={styles.reflectHeader}>
-                                        <Text style={styles.reflectQNum}>01</Text>
                                         <Text style={styles.reflectQuestion}>
                                             {dailyPrompt?.text ?? "What's on your mind? What does this quote stir up for you?"}
                                         </Text>
@@ -1353,121 +1185,34 @@ export const HuntScreen: React.FC = () => {
                                             textAlignVertical="top"
                                             onFocus={handleInputFocus}
                                         />
-                                        {/* Chat potato — voice button */}
+                                    </View>
+
+                                    {/* ── Save + Voice row ── */}
+                                    <View style={styles.reflectSaveRow}>
+                                        <Pressable
+                                            style={({ pressed }) => [
+                                                styles.emotionSaveBtn,
+                                                !canSaveReflection && { opacity: 0.35 },
+                                                pressed && canSaveReflection && { backgroundColor: YELLOW },
+                                            ]}
+                                            onPress={handleSaveReflection}
+                                            disabled={!canSaveReflection}
+                                        >
+                                            <Text style={styles.emotionSaveBtnText}>SAVE TO JOURNAL</Text>
+                                        </Pressable>
                                         <TouchableOpacity
-                                            style={styles.reflectVoiceBtn}
+                                            style={styles.emotionVoiceBtn}
                                             onPress={() => setVoiceTarget('reflection')}
                                             activeOpacity={0.7}
                                         >
-                                            <Image source={chatModePotatoIcon} style={styles.reflectVoiceIcon} resizeMode="contain" />
+                                            <Image source={chatModePotatoIcon} style={styles.emotionVoiceIcon} resizeMode="contain" />
                                         </TouchableOpacity>
                                     </View>
-
-                                    {/* ── Divider + Save button ── */}
-                                    <View style={styles.reflectDivider} />
-                                    <Pressable
-                                        style={({ pressed }) => [
-                                            styles.reflectSaveBtn,
-                                            !canSaveReflection && { opacity: 0.35 },
-                                            pressed && canSaveReflection && { backgroundColor: YELLOW },
-                                        ]}
-                                        onPress={handleSaveReflection}
-                                        disabled={!canSaveReflection}
-                                    >
-                                        <Text style={styles.reflectSaveBtnText}>SAVE TO JOURNAL</Text>
-                                    </Pressable>
                                 </>
                             )}
                         </Animated.View>
                         </RNAnimated.View>
                     )}
-
-                    {/* ─── Step 3: Quote Chat ─── */}
-                    {activeStep === 3 && ((): React.ReactElement => {
-                        const level = Math.min(Math.max(progress?.level ?? 1, 1), 9);
-                        const levelPotato = POTATO_IMAGES[level];
-                        return (
-                            <RNAnimated.View style={cardHStyle}>
-                            <Animated.View entering={FadeInDown.duration(400)} style={[styles.reflectCard, { flex: 1 }]}>
-                                {/* Header */}
-                                <View style={styles.reflectHeader}>
-                                    <Text style={styles.reflectQuestion}>reflect with ulbo on today's wisdom</Text>
-                                </View>
-                                <View style={styles.reflectDivider} />
-
-                                {/* Scrollable chat messages */}
-                                <ScrollView
-                                    ref={chatScrollRef}
-                                    style={styles.chatArea}
-                                    contentContainerStyle={styles.chatContent}
-                                    showsVerticalScrollIndicator={true}
-                                    scrollIndicatorInsets={{ right: 1 }}
-                                    keyboardShouldPersistTaps="handled"
-                                    nestedScrollEnabled={true}
-                                    onContentSizeChange={() => chatScrollRef.current?.scrollToEnd({ animated: true })}
-                                >
-                                    {chatMessages.map(msg => (
-                                        msg.role === 'user' ? (
-                                            <View key={msg.id} style={styles.chatRowRight}>
-                                                <AnimatedAvatar source={levelPotato} />
-                                                <View style={styles.chatBubbleRight}>
-                                                    <Text style={styles.chatBubbleRightText}>{msg.text}</Text>
-                                                </View>
-                                            </View>
-                                        ) : (
-                                            <View key={msg.id} style={styles.chatRowLeft}>
-                                                <AnimatedAvatar source={chatPotatoIcon} />
-                                                <View style={styles.chatBubbleLeft}>
-                                                    <Text style={styles.chatBubbleLeftText}>{msg.text}</Text>
-                                                </View>
-                                            </View>
-                                        )
-                                    ))}
-
-                                    {/* Typing indicator */}
-                                    {ulboThinking && (
-                                        <View style={styles.chatRowLeft}>
-                                            <AnimatedAvatar source={chatPotatoIcon} />
-                                            <View style={styles.chatBubbleLeft}>
-                                                <TypingDots />
-                                            </View>
-                                        </View>
-                                    )}
-                                </ScrollView>
-
-                                {/* Input bar */}
-                                <View style={styles.reflectDivider} />
-                                <View style={styles.chatInputRow}>
-                                    <RNTextInput
-                                        style={styles.chatInput}
-                                        placeholder="Message Ulbo..."
-                                        placeholderTextColor="#AAAAAA"
-                                        multiline
-                                        value={chatInput}
-                                        onChangeText={setChatInput}
-                                        textAlignVertical="top"
-                                        returnKeyType="send"
-                                        onSubmitEditing={handleSendChat}
-                                        blurOnSubmit={false}
-                                        onFocus={handleInputFocus}
-                                    />
-                                    <TouchableOpacity
-                                        style={[styles.chatSendBtn, chatInput.trim() && styles.chatSendBtnActive]}
-                                        onPress={chatInput.trim() ? handleSendChat : () => setVoiceTarget('bonus')}
-                                        activeOpacity={0.7}
-                                        disabled={ulboThinking}
-                                    >
-                                        {chatInput.trim() ? (
-                                            <SendArrowIcon color={BLACK} size={20} />
-                                        ) : (
-                                            <Image source={textPotatoIcon} style={styles.chatSendIcon} resizeMode="contain" />
-                                        )}
-                                    </TouchableOpacity>
-                                </View>
-                            </Animated.View>
-                            </RNAnimated.View>
-                        );
-                    })() as React.ReactElement}
 
                     <View style={{ height: 40 }} />
 
@@ -1518,13 +1263,45 @@ const styles = StyleSheet.create({
         paddingTop: 12,
         paddingBottom: 120,
     },
+    // ── Tab Bar ──
+    tabBar: {
+        flexDirection: 'row',
+        backgroundColor: WHITE,
+        borderRadius: 50,
+        marginBottom: 16,
+        padding: 4,
+    },
+    tabSlider: {
+        position: 'absolute',
+        top: 4,
+        bottom: 4,
+        left: 4,
+        backgroundColor: YELLOW,
+        borderRadius: 50,
+    },
+    tabPill: {
+        flex: 1,
+        paddingVertical: 13,
+        alignItems: 'center',
+        zIndex: 1,              // text above the yellow slider
+    },
+    tabPillText: {
+        fontFamily: 'Inter-SemiBold',
+        fontSize: 13,
+        color: BLACK,
+        opacity: 0.45,
+    },
+    tabPillTextActive: {
+        opacity: 1,
+    },
+
     // ── Emotion Step ──
     emotionTitle: {
-        fontFamily: 'Inter-SemiBold',
-        fontSize: 25,
+        fontFamily: 'Inter-Bold',
+        fontSize: 16,
         color: BLACK,
-        marginBottom: 12,
-        letterSpacing: 0.3,
+        marginBottom: 10,
+        letterSpacing: 0.2,
     },
     emotionRow: {
         flexDirection: 'row',
@@ -1534,12 +1311,12 @@ const styles = StyleSheet.create({
     emotionBtn: {
         flex: 1,
         alignItems: 'center',
-        paddingVertical: 4,
-        paddingHorizontal: 4,
+        paddingVertical: 2,
+        paddingHorizontal: 2,
     },
     emotionImg: {
-        width: 64,
-        height: 64,
+        width: 50,
+        height: 50,
     },
     emotionDivider: {
         height: 2,
@@ -1555,6 +1332,37 @@ const styles = StyleSheet.create({
         paddingBottom: 16,
         lineHeight: 24,
         textAlignVertical: 'top',
+    },
+    emotionSaveRow: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        paddingHorizontal: 16,
+        paddingVertical: 8,
+        gap: 10,
+    },
+    emotionSaveBtn: {
+        flex: 1,
+        height: 46,
+        borderRadius: 23,
+        backgroundColor: '#EEEEEE',
+        alignItems: 'center',
+        justifyContent: 'center',
+    },
+    emotionSaveBtnText: {
+        fontFamily: 'Inter-SemiBold',
+        fontSize: 16,
+        color: BLACK,
+        letterSpacing: 1,
+    },
+    emotionVoiceBtn: {
+        width: 46,
+        height: 46,
+        alignItems: 'center',
+        justifyContent: 'center',
+    },
+    emotionVoiceIcon: {
+        width: 46,
+        height: 46,
     },
 
     contentCard: {
@@ -1687,14 +1495,9 @@ const styles = StyleSheet.create({
     },
     reflectHeader: {
         paddingHorizontal: 20,
-        paddingTop: 20,
-        paddingBottom: 16,
-        gap: 10,
-    },
-    reflectQNum: {
-        fontFamily: 'Inter-SemiBold',
-        fontSize: 16,
-        color: BLACK,
+        paddingTop: 16,
+        paddingBottom: 12,
+        gap: 6,
     },
     reflectQuestion: {
         fontFamily: 'Inter-SemiBold',
@@ -1709,8 +1512,8 @@ const styles = StyleSheet.create({
     reflectInputWrap: {
         flex: 1,
         paddingHorizontal: 20,
-        paddingTop: 16,
-        paddingBottom: 16,
+        paddingTop: 8,
+        paddingBottom: 0,
     },
     reflectInput: {
         flex: 1,
@@ -1719,151 +1522,32 @@ const styles = StyleSheet.create({
         lineHeight: 26,
         color: BLACK,
         textAlignVertical: 'top',
+        // Strip iOS default internal TextInput padding so the bottom gap is consistent
+        paddingTop: 0,
+        paddingBottom: 0,
     },
-    reflectVoiceBtn: {
-        position: 'absolute',
-        bottom: 16,
-        right: 16,
-        width: 56,
-        height: 56,
-        alignItems: 'center',
-        justifyContent: 'center',
-        backgroundColor: WHITE,
-        borderRadius: 28,
-    },
-    reflectVoiceIcon: {
-        width: 52,
-        height: 52,
-    },
-    reflectSaveBtn: {
-        paddingVertical: 18,
-        alignItems: 'center',
-        justifyContent: 'center',
-    },
-    reflectSaveBtnText: {
-        fontFamily: 'Inter-SemiBold',
-        fontSize: 16,
-        color: BLACK,
-        letterSpacing: 1,
-    },
-    // ── Chat step (step 3) ──
-    chatArea: {
-        flex: 1,
-    },
-    chatContent: {
-        paddingHorizontal: 16,
-        paddingVertical: 20,
-        gap: 24,
-    },
-    chatRowRight: {
-        alignItems: 'flex-end',
-        gap: 6,
-    },
-    chatRowLeft: {
-        alignItems: 'flex-start',
-        gap: 6,
-    },
-    chatAvatar: {
-        width: 36,
-        height: 36,
-    },
-    chatBubbleRight: {
-        backgroundColor: YELLOW,
-        borderWidth: 2,
-        borderColor: BLACK,
-        borderRadius: 20,
-        borderBottomRightRadius: 4,
-        paddingHorizontal: 16,
-        paddingVertical: 12,
-        maxWidth: '85%',
-    },
-    chatBubbleRightText: {
-        fontFamily: 'Inter-Medium',
-        fontSize: 16,
-        lineHeight: 24,
-        color: BLACK,
-    },
-    chatBubbleLeft: {
-        backgroundColor: '#F0F0F0',
-        borderWidth: 2,
-        borderColor: BLACK,
-        borderRadius: 20,
-        borderBottomLeftRadius: 4,
-        paddingHorizontal: 16,
-        paddingVertical: 12,
-        maxWidth: '85%',
-    },
-    chatBubbleLeftText: {
-        fontFamily: 'Inter-Medium',
-        fontSize: 16,
-        lineHeight: 24,
-        color: BLACK,
-    },
-    chatInputRow: {
+    reflectSaveRow: {
         flexDirection: 'row',
-        alignItems: 'flex-end',
+        alignItems: 'center',
         paddingHorizontal: 16,
-        paddingVertical: 12,
+        paddingTop: 8,
+        paddingBottom: 8,
         gap: 10,
     },
-    chatInput: {
-        flex: 1,
-        fontFamily: 'Inter-Medium',
-        fontSize: 16,
-        color: BLACK,
-        minHeight: 44,
-        maxHeight: 120,
-        paddingVertical: 8,
-    },
-    chatSendBtn: {
-        width: 44,
-        height: 44,
-        alignItems: 'center',
-        justifyContent: 'center',
-    },
-    chatSendBtnActive: {
-        backgroundColor: YELLOW,
-        borderRadius: 22,
-        borderWidth: 2,
-        borderColor: BLACK,
-    },
-    chatThinking: {
-        fontFamily: 'Inter-Medium',
-        fontSize: 15,
-        color: '#888888',
-        fontStyle: 'italic',
-    },
-    chatSendIcon: {
-        width: 40,
-        height: 40,
-    },
-    chatDoneRow: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        gap: 8,
-        paddingHorizontal: 20,
-        paddingVertical: 20,
-    },
-    chatDoneText: {
-        fontFamily: 'Inter-Medium',
-        fontSize: 15,
-        color: '#4B5563',
-    },
-
     reflectSavedWrap: {
         alignItems: 'center',
-        paddingVertical: 48,
+        paddingVertical: 12,
         paddingHorizontal: 24,
-        gap: 12,
+        gap: 8,
     },
     reflectSavedTitle: {
         fontFamily: 'Inter-SemiBold',
-        fontSize: 20,
+        fontSize: 16,
         color: BLACK,
     },
     reflectSavedSub: {
         fontFamily: 'Inter-Medium',
-        fontSize: 15,
+        fontSize: 16,
         color: '#4B5563',
     },
     reflectionFooter: {
@@ -1871,7 +1555,7 @@ const styles = StyleSheet.create({
         alignItems: 'center',
         justifyContent: 'space-between',
         paddingHorizontal: 18,
-        paddingBottom: 14,
+        paddingBottom: 8,
     },
     reflectionWordCount: {
         fontFamily: 'Inter-SemiBold',
@@ -1881,12 +1565,12 @@ const styles = StyleSheet.create({
     reflectionSaveBtn: {
         backgroundColor: '#FFE600',
         paddingHorizontal: 22,
-        paddingVertical: 9,
+        paddingVertical: 0,
         borderRadius: 20,
     },
     reflectionSaveBtnText: {
         fontFamily: 'Inter-Bold',
-        fontSize: 17,
+        fontSize: 16,
         color: '#000000',
     },
 
@@ -1900,25 +1584,25 @@ const styles = StyleSheet.create({
         flexDirection: 'row',
         alignItems: 'center',
         justifyContent: 'space-between',
-        marginBottom: 14,
+        marginBottom: 12,
     },
     gratitudeTitle: {
-        fontFamily: 'Inter-SemiBold',
-        fontSize: 25,
+        fontFamily: 'Inter-Bold',
+        fontSize: 16,
         color: BLACK,
-        letterSpacing: 0.3,
+        letterSpacing: 0.2,
     },
     gratitudeCounter: {
-        fontSize: 20,
+        fontSize: 16,
     },
     gratitudeCountNum: {
-        fontFamily: 'Inter-SemiBold',
-        fontSize: 20,
+        fontFamily: 'Inter-Bold',
+        fontSize: 16,
         color: BLACK,
     },
     gratitudeCountTotal: {
-        fontFamily: 'Inter-Medium',
-        fontSize: 20,
+        fontFamily: 'Inter-Bold',
+        fontSize: 16,
         color: '#AAAAAA',
     },
     gratitudeDivider: {
@@ -1962,17 +1646,6 @@ const styles = StyleSheet.create({
     gratitudeMascot: {
         width: 80,
         height: 80,
-    },
-    sendBtn: {
-        width: 34,
-        height: 34,
-        borderRadius: 17,
-        alignItems: 'center',
-        justifyContent: 'center',
-        backgroundColor: YELLOW,
-    },
-    sendBtnDisabled: {
-        backgroundColor: '#F0F0F0',
     },
     completionMsg: {
         flexDirection: 'row',

@@ -36,6 +36,15 @@ import { useHeaderHeight } from '../context/HeaderHeightContext';
 import { searchPhotos, UNSPLASH_ACCESS_KEY, UnsplashPhoto } from '../utils/unsplashApi';
 import { getDailyVisionBoard, saveDailyVisionBoard, DailyVisionBoard } from '../utils/dailyVisionStorage';
 import { getThemeForDate, VisionTheme } from '../data/visionThemes';
+import {
+    getInspirationCategories,
+    createInspirationCategory,
+    updateInspirationCategory,
+    deleteInspirationCategory,
+    makeInspirationImage,
+    InspirationCategory,
+    InspirationImage,
+} from '../utils/inspirationStorage';
 
 const YELLOW = '#FFE600';
 const BLACK = '#000000';
@@ -427,6 +436,7 @@ const DraggableItem = ({
     onDragEnd,
     isOverDeleteZone,
     layoutVersion,
+    boardSize,
 }: {
     item: LocalVisionItem;
     onUpdate: (id: string, x: number, y: number, s: number, r: number) => void;
@@ -437,6 +447,7 @@ const DraggableItem = ({
     onDragEnd: () => void;
     isOverDeleteZone: SharedValue<boolean>;
     layoutVersion: number;
+    boardSize: SharedValue<{ width: number; height: number }>;
 }) => {
     const x = useSharedValue(item.position_x);
     const y = useSharedValue(item.position_y);
@@ -454,8 +465,6 @@ const DraggableItem = ({
     const isDragging = useSharedValue(false);
     const context = useSharedValue({ x: 0, y: 0 });
 
-    const HEADER_HEIGHT = 100;
-
     const pan = Gesture.Pan()
         .onStart(() => {
             isDragging.value = true;
@@ -466,20 +475,32 @@ const DraggableItem = ({
             x.value = context.value.x + e.translationX;
             y.value = context.value.y + e.translationY;
 
-            // Item center in screen coords (items are now at absolute board coords)
-            const itemCenterX = x.value + ITEM_SIZE / 2;
-            const itemCenterY = HEADER_HEIGHT + y.value + ITEM_SIZE / 2;
+            // Hit-test in BOARD-LOCAL coords using AABB overlap so the item's
+            // ACTUAL visible footprint (after scale) is what matters — not just
+            // its center. The delete zone is rendered inside the board at
+            // `bottom: 40` and centered horizontally.
+            const boardW = boardSize.value.width;
+            const boardH = boardSize.value.height;
+            if (boardW > 0 && boardH > 0) {
+                const itemCX = x.value + ITEM_SIZE / 2;
+                const itemCY = y.value + ITEM_SIZE / 2;
+                const itemHalfW = (ITEM_SIZE * scale.value) / 2;
+                const itemHalfH = (ITEM_SIZE * scale.value) / 2;
 
-            const zoneCenterX = width / 2;
-            const thresholdY = height - 250;
-            const thresholdX = 150;
+                const binCX     = boardW / 2;
+                const binCY     = boardH - 65;
+                const binHalfW  = 90;  // bin half-width  (with a small margin)
+                const binHalfH  = 45;  // bin half-height (with a small margin)
 
-            const isOver = itemCenterY > thresholdY && Math.abs(itemCenterX - zoneCenterX) < thresholdX;
+                const isOver =
+                    Math.abs(itemCX - binCX) < (itemHalfW + binHalfW) &&
+                    Math.abs(itemCY - binCY) < (itemHalfH + binHalfH);
 
-            if (isOver !== isOverDeleteZone.value) {
-                isOverDeleteZone.value = isOver;
-                if (isOver) {
-                    runOnJS(Haptics.impactAsync)(Haptics.ImpactFeedbackStyle.Medium);
+                if (isOver !== isOverDeleteZone.value) {
+                    isOverDeleteZone.value = isOver;
+                    if (isOver) {
+                        runOnJS(Haptics.impactAsync)(Haptics.ImpactFeedbackStyle.Medium);
+                    }
                 }
             }
         })
@@ -1539,6 +1560,551 @@ export const StockImageSheet = ({
 };
 
 // ═══════════════════════════════════════════════════════════
+// Inspiration View (grid + detail)
+// ═══════════════════════════════════════════════════════════
+
+type InspirationCardProps = {
+    category?:    InspirationCategory;   // undefined → "add new" placeholder
+    onPress:      () => void;
+    onLongPress?: () => void;
+};
+
+const InspirationCard: React.FC<InspirationCardProps> = ({ category, onPress, onLongPress }) => {
+    if (!category) {
+        return (
+            <TouchableOpacity
+                style={inspStyles.card}
+                onPress={onPress}
+                activeOpacity={0.75}
+            >
+                <View style={inspStyles.emptyCardInner}>
+                    <View style={inspStyles.plusCircle}>
+                        <Text style={inspStyles.plusText}>+</Text>
+                    </View>
+                </View>
+            </TouchableOpacity>
+        );
+    }
+
+    const thumb   = category.images[0]?.uri;
+    const title   = category.title || 'UNTITLED';
+
+    return (
+        <TouchableOpacity
+            style={inspStyles.card}
+            onPress={onPress}
+            onLongPress={onLongPress}
+            delayLongPress={450}
+            activeOpacity={0.8}
+        >
+            <View style={inspStyles.cardImageWrap}>
+                {thumb ? (
+                    <Image
+                        source={{ uri: thumb }}
+                        style={inspStyles.cardImage}
+                        resizeMode="cover"
+                    />
+                ) : null}
+            </View>
+            <Text style={inspStyles.cardTitle} numberOfLines={1}>{title}</Text>
+        </TouchableOpacity>
+    );
+};
+
+// ── Draggable image inside the inspiration board ──
+// Pan + pinch + rotate. Drag onto the bin (when one's visible) to remove.
+type DraggableInspirationImageProps = {
+    image:            InspirationImage;
+    onUpdate:         (id: string, x: number, y: number, s: number, r: number) => void;
+    onInstantRemove:  (id: string) => void;
+    onDragStart:      () => void;
+    onDragEnd:        () => void;
+    isOverDeleteZone: SharedValue<boolean>;
+    boardSize:        SharedValue<{ width: number; height: number }>;
+};
+
+const INSP_IMG_SIZE = 120;
+
+const DraggableInspirationImage: React.FC<DraggableInspirationImageProps> = ({
+    image,
+    onUpdate,
+    onInstantRemove,
+    onDragStart,
+    onDragEnd,
+    isOverDeleteZone,
+    boardSize,
+}) => {
+    const x        = useSharedValue(image.position_x);
+    const y        = useSharedValue(image.position_y);
+    const scale    = useSharedValue(image.scale);
+    const rotation = useSharedValue(image.rotation);
+    const ctx      = useSharedValue({ x: 0, y: 0 });
+    const dragging = useSharedValue(false);
+
+    const pan = Gesture.Pan()
+        .onStart(() => {
+            // Reset for this drag so a successful previous delete doesn't
+            // leave the flag latched true.
+            isOverDeleteZone.value = false;
+            dragging.value = true;
+            ctx.value = { x: x.value, y: y.value };
+            runOnJS(onDragStart)();
+        })
+        .onUpdate((e) => {
+            x.value = ctx.value.x + e.translationX;
+            y.value = ctx.value.y + e.translationY;
+
+            // AABB overlap so the image's actual visible footprint (after
+            // scale) decides "over the bin", not just the geometric center.
+            const boardW = boardSize.value.width;
+            const boardH = boardSize.value.height;
+            if (boardW > 0 && boardH > 0) {
+                const itemCX = x.value + INSP_IMG_SIZE / 2;
+                const itemCY = y.value + INSP_IMG_SIZE / 2;
+                const itemHalfW = (INSP_IMG_SIZE * scale.value) / 2;
+                const itemHalfH = (INSP_IMG_SIZE * scale.value) / 2;
+
+                const binCX     = boardW / 2;
+                const binCY     = boardH - 65;
+                const binHalfW  = 90;
+                const binHalfH  = 45;
+
+                const isOver =
+                    Math.abs(itemCX - binCX) < (itemHalfW + binHalfW) &&
+                    Math.abs(itemCY - binCY) < (itemHalfH + binHalfH);
+
+                if (isOver !== isOverDeleteZone.value) {
+                    isOverDeleteZone.value = isOver;
+                    if (isOver) {
+                        runOnJS(Haptics.impactAsync)(Haptics.ImpactFeedbackStyle.Medium);
+                    }
+                }
+            }
+        })
+        .onFinalize(() => {
+            dragging.value = false;
+            runOnJS(onDragEnd)();
+
+            // NB: do NOT reset isOverDeleteZone here — pinch/rot's onFinalize
+            // also fires on release, and they read this flag to decide
+            // whether to skip their own onUpdate (which would re-introduce
+            // the deleted image from closure state).
+            if (isOverDeleteZone.value) {
+                runOnJS(onInstantRemove)(image.id);
+            } else {
+                runOnJS(onUpdate)(image.id, x.value, y.value, scale.value, rotation.value);
+            }
+        });
+
+    const pinch = Gesture.Pinch()
+        .onChange((e) => { scale.value *= e.scaleChange; })
+        .onFinalize(() => {
+            // Don't persist a position update if the release was over the
+            // bin — pan.onFinalize handles deletion, and re-writing state
+            // here would resurrect the deleted image.
+            if (isOverDeleteZone.value) return;
+            runOnJS(onUpdate)(image.id, x.value, y.value, scale.value, rotation.value);
+        });
+
+    const rot = Gesture.Rotation()
+        .onChange((e) => { rotation.value += e.rotationChange * (180 / Math.PI); })
+        .onFinalize(() => {
+            if (isOverDeleteZone.value) return;
+            runOnJS(onUpdate)(image.id, x.value, y.value, scale.value, rotation.value);
+        });
+
+    const composed = Gesture.Simultaneous(pan, pinch, rot);
+
+    const animatedStyle = useAnimatedStyle(() => ({
+        transform: [
+            { translateX: x.value },
+            { translateY: y.value },
+            { scale: scale.value },
+            { rotate: `${rotation.value}deg` },
+        ],
+        position: 'absolute' as const,
+        zIndex: dragging.value ? 100 : 5,
+        shadowOpacity: withTiming(dragging.value ? 0.18 : 0.08, { duration: 180 }),
+    }));
+
+    return (
+        <GestureDetector gesture={composed}>
+            <Animated.View style={[inspStyles.draggableImgWrap, animatedStyle]}>
+                <Image
+                    source={{ uri: image.uri }}
+                    style={inspStyles.draggableImg}
+                    resizeMode="cover"
+                />
+            </Animated.View>
+        </GestureDetector>
+    );
+};
+
+type InspirationDetailProps = {
+    category: InspirationCategory;
+    onBack:   () => void;
+    onChange: (patch: Partial<InspirationCategory>) => void;
+};
+
+const InspirationDetail: React.FC<InspirationDetailProps> = ({
+    category,
+    onBack,
+    onChange,
+}) => {
+    const [title, setTitle] = useState(category.title);
+    const [isDraggingAny, setIsDraggingAny] = useState(false);
+    const isOverDeleteZone = useSharedValue(false);
+    const boardSize        = useSharedValue({ width: 0, height: 0 });
+
+    const deleteZoneStyle = useAnimatedStyle(() => ({
+        backgroundColor: isOverDeleteZone.value ? '#FF3B30' : WHITE,
+        borderColor:     isOverDeleteZone.value ? '#FF3B30' : BLACK + '20',
+        transform: [{ scale: withTiming(isOverDeleteZone.value ? 1.1 : 1, { duration: 180 }) }],
+    }));
+    const deleteIconProps = useAnimatedProps(() => ({
+        stroke: isOverDeleteZone.value ? '#FFF' : BLACK,
+    }));
+
+    const commitTitle = () => {
+        const trimmed = title.trim();
+        if (trimmed !== category.title) {
+            onChange({ title: trimmed });
+        }
+    };
+
+    const handleAddImage = async () => {
+        const result = await ImagePicker.launchImageLibraryAsync({
+            mediaTypes:              ['images'],
+            allowsEditing:           false,
+            quality:                 0.8,
+            allowsMultipleSelection: true,
+            selectionLimit:          8,
+        });
+        if (result.canceled) return;
+        const newImgs = result.assets.map((a, i) =>
+            makeInspirationImage(a.uri, i, category.images.length)
+        );
+        onChange({ images: [...category.images, ...newImgs] });
+    };
+
+    const handleImageUpdate = (id: string, x: number, y: number, s: number, r: number) => {
+        const next = category.images.map(img =>
+            img.id === id
+                ? { ...img, position_x: x, position_y: y, scale: s, rotation: r }
+                : img
+        );
+        onChange({ images: next });
+    };
+
+    const handleImageInstantRemove = (id: string) => {
+        Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+        onChange({ images: category.images.filter(i => i.id !== id) });
+    };
+
+    // Root = the white board card itself, so it matches the exact shape of
+    // the Monthly board / Inspiration grid (same marginHorizontal, radius).
+    return (
+        <View
+            style={inspStyles.boardCard}
+            onLayout={e => {
+                const { width: w, height: h } = e.nativeEvent.layout;
+                boardSize.value = { width: w, height: h };
+            }}
+        >
+            {/* Subtle back chevron, top-left, no background */}
+            <TouchableOpacity
+                onPress={onBack}
+                hitSlop={{ top: 14, bottom: 14, left: 14, right: 14 }}
+                style={inspStyles.detailBackInline}
+                activeOpacity={0.5}
+            >
+                <ChevronLeftIcon color={BLACK} size={24} />
+            </TouchableOpacity>
+
+            {/* Editable title, centered at top of card */}
+            <View style={inspStyles.boardTitleWrap} pointerEvents="box-none">
+                <RNTextInput
+                    value={title}
+                    onChangeText={setTitle}
+                    onBlur={commitTitle}
+                    onSubmitEditing={commitTitle}
+                    placeholder="TITLE"
+                    placeholderTextColor="#D1D5DB"
+                    style={inspStyles.boardTitleInput}
+                    autoCapitalize="characters"
+                    returnKeyType="done"
+                />
+            </View>
+
+            {/* Draggable images */}
+            {category.images.map(img => (
+                <DraggableInspirationImage
+                    key={img.id}
+                    image={img}
+                    onUpdate={handleImageUpdate}
+                    onInstantRemove={handleImageInstantRemove}
+                    onDragStart={() => setIsDraggingAny(true)}
+                    onDragEnd={()   => setIsDraggingAny(false)}
+                    isOverDeleteZone={isOverDeleteZone}
+                    boardSize={boardSize}
+                />
+            ))}
+
+            {/* Drag-to-delete bin (matches Monthly board) */}
+            {isDraggingAny && (
+                <Animated.View
+                    entering={SlideInDown.duration(200)}
+                    exiting={SlideOutDown.duration(200)}
+                    style={[styles.deleteZoneWrapper, deleteZoneStyle]}
+                >
+                    <View style={styles.deleteZoneInner}>
+                        <Svg width={22} height={22} viewBox="0 0 24 24" fill="none">
+                            <AnimatedPath
+                                d="M3 6h18M8 6V4a2 2 0 012-2h4a2 2 0 012 2v2M19 6v14a2 2 0 01-2 2H7a2 2 0 01-2-2V6M10 11v6M14 11v6"
+                                animatedProps={deleteIconProps}
+                                strokeWidth={1.5}
+                                strokeLinecap="round"
+                                strokeLinejoin="round"
+                            />
+                        </Svg>
+                    </View>
+                </Animated.View>
+            )}
+
+            {/* + FAB inside the card, bottom-right (hidden during drag) */}
+            {!isDraggingAny && (
+                <TouchableOpacity
+                    style={inspStyles.boardFab}
+                    onPress={handleAddImage}
+                    activeOpacity={0.8}
+                >
+                    <Text style={inspStyles.boardFabText}>+</Text>
+                </TouchableOpacity>
+            )}
+        </View>
+    );
+};
+
+const InspirationView: React.FC = () => {
+    const [cats, setCats] = useState<InspirationCategory[]>([]);
+    const [activeId, setActiveId] = useState<string | null>(null);
+
+    const refresh = useCallback(async () => {
+        const data = await getInspirationCategories();
+        setCats(data);
+    }, []);
+
+    useFocusEffect(useCallback(() => { refresh(); }, [refresh]));
+
+    const active = cats.find(c => c.id === activeId) ?? null;
+
+    const handleCreate = async () => {
+        const cat = await createInspirationCategory();
+        setCats(prev => [...prev, cat]);
+        setActiveId(cat.id);
+    };
+
+    const handleUpdate = async (patch: Partial<InspirationCategory>) => {
+        if (!active) return;
+        // Optimistic local update
+        setCats(prev => prev.map(c => c.id === active.id ? { ...c, ...patch } : c));
+        await updateInspirationCategory(active.id, {
+            title:  patch.title  ?? active.title,
+            images: patch.images ?? active.images,
+        });
+    };
+
+    const handleDeleteCategory = (cat: InspirationCategory) => {
+        Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+        Alert.alert(
+            'Delete category?',
+            cat.title ? `"${cat.title}" will be removed.` : 'This category will be removed.',
+            [
+                { text: 'Cancel', style: 'cancel' },
+                {
+                    text: 'Delete',
+                    style: 'destructive',
+                    onPress: async () => {
+                        await deleteInspirationCategory(cat.id);
+                        setCats(prev => prev.filter(c => c.id !== cat.id));
+                        if (activeId === cat.id) setActiveId(null);
+                    },
+                },
+            ]
+        );
+    };
+
+    // Detail view takes over when a category is open
+    if (active) {
+        return (
+            <InspirationDetail
+                category={active}
+                onBack={() => setActiveId(null)}
+                onChange={handleUpdate}
+            />
+        );
+    }
+
+    // Grid view
+    return (
+        <ScrollView
+            style={{ flex: 1 }}
+            contentContainerStyle={inspStyles.gridContainer}
+            showsVerticalScrollIndicator={false}
+        >
+            <View style={inspStyles.gridRow}>
+                {cats.map(cat => (
+                    <InspirationCard
+                        key={cat.id}
+                        category={cat}
+                        onPress={() => setActiveId(cat.id)}
+                        onLongPress={() => handleDeleteCategory(cat)}
+                    />
+                ))}
+                {/* "+" tile always at the end */}
+                <InspirationCard onPress={handleCreate} />
+            </View>
+        </ScrollView>
+    );
+};
+
+const inspStyles = StyleSheet.create({
+    // ── Grid ──
+    gridContainer: {
+        paddingHorizontal: 10,
+        paddingTop:        10,
+        paddingBottom:     24,
+    },
+    gridRow: {
+        flexDirection: 'row',
+        flexWrap:      'wrap',
+        justifyContent: 'space-between',
+    },
+    card: {
+        width:        '48%',
+        aspectRatio:  3 / 4,
+        backgroundColor: WHITE,
+        borderRadius: 18,
+        marginBottom: 12,
+        padding:      10,
+        justifyContent: 'space-between',
+    },
+    cardImageWrap: {
+        flex: 1,
+        backgroundColor: '#F3F4F6',
+        borderRadius: 12,
+        overflow: 'hidden',
+    },
+    cardImage: {
+        width:  '100%',
+        height: '100%',
+    },
+    cardTitle: {
+        fontFamily: 'Inter-Bold',
+        fontSize:   16,
+        color:      BLACK,
+        textAlign:  'center',
+        marginTop:  10,
+        textTransform: 'uppercase',
+        letterSpacing: 0.6,
+    },
+    emptyCardInner: {
+        flex: 1,
+        alignItems: 'center',
+        justifyContent: 'center',
+    },
+    plusCircle: {
+        width:  56,
+        height: 56,
+        borderRadius: 28,
+        backgroundColor: YELLOW,
+        borderWidth: 2,
+        borderColor: BLACK,
+        alignItems:  'center',
+        justifyContent: 'center',
+    },
+    plusText: {
+        fontFamily: 'Inter-Bold',
+        fontSize:   28,
+        color:      BLACK,
+        marginTop:  -2,
+    },
+
+    // ── Detail (mirrors Monthly board) ──
+    boardCard: {
+        flex: 1,
+        marginHorizontal: 12,
+        backgroundColor: WHITE,
+        borderRadius: 20,
+        overflow: 'hidden',
+        position: 'relative',
+    },
+    detailBackInline: {
+        position: 'absolute',
+        top:  16,
+        left: 14,
+        width:  36,
+        height: 36,
+        alignItems:     'center',
+        justifyContent: 'center',
+        zIndex: 3,
+    },
+    boardTitleWrap: {
+        position: 'absolute',
+        top: 22,
+        left: 0,
+        right: 0,
+        alignItems: 'center',
+        zIndex: 0,
+    },
+    boardTitleInput: {
+        fontFamily:    'Inter-Bold',
+        fontSize:      28,
+        color:         BLACK,
+        textAlign:     'center',
+        letterSpacing: 0.5,
+        textTransform: 'uppercase',
+        paddingVertical:  4,
+        paddingHorizontal: 16,
+        minWidth: 120,
+    },
+    draggableImgWrap: {
+        width:  INSP_IMG_SIZE,
+        height: INSP_IMG_SIZE,
+        shadowColor:  BLACK,
+        shadowOffset: { width: 0, height: 2 },
+        shadowRadius: 6,
+        elevation: 3,
+    },
+    draggableImg: {
+        width:  '100%',
+        height: '100%',
+        borderRadius: 10,
+        backgroundColor: '#F3F4F6',
+    },
+    boardFab: {
+        position: 'absolute',
+        right:    16,
+        bottom:   16,
+        width:    56,
+        height:   56,
+        borderRadius: 28,
+        backgroundColor: YELLOW,
+        borderWidth: 2,
+        borderColor: BLACK,
+        alignItems:     'center',
+        justifyContent: 'center',
+        zIndex: 5,
+    },
+    boardFabText: {
+        fontFamily: 'Inter-Bold',
+        fontSize:   28,
+        color:      BLACK,
+        marginTop:  -2,
+    },
+});
+
+// ═══════════════════════════════════════════════════════════
 // Main Screen
 // ═══════════════════════════════════════════════════════════
 
@@ -1546,7 +2112,19 @@ export const VisionBoardScreen: React.FC = () => {
     const boardRef     = useRef<View>(null);
     const headerHeight = useHeaderHeight();
     const insets       = useSafeAreaInsets();
-    const [boardMode, setBoardMode] = useState<'monthly' | 'weekly'>('monthly');
+    const [boardMode, setBoardMode] = useState<'monthly' | 'inspiration'>('monthly');
+
+    // Sliding indicator for the Monthly / Inspiration toggle
+    const [pillWidth, setPillWidth] = useState(0);
+    const pillProgress = useSharedValue(0); // 0 = monthly, 1 = inspiration
+    useEffect(() => {
+        pillProgress.value = withTiming(boardMode === 'monthly' ? 0 : 1, { duration: 220 });
+    }, [boardMode]);
+    // Inner area = pillWidth − 2*border(2) − 2*padding(4) = pillWidth − 12
+    const halfInner = Math.max(0, (pillWidth - 12) / 2);
+    const pillIndicatorStyle = useAnimatedStyle(() => ({
+        transform: [{ translateX: pillProgress.value * halfInner }],
+    }));
 
     const todayStr = useMemo(() => {
         const d = new Date();
@@ -1569,6 +2147,8 @@ export const VisionBoardScreen: React.FC = () => {
     // Drag-to-delete state
     const [isDraggingAny, setIsDraggingAny] = useState(false);
     const isOverDeleteZone = useSharedValue(false);
+    // Measured size of the board (used for board-local drag-to-delete hit-test)
+    const boardSize = useSharedValue({ width: 0, height: 0 });
 
     const deleteZoneStyle = useAnimatedStyle(() => ({
         backgroundColor: isOverDeleteZone.value ? '#FF3B30' : WHITE,
@@ -1596,12 +2176,8 @@ export const VisionBoardScreen: React.FC = () => {
             const data = await fetchVisionItems();
             setItems(data);
         } else {
-            const daily = await getDailyVisionBoard(todayStr);
-            if (daily && daily.completed) {
-                setItems(daily.items as LocalVisionItem[]);
-            } else {
-                setItems([]);
-            }
+            // Inspiration mode manages its own list; keep board items empty.
+            setItems([]);
         }
     };
 
@@ -1767,30 +2343,13 @@ export const VisionBoardScreen: React.FC = () => {
     const handleUpdate = (id: string, x: number, y: number, s: number, r: number) => {
         // Skip items that still have a temporary local ID (not yet persisted to DB)
         if (id.startsWith('temp-') || id.startsWith('stock-')) return;
-
-        if (boardMode === 'weekly') {
-            setItems(prev => {
-                const updated = prev.map(i => i.id === id ? { ...i, position_x: x, position_y: y, scale: s, rotation: r } : i);
-                saveDailyVisionBoard({ date: todayStr, themeId: getThemeForDate(todayStr).id, completed: true, items: updated });
-                return updated;
-            });
-        } else {
-            updateVisionItemPosition(id, x, y, s, r);
-        }
+        updateVisionItemPosition(id, x, y, s, r);
     };
 
     const confirmDelete = async () => {
         if (deleteId) {
-            if (boardMode === 'weekly') {
-                setItems(prev => {
-                    const updated = prev.filter(i => i.id !== deleteId);
-                    saveDailyVisionBoard({ date: todayStr, themeId: getThemeForDate(todayStr).id, completed: true, items: updated });
-                    return updated;
-                });
-            } else {
-                await deleteVisionItem(deleteId);
-                setItems(prev => prev.filter(i => i.id !== deleteId));
-            }
+            await deleteVisionItem(deleteId);
+            setItems(prev => prev.filter(i => i.id !== deleteId));
             setDeleteId(null);
         }
     };
@@ -1798,209 +2357,156 @@ export const VisionBoardScreen: React.FC = () => {
     const handleUpdateTextStyle = (style: { text_color?: string; font_family?: string; bg_style?: string }) => {
         if (!editingTextItem) return;
 
-        if (boardMode === 'weekly') {
-            setItems(prev => {
-                const updated = prev.map(i => i.id === editingTextItem.id ? { ...i, ...style } : i);
-                saveDailyVisionBoard({ date: todayStr, themeId: getThemeForDate(todayStr).id, completed: true, items: updated });
-                return updated;
-            });
-            setEditingTextItem(prev => prev ? { ...prev, ...style } : null);
-        } else {
-            setItems(prev => prev.map(i => i.id === editingTextItem.id ? { ...i, ...style } : i));
-            setEditingTextItem(prev => prev ? { ...prev, ...style } : null);
-            if (!editingTextItem.id.startsWith('temp-')) {
-                updateVisionItemStyle(editingTextItem.id, style);
-            }
+        setItems(prev => prev.map(i => i.id === editingTextItem.id ? { ...i, ...style } : i));
+        setEditingTextItem(prev => prev ? { ...prev, ...style } : null);
+        if (!editingTextItem.id.startsWith('temp-')) {
+            updateVisionItemStyle(editingTextItem.id, style);
         }
     };
 
 
     return (
         <GestureHandlerRootView style={{ flex: 1 }}>
-            <View style={[styles.container, { backgroundColor: WHITE }]}>
-                {/* ── Header ── */}
-                <SafeAreaView edges={['top']} style={[styles.headerSafe, { paddingTop: headerHeight }]}>
-                    <View style={styles.header}>
-                        <View style={styles.backBtn} />
-                        <View style={styles.headerTitleWrap}>
-                            <View style={{ flexDirection: 'row', backgroundColor: BLACK + '08', borderRadius: 20, padding: 4, alignSelf: 'center' }}>
-                                <TouchableOpacity
-                                    onPress={() => setBoardMode('monthly')}
-                                    style={{ paddingVertical: 8, paddingHorizontal: 16, borderRadius: 16, backgroundColor: boardMode === 'monthly' ? WHITE : 'transparent', shadowColor: boardMode === 'monthly' ? BLACK : 'transparent', shadowOpacity: 0.1, shadowRadius: 4, elevation: boardMode === 'monthly' ? 2 : 0 }}
-                                >
-                                    <Text style={{ fontFamily: 'Outfit-Medium', fontSize: 14, color: boardMode === 'monthly' ? BLACK : BLACK + '60' }}>Monthly</Text>
-                                </TouchableOpacity>
-                                <TouchableOpacity
-                                    onPress={() => setBoardMode('weekly')}
-                                    style={{ paddingVertical: 8, paddingHorizontal: 16, borderRadius: 16, backgroundColor: boardMode === 'weekly' ? WHITE : 'transparent', shadowColor: boardMode === 'weekly' ? BLACK : 'transparent', shadowOpacity: 0.1, shadowRadius: 4, elevation: boardMode === 'weekly' ? 2 : 0 }}
-                                >
-                                    <Text style={{ fontFamily: 'Outfit-Medium', fontSize: 14, color: boardMode === 'weekly' ? BLACK : BLACK + '60' }}>Weekly</Text>
-                                </TouchableOpacity>
-                            </View>
-                        </View>
+            <View style={[styles.container, { backgroundColor: BLACK }]}>
+                {/* ── Mode toggle pill (below the floating AppHeader) ── */}
+                <View style={[styles.modePillWrap, { marginTop: headerHeight + 10 }]}>
+                    <View
+                        style={styles.modePill}
+                        onLayout={e => setPillWidth(e.nativeEvent.layout.width)}
+                    >
+                        {/* Sliding yellow indicator behind the labels */}
+                        <Animated.View style={[styles.modePillIndicator, { width: halfInner }, pillIndicatorStyle]} />
                         <TouchableOpacity
-                            onPress={handleShareBoard}
-                            style={styles.backBtn}
-                            activeOpacity={0.6}
-                            hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+                            onPress={() => setBoardMode('monthly')}
+                            style={styles.modePillHalf}
+                            activeOpacity={0.8}
                         >
-                            <ShareIcon color={BLACK} size={22} />
+                            <Text style={styles.modePillText}>Monthly</Text>
+                        </TouchableOpacity>
+                        <TouchableOpacity
+                            onPress={() => setBoardMode('inspiration')}
+                            style={styles.modePillHalf}
+                            activeOpacity={0.8}
+                        >
+                            <Text style={styles.modePillText}>Inspiration</Text>
                         </TouchableOpacity>
                     </View>
-                </SafeAreaView>
-
-
-                {/* ── Board ── */}
-                <View style={styles.board} ref={boardRef} collapsable={false}>
-                    {/* Canvas background layer */}
-                    {activeBgPreset.type === 'gradient' && activeBgPreset.colors ? (
-                        <LinearGradient
-                            colors={activeBgPreset.colors}
-                            start={activeBgPreset.start ?? { x: 0, y: 0 }}
-                            end={activeBgPreset.end ?? { x: 1, y: 1 }}
-                            style={StyleSheet.absoluteFillObject}
-                        />
-                    ) : activeBgPreset.type === 'solid' && activeBgPreset.color ? (
-                        <View style={[StyleSheet.absoluteFillObject, { backgroundColor: activeBgPreset.color }]} />
-                    ) : null}
-
-                    {items.map((item) => (
-                        <DraggableItem
-                            key={item.id}
-                            item={item}
-                            layoutVersion={layoutVersion}
-                            onUpdate={handleUpdate}
-                            onRetry={handleRetry}
-                            onDelete={(id, instant) => {
-                                Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-                                if (instant) {
-                                    setItems(prev => prev.filter(i => i.id !== id));
-                                    if (!id.startsWith('temp-') && !id.startsWith('stock-')) {
-                                        deleteVisionItem(id);
-                                    }
-                                } else {
-                                    setDeleteId(id);
-                                }
-                            }}
-                            onEditStyle={(id) => setEditingTextItem(items.find(i => i.id === id) ?? null)}
-                            onDragStart={() => {
-                                setIsDraggingAny(true);
-                                // Bring to front by moving to end of render list
-                                setItems(prev => {
-                                    const idx = prev.findIndex(i => i.id === item.id);
-                                    if (idx === -1 || idx === prev.length - 1) return prev;
-                                    const next = [...prev];
-                                    next.push(next.splice(idx, 1)[0]);
-                                    return next;
-                                });
-                            }}
-                            onDragEnd={() => setIsDraggingAny(false)}
-                            isOverDeleteZone={isOverDeleteZone}
-                        />
-                    ))}
-                    {items.length === 0 && (
-                        boardMode === 'monthly' ? (
-                            <EmptyState
-                                onAddImage={handleAddImage}
-                                onAddText={() => setIsInputVisible(true)}
-                                onBrowseStock={() => { setStockThemeCategory(undefined); setIsStockVisible(true); }}
-                            />
-                        ) : (
-                            <DailyEmptyState
-                                dateStr={todayStr}
-                                onAddImage={handleAddImage}
-                                onAddText={() => setIsInputVisible(true)}
-                                onBrowseStock={() => {
-                                    const theme = getThemeForDate(todayStr);
-                                    setStockThemeCategory({
-                                        label: theme.title,
-                                        subcategories: theme.keywords,
-                                    });
-                                    setIsStockVisible(true);
-                                }}
-                            />
-                        )
-                    )}
-
-                    {/* Delete zone */}
-                    {isDraggingAny && (
-                        <Animated.View
-                            entering={SlideInDown.duration(200)}
-                            exiting={SlideOutDown.duration(200)}
-                            style={[styles.deleteZoneWrapper, deleteZoneStyle]}
-                        >
-                            <View style={styles.deleteZoneInner}>
-                                <Svg width={22} height={22} viewBox="0 0 24 24" fill="none">
-                                    <AnimatedPath
-                                        d="M3 6h18M8 6V4a2 2 0 012-2h4a2 2 0 012 2v2M19 6v14a2 2 0 01-2 2H7a2 2 0 01-2-2V6M10 11v6M14 11v6"
-                                        animatedProps={deleteIconProps}
-                                        strokeWidth={1.5}
-                                        strokeLinecap="round"
-                                        strokeLinejoin="round"
-                                    />
-                                </Svg>
-                                <Animated.Text style={[styles.deleteText, deleteTextStyle]}>
-                                    Drop to delete
-                                </Animated.Text>
-                            </View>
-                        </Animated.View>
-                    )}
                 </View>
 
-                {/* ── Bottom Actions (visible when items exist) ── */}
-                {items.length > 0 && !isDraggingAny && !isStockVisible && (
-                    <Animated.View
-                        entering={FadeInDown.duration(300)}
-                        style={[styles.bottomBar, { backgroundColor: WHITE + 'F0', bottom: 62 + insets.bottom }]}
+                {/* ── Inspiration mode short-circuits the board ── */}
+                {boardMode === 'inspiration' && (
+                    <View style={{ flex: 1, marginBottom: 62 + insets.bottom + 12 }}>
+                        <InspirationView />
+                    </View>
+                )}
+
+                {/* ── Monthly Board Card ── */}
+                {boardMode === 'monthly' && (
+                <View style={[styles.boardCardWrapper, { marginBottom: 62 + insets.bottom + 12 }]}>
+                    <View
+                        style={styles.board}
+                        ref={boardRef}
+                        collapsable={false}
+                        onLayout={e => {
+                            const { width: w, height: h } = e.nativeEvent.layout;
+                            boardSize.value = { width: w, height: h };
+                        }}
                     >
+                        {/* Canvas background layer */}
+                        {activeBgPreset.type === 'gradient' && activeBgPreset.colors ? (
+                            <LinearGradient
+                                colors={activeBgPreset.colors}
+                                start={activeBgPreset.start ?? { x: 0, y: 0 }}
+                                end={activeBgPreset.end ?? { x: 1, y: 1 }}
+                                style={StyleSheet.absoluteFillObject}
+                            />
+                        ) : activeBgPreset.type === 'solid' && activeBgPreset.color ? (
+                            <View style={[StyleSheet.absoluteFillObject, { backgroundColor: activeBgPreset.color }]} />
+                        ) : null}
+
+                        {/* Month header at top of card */}
+                        <View style={styles.monthHeader} pointerEvents="none">
+                            <Text style={styles.monthHeaderName}>
+                                {new Date().toLocaleDateString('en-US', { month: 'long' }).toUpperCase()}
+                            </Text>
+                            <Text style={styles.monthHeaderYear}>
+                                {new Date().getFullYear()}
+                            </Text>
+                        </View>
+
+                        {items.map((item) => (
+                            <DraggableItem
+                                key={item.id}
+                                item={item}
+                                layoutVersion={layoutVersion}
+                                onUpdate={handleUpdate}
+                                onRetry={handleRetry}
+                                onDelete={(id, instant) => {
+                                    Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+                                    if (instant) {
+                                        setItems(prev => prev.filter(i => i.id !== id));
+                                        if (!id.startsWith('temp-') && !id.startsWith('stock-')) {
+                                            deleteVisionItem(id);
+                                        }
+                                    } else {
+                                        setDeleteId(id);
+                                    }
+                                }}
+                                onEditStyle={(id) => setEditingTextItem(items.find(i => i.id === id) ?? null)}
+                                onDragStart={() => {
+                                    setIsDraggingAny(true);
+                                    // Bring to front by moving to end of render list
+                                    setItems(prev => {
+                                        const idx = prev.findIndex(i => i.id === item.id);
+                                        if (idx === -1 || idx === prev.length - 1) return prev;
+                                        const next = [...prev];
+                                        next.push(next.splice(idx, 1)[0]);
+                                        return next;
+                                    });
+                                }}
+                                onDragEnd={() => setIsDraggingAny(false)}
+                                isOverDeleteZone={isOverDeleteZone}
+                                boardSize={boardSize}
+                            />
+                        ))}
+
+                        {/* Delete zone */}
+                        {isDraggingAny && (
+                            <Animated.View
+                                entering={SlideInDown.duration(200)}
+                                exiting={SlideOutDown.duration(200)}
+                                style={[styles.deleteZoneWrapper, deleteZoneStyle]}
+                            >
+                                <View style={styles.deleteZoneInner}>
+                                    <Svg width={22} height={22} viewBox="0 0 24 24" fill="none">
+                                        <AnimatedPath
+                                            d="M3 6h18M8 6V4a2 2 0 012-2h4a2 2 0 012 2v2M19 6v14a2 2 0 01-2 2H7a2 2 0 01-2-2V6M10 11v6M14 11v6"
+                                            animatedProps={deleteIconProps}
+                                            strokeWidth={1.5}
+                                            strokeLinecap="round"
+                                            strokeLinejoin="round"
+                                        />
+                                    </Svg>
+                                </View>
+                            </Animated.View>
+                        )}
+                    </View>
+
+                    {/* ── FAB: + Add button ── */}
+                    {!isDraggingAny && (
                         <TouchableOpacity
-                            style={[styles.actionPill, styles.actionPillIconOnly, { backgroundColor: WHITE, borderColor: BLACK + '12' }]}
+                            style={styles.fab}
                             onPress={() => {
-                                if (boardMode === 'weekly') {
-                                    const theme = getThemeForDate(todayStr);
-                                    setStockThemeCategory({ label: theme.title, subcategories: theme.keywords });
-                                } else {
-                                    setStockThemeCategory(undefined);
-                                }
+                                Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                                setStockThemeCategory(undefined);
                                 setIsStockVisible(true);
                             }}
-                            activeOpacity={0.7}
+                            activeOpacity={0.75}
                         >
-                            <SearchImageIcon color={BLACK} size={20} />
+                            <Text style={styles.fabText}>+</Text>
                         </TouchableOpacity>
-
-                        <TouchableOpacity
-                            style={[styles.actionPill, styles.actionPillIconOnly, { backgroundColor: WHITE, borderColor: BLACK + '12' }]}
-                            onPress={() => setIsLayoutVisible(true)}
-                            activeOpacity={0.7}
-                        >
-                            <LayoutIcon color={BLACK} size={20} />
-                        </TouchableOpacity>
-
-                        <View style={styles.vertDivider} />
-
-                        <TouchableOpacity
-                            style={[styles.actionPill, { backgroundColor: WHITE, borderColor: BLACK + '12' }]}
-                            onPress={handleAddImage}
-                            activeOpacity={0.7}
-                        >
-                            <ImagePlusIcon color={YELLOW} size={20} />
-                            <Text style={[styles.actionPillText, { color: BLACK, marginLeft: 4 }]}>
-                                Image
-                            </Text>
-                        </TouchableOpacity>
-
-                        <TouchableOpacity
-                            style={[styles.actionPill, { backgroundColor: YELLOW, borderColor: YELLOW }]}
-                            onPress={() => setIsInputVisible(true)}
-                            activeOpacity={0.7}
-                        >
-                            <SparklesIcon color="#FFF" size={20} />
-                            <Text style={[styles.actionPillText, { color: '#FFF', marginLeft: 4 }]}>
-                                Affirmation
-                            </Text>
-                        </TouchableOpacity>
-                    </Animated.View>
+                    )}
+                </View>
                 )}
 
                 {/* ── Sheets ── */}
@@ -2131,37 +2637,178 @@ const styles = StyleSheet.create({
     headerSafe: {
         zIndex: 10,
     },
-    header: {
+
+    // ── Header Card ──
+    headerCard: {
+        backgroundColor: WHITE,
+        borderRadius: 20,
+        borderWidth: 2,
+        borderColor: BLACK,
+        marginHorizontal: 12,
+        marginBottom: 8,
+        paddingHorizontal: 18,
+        paddingTop: 14,
+        paddingBottom: 14,
+    },
+    headerCardRow: {
         flexDirection: 'row',
         alignItems: 'center',
-        paddingHorizontal: 16,
-        paddingVertical: 12,
+        justifyContent: 'space-between',
+        marginBottom: 12,
     },
-    backBtn: {
-        width: 44,
-        height: 44,
+    headerCardTitle: {
+        fontFamily: 'MontserratAlternates-ExtraBoldItalic',
+        fontSize: 22,
+        color: BLACK,
+        fontWeight: '800',
+    },
+    modeToggleRow: {
+        flexDirection: 'row',
+        gap: 8,
+    },
+    modeBtn: {
+        paddingVertical: 6,
+        paddingHorizontal: 18,
+        borderRadius: 20,
+        borderWidth: 1.5,
+        borderColor: BLACK + '25',
+        backgroundColor: 'transparent',
+    },
+    modeBtnActive: {
+        backgroundColor: YELLOW,
+        borderColor: YELLOW,
+    },
+    modeBtnText: {
+        fontFamily: 'Outfit-Medium',
+        fontSize: 13,
+        color: BLACK + '60',
+    },
+    modeBtnTextActive: {
+        color: BLACK,
+        fontFamily: 'Outfit-Medium',
+    },
+
+    // ── New Monthly / Inspiration pill toggle ──
+    modePillWrap: {
+        marginHorizontal: 12,
+        marginBottom: 10,
+    },
+    modePill: {
+        flexDirection: 'row',
+        backgroundColor: WHITE,
+        borderRadius: 40,
+        padding: 4,
+        borderWidth: 2,
+        borderColor: BLACK,
+        position: 'relative',
+        overflow: 'hidden',
+    },
+    modePillIndicator: {
+        position: 'absolute',
+        top: 4,
+        bottom: 4,
+        left: 4,
+        backgroundColor: YELLOW,
+        borderRadius: 40,
+    },
+    modePillHalf: {
+        flex: 1,
+        borderRadius: 40,
+        paddingVertical: 12,
         alignItems: 'center',
         justifyContent: 'center',
+        zIndex: 1,
     },
-    headerTitleWrap: {
+    modePillText: {
+        fontFamily: 'Inter-Bold',
+        fontSize: 16,
+        color: BLACK,
+    },
+
+    // ── Board Card Wrapper ──
+    boardCardWrapper: {
         flex: 1,
+        marginHorizontal: 12,
+        marginBottom: 12,
+        backgroundColor: WHITE,
+        borderRadius: 20,
+        overflow: 'hidden',
+    },
+
+    // ── Monthly header (APRIL / 2026) ──
+    monthHeader: {
+        position: 'absolute',
+        top: 24,
+        left: 0,
+        right: 0,
         alignItems: 'center',
     },
-    headerTitle: {
-        fontFamily: 'MontserratAlternates-ExtraBoldItalic',
-        fontSize: 26,
-        lineHeight: 30,
+    monthHeaderName: {
+        fontFamily: 'Inter-Bold',
+        fontSize: 28,
+        color: BLACK,
+        letterSpacing: 1.5,
     },
-    headerSub: {
-        fontFamily: 'MontserratAlternates-ExtraBoldItalic',
-        fontSize: 13,
-        marginTop: 1,
+    monthHeaderYear: {
+        fontFamily: 'Inter-Bold',
+        fontSize: 22,
+        color: '#D1D5DB',
+        letterSpacing: 1.2,
+        marginTop: -2,
     },
 
     // ── Board ──
     board: {
         flex: 1,
         overflow: 'hidden',
+    },
+
+    // ── FAB ──
+    fab: {
+        position: 'absolute',
+        bottom: 16,
+        right: 16,
+        width: 56,
+        height: 56,
+        borderRadius: 28,
+        backgroundColor: YELLOW,
+        borderWidth: 2,
+        borderColor: BLACK,
+        alignItems: 'center',
+        justifyContent: 'center',
+        zIndex: 200,
+    },
+    fabText: {
+        color: BLACK,
+        fontSize: 28,
+        lineHeight: 30,
+        fontFamily: 'Inter-Bold',
+        marginTop: -2,
+    },
+
+    // ── Mini Toolbar ──
+    miniToolbar: {
+        position: 'absolute',
+        bottom: 16,
+        left: 16,
+        flexDirection: 'row',
+        gap: 8,
+        zIndex: 200,
+    },
+    toolBtn: {
+        width: 42,
+        height: 42,
+        borderRadius: 21,
+        backgroundColor: WHITE,
+        borderWidth: 1.5,
+        borderColor: BLACK + '20',
+        alignItems: 'center',
+        justifyContent: 'center',
+        shadowColor: BLACK,
+        shadowOffset: { width: 0, height: 2 },
+        shadowOpacity: 0.08,
+        shadowRadius: 6,
+        elevation: 3,
     },
     itemContainer: {
         width: 160,
@@ -2320,9 +2967,8 @@ const styles = StyleSheet.create({
         gap: 10,
     },
     deleteText: {
-        fontFamily: 'MontserratAlternates-ExtraBoldItalic',
+        fontFamily: 'Inter-Bold',
         fontSize: 15,
-        fontWeight: '600',
     },
 
     // ── Bottom Actions Bar ──
@@ -2698,12 +3344,13 @@ const styles = StyleSheet.create({
         elevation: 12,
     },
     dialogTitle: {
-        fontFamily: 'MontserratAlternates-ExtraBoldItalic',
-        fontSize: 22,
+        fontFamily: 'Inter-Bold',
+        fontSize: 20,
         marginTop: 4,
+        letterSpacing: 0.2,
     },
     dialogBody: {
-        fontFamily: 'MontserratAlternates-ExtraBoldItalic',
+        fontFamily: 'Inter-Medium',
         fontSize: 14,
         textAlign: 'center',
         lineHeight: 20,
@@ -2721,9 +3368,9 @@ const styles = StyleSheet.create({
         alignItems: 'center',
     },
     dialogBtnText: {
-        fontFamily: 'MontserratAlternates-ExtraBoldItalic',
+        fontFamily: 'Inter-SemiBold',
         fontSize: 15,
-        fontWeight: '600',
+        letterSpacing: 0.2,
     },
     clearDialogIconBadge: {
         width: 64,
