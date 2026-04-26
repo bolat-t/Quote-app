@@ -6,6 +6,7 @@
  * The file name is kept stable to avoid churning imports across the app.
  */
 import React, { useState, useEffect, useCallback, useRef } from 'react';
+import { BLACK, WHITE, YELLOW } from '../constants/colors';
 import {
     StyleSheet,
     View,
@@ -103,10 +104,6 @@ const COACH_MESSAGES = [
 
 const STEP_LABELS = ['Emotion', '3things', 'Reflect'];
 
-const YELLOW = '#FFE600';
-const BLACK  = '#000000';
-const WHITE  = '#FFFFFF';
-
 // Fallback Ulbo response when AI call fails or returns null
 const SPIRIT_FALLBACK = (name: string) => ({
     reply: `You showed up and wrote it down, ${name}. That already counts for a lot.`,
@@ -114,8 +111,6 @@ const SPIRIT_FALLBACK = (name: string) => ({
     tags: ['showing up', 'reflective'],
     followUp: "What's one thing from today you want to remember tomorrow?",
 });
-
-
 
 const ArrowRightIcon = ({ color, size = 18 }: { color: string; size?: number }) => (
     <Svg width={size} height={size} viewBox="0 0 24 24" fill="none">
@@ -582,7 +577,6 @@ export const HuntScreen: React.FC = () => {
     }, [mood]);
 
     useEffect(() => { loadData(); }, [loadData]);
-
 
     // ── Handlers ──
 
@@ -1154,7 +1148,6 @@ export const HuntScreen: React.FC = () => {
                         </Animated.View>
                         </RNAnimated.View>
                     )}
-
 
                     {/* ─── Step 2: Reflect ─── */}
                     {activeStep === 2 && (

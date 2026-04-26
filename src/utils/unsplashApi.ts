@@ -6,7 +6,7 @@
  *  2. Click "New Application" and accept the API guidelines
  *  3. Copy your "Access Key" and replace the placeholder below
  */
-export const UNSPLASH_ACCESS_KEY = 'eVDDt_7Dl-JsVUs7u6TS0r8cFI7qa7lb7uTzS-pLtDY';
+const UNSPLASH_ACCESS_KEY = 'eVDDt_7Dl-JsVUs7u6TS0r8cFI7qa7lb7uTzS-pLtDY';
 
 const BASE = 'https://api.unsplash.com';
 
@@ -44,14 +44,3 @@ export const searchPhotos = async (
     }
 };
 
-/** Fetch photos visually similar to a given photo ID. */
-export const getRelatedPhotos = async (photoId: string): Promise<UnsplashPhoto[]> => {
-    try {
-        const res = await fetch(`${BASE}/photos/${photoId}/related`, { headers: authHeader() });
-        if (!res.ok) return [];
-        const json = await res.json();
-        return (json.results as UnsplashPhoto[]) ?? [];
-    } catch {
-        return [];
-    }
-};

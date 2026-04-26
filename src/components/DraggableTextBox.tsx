@@ -1,4 +1,5 @@
 import React, { useRef, useState, useEffect } from 'react';
+import { BLACK, WHITE, YELLOW } from '../constants/colors';
 import {
     View,
     Text,
@@ -10,10 +11,6 @@ import {
     Keyboard,
 } from 'react-native';
 const { width: screenWidth, height: screenHeight } = Dimensions.get('window');
-
-const YELLOW = '#FFE600';
-const BLACK = '#000000';
-const WHITE = '#FFFFFF';
 
 export interface TextBoxData {
     id: string;

@@ -3,9 +3,7 @@ import { View, Text, StyleSheet, Animated, Modal } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import Svg, { Path as SvgPath } from 'react-native-svg';
 import * as Haptics from 'expo-haptics';
-
-const YELLOW = '#FFE600';
-const BLACK  = '#000000';
+import { BLACK, YELLOW } from '../constants/colors';
 
 interface XPToastProps {
     xpAmount: number;

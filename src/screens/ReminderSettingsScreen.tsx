@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { BLACK, GRAY, WHITE, YELLOW } from '../constants/colors';
 import {
     View, Text, StyleSheet, TouchableOpacity,
     ScrollView, SafeAreaView, Modal, Alert,
@@ -11,10 +12,6 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { WheelPicker } from '../components/WheelPicker';
 import { requestNotificationPermissions, scheduleDailyReminder } from '../utils/notifications';
 
-const BLACK  = '#000000';
-const WHITE  = '#FFFFFF';
-const YELLOW = '#FFE600';
-const GRAY   = '#F2F2F2';
 const MUTED  = '#AAAAAA';
 
 const HOURS   = ['1','2','3','4','5','6','7','8','9','10','11','12'];

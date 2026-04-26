@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
+import { BLACK, WHITE, YELLOW } from '../constants/colors';
 import {
     View,
     Text,
@@ -44,13 +45,8 @@ import { isOnboardingCompleted, completeOnboarding } from '../utils/storage';
 import { trackEvent, setUserProperties } from '../lib/analytics';
 import { useDailyQuote } from '../hooks/useDailyQuote';
 
-const YELLOW = '#FFE600';
-const BLACK  = '#000000';
-const WHITE  = '#FFFFFF';
-
 const { width: SCREEN_W } = Dimensions.get('window');
 const BASE_JUMP_H = 80;
-
 
 // ─────────────────────────────────────────────
 // SVG Icons
@@ -511,7 +507,6 @@ const PotatoMascot: React.FC<PotatoMascotProps> = ({ level, getJumpHeight, onPea
     );
 };
 
-
 // ─────────────────────────────────────────────
 // Todo action definitions
 // ─────────────────────────────────────────────
@@ -545,7 +540,6 @@ interface BreakAnim {
     opacity:    Animated.Value;
     scale:      Animated.Value;
 }
-
 
 // ─────────────────────────────────────────────
 // Main Screen

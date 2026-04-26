@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from 'react';
+import { BLACK, WHITE, YELLOW } from '../constants/colors';
 import {
     View,
     Text,
@@ -18,10 +19,6 @@ import Animated, {
     FadeInDown,
 } from 'react-native-reanimated';
 import { getWeeklyHistory } from '../utils/journalStorage';
-
-const YELLOW = '#FFE600';
-const BLACK = '#000000';
-const WHITE = '#FFFFFF';
 
 // ─────────────────────────────────────────────
 // Icons

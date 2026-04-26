@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { BLACK, WHITE, YELLOW } from '../constants/colors';
 import {
     View,
     Text,
@@ -14,10 +15,6 @@ import {
 import Svg, { Path } from 'react-native-svg';
 import { submitFeedback, FeedbackType } from '../utils/feedbackStorage';
 import * as Haptics from 'expo-haptics';
-
-const YELLOW = '#FFE600';
-const BLACK = '#000000';
-const WHITE = '#FFFFFF';
 
 interface FeedbackModalProps {
     visible: boolean;

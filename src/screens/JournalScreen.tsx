@@ -6,6 +6,7 @@
  * name); kept stable to avoid churning imports.
  */
 import React, { useState, useCallback, useEffect, useMemo, useRef } from 'react';
+import { BLACK, WHITE, YELLOW } from '../constants/colors';
 import {
     View, Text, StyleSheet, ScrollView, Image,
     ActivityIndicator, TouchableOpacity,
@@ -26,10 +27,6 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { trackEvent } from '../lib/analytics';
 import { useHeaderHeight } from '../context/HeaderHeightContext';
 import { useHistoryCalendar } from '../context/HistoryCalendarContext';
-
-const YELLOW = '#FFE600';
-const BLACK  = '#000000';
-const WHITE  = '#FFFFFF';
 
 // ─── Helpers ────────────────────────────────────────────────────────────────
 

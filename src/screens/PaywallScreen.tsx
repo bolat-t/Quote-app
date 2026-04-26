@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { BLACK, WHITE, YELLOW } from '../constants/colors';
 import {
     View,
     Text,
@@ -16,10 +17,6 @@ import type { RootStackParamList } from '../types';
 import * as Haptics from 'expo-haptics';
 import { usePurchase, PurchasesPackage } from '../context/PurchaseContext';
 import { Svg, Path } from 'react-native-svg';
-
-const YELLOW = '#FFE600';
-const BLACK = '#000000';
-const WHITE = '#FFFFFF';
 
 const FEATURES = [
     { title: 'Deeper Reflections', desc: 'Unlock guided prompts & themes', color: '#7C5CFC' },

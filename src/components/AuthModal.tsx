@@ -3,10 +3,7 @@ import React, { useState } from 'react';
 import { View, Text, StyleSheet, Modal, TouchableOpacity, TextInput, ActivityIndicator, Alert, KeyboardAvoidingView, Platform } from 'react-native';
 import { Svg, Path } from 'react-native-svg';
 import { useAuth } from '../context/AuthContext';
-
-const YELLOW = '#FFE600';
-const BLACK = '#000000';
-const WHITE = '#FFFFFF';
+import { BLACK, WHITE, YELLOW } from '../constants/colors';
 
 interface AuthModalProps {
     visible: boolean;

@@ -1,16 +1,16 @@
-export interface VisionThemeKeyword {
+interface VisionThemeKeyword {
     label: string;
     query: string;
 }
 
-export interface VisionTheme {
+interface VisionTheme {
     id: string;
     title: string;
     description: string;
     keywords: VisionThemeKeyword[];
 }
 
-export const VISION_THEMES: VisionTheme[] = [
+const VISION_THEMES: VisionTheme[] = [
     {
         id: 'dream_home',
         title: 'Dream Home',

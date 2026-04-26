@@ -19,6 +19,7 @@
 
 import React, { useEffect, useRef } from 'react';
 import { View, Text, StyleSheet, ScrollView } from 'react-native';
+import { BLACK, YELLOW } from '../constants/colors';
 import Animated, {
     useSharedValue,
     useAnimatedScrollHandler,
@@ -31,9 +32,6 @@ import Animated, {
 
 export const ITEM_H   = 54;   // row height — also the snap interval
 export const PICKER_H = ITEM_H * 5;  // show 5 rows (2 + selected + 2)
-
-const BLACK  = '#000000';
-const YELLOW = '#FFE600';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 

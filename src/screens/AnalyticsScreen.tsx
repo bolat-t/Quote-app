@@ -4,10 +4,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { getJournalEntries, JournalEntry, calculateStreak } from '../utils/journalStorage';
 import { Svg, Path, Circle, Line } from 'react-native-svg';
 import { ActivityRings } from '../components/ActivityRings';
-
-const YELLOW = '#FFE600';
-const BLACK = '#000000';
-const WHITE = '#FFFFFF';
+import { BLACK, WHITE, YELLOW } from '../constants/colors';
 
 const { width: screenWidth } = Dimensions.get('window');
 

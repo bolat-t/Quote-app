@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { BLACK, GRAY, WHITE, YELLOW } from '../constants/colors';
 import {
     View, Text, StyleSheet, TouchableOpacity, SafeAreaView,
 } from 'react-native';
@@ -11,10 +12,6 @@ import { WheelPicker } from '../components/WheelPicker';
 import { useSetCommitmentMins } from '../context/CommitmentContext';
 import { useSetTimerSecs } from '../context/TimerSecondsContext';
 
-const BLACK  = '#000000';
-const WHITE  = '#FFFFFF';
-const YELLOW = '#FFE600';
-const GRAY   = '#F2F2F2';
 const MUTED  = '#AAAAAA';
 
 // Fine-grained 0–9, then 5-min steps to 60

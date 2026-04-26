@@ -1,4 +1,5 @@
 import React, { useState, useCallback, useMemo, useRef, useEffect } from 'react';
+import { BLACK, WHITE, YELLOW } from '../constants/colors';
 import {
     View,
     StyleSheet,
@@ -44,10 +45,6 @@ import {
     InspirationCategory,
     InspirationImage,
 } from '../utils/inspirationStorage';
-
-const YELLOW = '#FFE600';
-const BLACK = '#000000';
-const WHITE = '#FFFFFF';
 
 const AnimatedPath = Animated.createAnimatedComponent(SvgPath);
 
@@ -2420,7 +2417,6 @@ export const VisionBoardScreen: React.FC = () => {
             updateVisionItemStyle(editingTextItem.id, style);
         }
     };
-
 
     return (
         <GestureHandlerRootView style={{ flex: 1 }}>

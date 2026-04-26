@@ -1,4 +1,5 @@
 import React from 'react';
+import { BLACK, WHITE, YELLOW } from '../constants/colors';
 import {
     View,
     Text,
@@ -50,10 +51,6 @@ const LockIcon = ({ color }: { color: string }) => (
 // ─────────────────────────────────────────────
 // Constants
 // ─────────────────────────────────────────────
-
-const YELLOW = '#FFE600';
-const BLACK = '#000000';
-const WHITE = '#FFFFFF';
 
 // ─────────────────────────────────────────────
 // Potato Icon

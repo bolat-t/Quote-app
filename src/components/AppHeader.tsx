@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { BLACK, GRAY, WHITE, YELLOW } from '../constants/colors';
 import {
     View,
     Text,
@@ -26,10 +27,6 @@ import { clearMemory } from '../memory/MemorySystem';
 import { AuthModal } from './AuthModal';
 import { FeedbackModal } from './FeedbackModal';
 
-const YELLOW = '#FFE600';
-const BLACK  = '#000000';
-const WHITE  = '#FFFFFF';
-const GRAY   = '#F2F2F2';
 const SUBTEXT = '#4B5563';
 
 // ─── SVG Icons ────────────────────────────────────────────────────────────────

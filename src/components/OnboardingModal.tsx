@@ -1,4 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
+import { BLACK, WHITE, YELLOW } from '../constants/colors';
 import {
     View,
     Text,
@@ -20,10 +21,6 @@ const ULBO = require('../../assets/mascot/ulbos_coloured.png');
 const COACH = require('../../assets/mascot/coach_bunny.png');
 
 const { width } = Dimensions.get('window');
-
-const YELLOW = '#FFE600';
-const BLACK = '#000000';
-const WHITE = '#FFFFFF';
 
 const MINT = '#4ECCA3';
 

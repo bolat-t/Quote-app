@@ -1,4 +1,5 @@
 import React, { useState, useCallback } from 'react';
+import { BLACK, WHITE, YELLOW } from '../constants/colors';
 import {
     View,
     Text,
@@ -16,9 +17,6 @@ if (Platform.OS === 'android' && UIManager.setLayoutAnimationEnabledExperimental
     UIManager.setLayoutAnimationEnabledExperimental(true);
 }
 
-const YELLOW = '#FFE600';
-const BLACK  = '#000000';
-const WHITE  = '#FFFFFF';
 const GREY   = '#F0F0F0';
 
 export type QuestStatus = 'todo' | 'in-progress' | 'done';

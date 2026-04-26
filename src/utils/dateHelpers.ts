@@ -32,21 +32,7 @@ export const formatDateShort = (date: Date = new Date()): string => {
 };
 
 /**
- * Get timestamp for a unique ID
- */
-export const getTimestamp = (): number => {
-    return Date.now();
-};
-
-/**
- * Generate a unique ID
- */
-export const generateId = (): string => {
-    return `${getTimestamp()}-${Math.random().toString(36).slice(2, 11)}`;
-};
-
-/**
- * Generate a UUID v4
+ * Generate a UUID v4 — used for journal-entry IDs that sync to Supabase.
  */
 export const generateUUID = (): string => {
     return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function (c) {

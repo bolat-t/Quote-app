@@ -6,6 +6,7 @@
  * the file/route name "Canvas" is kept stable to avoid churning imports.
  */
 import React, { useState, useEffect, useCallback, useRef } from 'react';
+import { BLACK, WHITE, YELLOW } from '../constants/colors';
 import {
     StyleSheet,
     View,
@@ -109,10 +110,6 @@ const POTATO_IMAGES: Record<number, any> = {
     8: require('../../assets/mascot/potato_levels/level_8_potato.png'),
     9: require('../../assets/mascot/potato_levels/level_9_potato.png'),
 };
-
-const YELLOW = '#FFE600';
-const BLACK  = '#000000';
-const WHITE  = '#FFFFFF';
 
 const SCREEN_W = Dimensions.get('window').width;
 const SCREEN_H = Dimensions.get('window').height;

@@ -215,15 +215,6 @@ export const getJournalEntries = async (): Promise<JournalEntry[]> => {
 };
 
 /**
- * Get all unique dates that have journal entries
- */
-export const getAllJournalDates = async (): Promise<string[]> => {
-    const entries = await getJournalEntries();
-    const dates = new Set(entries.map(e => e.date));
-    return Array.from(dates);
-};
-
-/**
  * Sync a single entry to Supabase
  */
 const syncEntryToSupabase = async (entry: JournalEntry) => {
@@ -435,71 +426,6 @@ export const syncJournalWithSupabase = async (): Promise<void> => {
 };
 
 /**
- * Add an image to a journal entry (creating it if needed)
- */
-export const addJournalImage = async (
-    date: string,
-    imageUri: string,
-    quoteData?: { id: number; text: string },
-    responseText?: string // Added optional text
-): Promise<JournalEntry | void> => {
-    try {
-        const entries = await getJournalEntries();
-        const existingIndex = entries.findIndex(e => e.date === date);
-        let updatedEntry: JournalEntry;
-
-        if (existingIndex >= 0) {
-            // Update existing entry
-            const entry = entries[existingIndex];
-            const currentImages = entry.images || (entry.imageUri ? [entry.imageUri] : []);
-            const updatedImages = [...currentImages, imageUri];
-
-            updatedEntry = {
-                ...entry,
-                images: updatedImages,
-                imageUri: updatedImages[0]
-            };
-            entries[existingIndex] = updatedEntry;
-        } else {
-            // Create new entry
-            if (!quoteData) {
-                console.warn('Cannot create new journal entry without quote data');
-                return;
-            }
-
-            updatedEntry = {
-                id: generateJournalId(),
-                quoteId: quoteData.id,
-                quoteText: quoteData.text,
-                response: responseText || '', // Use provided text or empty
-                createdAt: Date.now(),
-                date: date,
-                images: [imageUri],
-                imageUri: imageUri
-            };
-            entries.unshift(updatedEntry);
-        }
-
-        await AsyncStorage.setItem(JOURNAL_KEY, JSON.stringify(entries));
-
-        // Sync
-        syncEntryToSupabase(updatedEntry).catch(e => console.error('Sync image failed', e));
-
-        return updatedEntry; // Return the entry so we can use it for AI
-    } catch (error) {
-        console.error('Error adding journal image:', error);
-        throw error;
-    }
-};
-
-/**
- * Update a journal entry with a saved image URI (Deprecated, use addJournalImage)
- */
-export const updateJournalEntryImage = async (date: string, imageUri: string): Promise<JournalEntry | void> => {
-    return addJournalImage(date, imageUri);
-};
-
-/**
  * Get a journal entry for a specific date
  */
 export const getJournalEntryByDate = async (date: string): Promise<JournalEntry | null> => {
@@ -527,43 +453,6 @@ export const getJournalEntriesByDate = async (date: string): Promise<JournalEntr
     }
 };
 
-const DAILY_SUMMARY_PREFIX = '@ulbo_daily_summary_';
-
-export const getDailySummary = async (date: string): Promise<string | null> => {
-    try {
-        return await AsyncStorage.getItem(DAILY_SUMMARY_PREFIX + date);
-    } catch {
-        return null;
-    }
-};
-
-export const saveDailySummary = async (date: string, summary: string): Promise<void> => {
-    try {
-        await AsyncStorage.setItem(DAILY_SUMMARY_PREFIX + date, summary);
-    } catch (e) {
-        console.error('Error saving daily summary:', e);
-    }
-};
-
-/**
- * Delete a journal entry by ID
- */
-export const deleteJournalEntry = async (id: string): Promise<void> => {
-    try {
-        const entries = await getJournalEntries();
-        const filteredEntries = entries.filter(entry => entry.id !== id);
-        await AsyncStorage.setItem(JOURNAL_KEY, JSON.stringify(filteredEntries));
-
-        // Also delete from Supabase if logged in?
-        const { data: { user } } = await supabase.auth.getUser();
-        if (user) {
-            supabase.from('journal_entries').delete().eq('id', id).then();
-        }
-    } catch (error) {
-        console.error('Error deleting journal entry:', error);
-        throw error;
-    }
-};
 
 /**
  * Generate a unique ID for journal entries

@@ -85,7 +85,7 @@ export const getInspirationCategories = async (): Promise<InspirationCategory[]>
     }
 };
 
-export const saveInspirationCategories = async (cats: InspirationCategory[]): Promise<void> => {
+const saveInspirationCategories = async (cats: InspirationCategory[]): Promise<void> => {
     try {
         await AsyncStorage.setItem(STORAGE_KEY, JSON.stringify(cats));
     } catch (e) {
