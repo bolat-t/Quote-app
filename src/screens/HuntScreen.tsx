@@ -1326,11 +1326,6 @@ const styles = StyleSheet.create({
         width: 50,
         height: 50,
     },
-    emotionDivider: {
-        height: 2,
-        backgroundColor: BLACK,
-        marginBottom: 16,
-    },
     emotionInput: {
         fontFamily: 'Inter-Medium',
         fontSize: 16,
@@ -1381,12 +1376,6 @@ const styles = StyleSheet.create({
         padding: 20,
         minHeight: 260,
     },
-    contentTitle: {
-        fontFamily: 'Inter-SemiBold',
-        fontSize: 25,
-        color: BLACK,
-        marginBottom: 20,
-    },
     loadingWrap: {
         flex: 1,
         justifyContent: 'center',
@@ -1394,103 +1383,9 @@ const styles = StyleSheet.create({
     },
 
     // ── Timer + Step Card ──
-    topBar: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        marginHorizontal: 16,
-        marginTop: 16,
-        marginBottom: 16,
-        paddingHorizontal: 8,
-        paddingVertical: 4,
-        gap: 16,
-    },
-    stepTrack: {
-        flex: 1,
-        flexDirection: 'row',
-        alignItems: 'center',
-        justifyContent: 'space-around',
-    },
-    stepDotWrap: {
-        alignItems: 'center',
-        gap: 5,
-        paddingVertical: 4,
-        paddingHorizontal: 6,
-    },
-    stepDot: {
-        width: 12,
-        height: 12,
-        borderRadius: 6,
-        backgroundColor: '#DDDDDD',
-    },
-    stepDotActive: {
-        backgroundColor: YELLOW,
-        width: 14,
-        height: 14,
-        borderRadius: 7,
-    },
-    stepDotDone: {
-        backgroundColor: BLACK,
-    },
-    stepDotLabel: {
-        fontFamily: 'Inter-Medium',
-        fontSize: 10,
-        color: '#666666',
-    },
-    stepDotLabelActive: {
-        color: WHITE,
-    },
-    heroImage: {
-        width: width * 0.35,
-        height: width * 0.35,
-    },
     // ── Bottom Mascot ──
-    bottomMascot: {
-        alignItems: 'center',
-        paddingTop: 32,
-        paddingBottom: 8,
-    },
-    bottomMascotInner: {
-        alignItems: 'center',
-    },
-    heroBubble: {
-        paddingHorizontal: 14,
-        paddingVertical: 10,
-        borderRadius: 16,
-        maxWidth: width * 0.42,
-        backgroundColor: '#F0F0F0',
-    },
-    bubbleTailWrap: {
-        alignItems: 'center',
-        marginTop: -2,
-        marginBottom: -1,
-    },
-    bubbleTail: {
-        width: 12,
-        height: 12,
-        transform: [{ rotate: '45deg' }],
-        borderRadius: 2,
-        marginBottom: -6,
-        backgroundColor: '#F0F0F0',
-    },
-    heroBubbleText: {
-        fontFamily: 'Inter-SemiBold',
-        fontSize: 16,
-        lineHeight: 22,
-        textAlign: 'center',
-        color: '#000000',
-    },
 
     // ── Section ──
-    sectionLabel: {
-        paddingHorizontal: 24,
-        paddingTop: 20,
-        paddingBottom: 14,
-    },
-    sectionTitle: {
-        fontFamily: 'Inter-Bold',
-        fontSize: 32,
-        color: '#000000',
-    },
 
     // ── Reflection Card ──
     // ── Reflect step (step 2) ──
@@ -1558,34 +1453,8 @@ const styles = StyleSheet.create({
         fontSize: 16,
         color: '#4B5563',
     },
-    reflectionFooter: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        justifyContent: 'space-between',
-        paddingHorizontal: 18,
-        paddingBottom: 8,
-    },
-    reflectionWordCount: {
-        fontFamily: 'Inter-SemiBold',
-        fontSize: 12,
-        color: '#4B5563',
-    },
-    reflectionSaveBtn: {
-        backgroundColor: '#FFE600',
-        paddingHorizontal: 22,
-        paddingVertical: 0,
-        borderRadius: 20,
-    },
-    reflectionSaveBtnText: {
-        fontFamily: 'Inter-Bold',
-        fontSize: 16,
-        color: '#000000',
-    },
 
     // ── Card Body (shared) ──
-    cardBody: {
-        gap: 12,
-    },
 
     // ── Gratitude (Step 1) ──
     gratitudeHeader: {
@@ -1669,94 +1538,10 @@ const styles = StyleSheet.create({
     },
 
     // ── Prompt ──
-    promptHeaderRow: {
-        flexDirection: 'row',
-        alignItems: 'flex-start',
-        gap: 12,
-        marginBottom: 8,
-    },
-    shuffleBtn: {
-        width: 32,
-        height: 32,
-        borderRadius: 16,
-        alignItems: 'center',
-        justifyContent: 'center',
-        marginTop: 2,
-        backgroundColor: '#F0F0F0',
-    },
-    promptText: {
-        fontFamily: 'Inter-SemiBold',
-        fontSize: 16,
-        lineHeight: 24,
-        color: '#000000',
-    },
-    textArea: {
-        fontFamily: 'Inter-Medium',
-        fontSize: 16,
-        lineHeight: 24,
-        minHeight: 100,
-        padding: 14,
-        borderRadius: 14,
-        backgroundColor: '#F0F4F8',
-        color: '#000000',
-    },
-    primaryBtn: {
-        paddingVertical: 14,
-        borderRadius: 26,
-        alignItems: 'center',
-        backgroundColor: '#FFE600',
-    },
-    primaryBtnText: {
-        color: '#000000',
-        fontFamily: 'Inter-Bold',
-        fontSize: 18,
-    },
 
     // ── Today Prompts ──
-    todayPromptItem: {
-        flexDirection: 'row',
-        alignItems: 'flex-start',
-        gap: 10,
-        paddingVertical: 4,
-    },
-    todayPromptBullet: {
-        width: 24,
-        height: 24,
-        borderRadius: 12,
-        backgroundColor: '#FFE600',
-        alignItems: 'center',
-        justifyContent: 'center',
-    },
-    todayPromptBulletText: {
-        fontFamily: 'Inter-SemiBold',
-        fontSize: 12,
-        color: '#000000',
-    },
-    todayPromptText: {
-        flex: 1,
-        fontFamily: 'Inter-SemiBold',
-        fontSize: 18,
-        lineHeight: 24,
-        color: '#000000',
-    },
 
     // ── Saved State ──
-    savedState: {
-        alignItems: 'center',
-        paddingVertical: 16,
-        gap: 4,
-    },
-    savedTitle: {
-        fontFamily: 'Inter-Bold',
-        fontSize: 26,
-        marginTop: 4,
-        color: '#000000',
-    },
-    savedSub: {
-        fontFamily: 'Inter-SemiBold',
-        fontSize: 14,
-        color: '#666666',
-    },
     writeAgainBtn: {
         marginTop: 10,
         paddingVertical: 6,
@@ -1769,59 +1554,6 @@ const styles = StyleSheet.create({
     },
 
     // ── Timer Done Modal ──
-    modalBackdrop: {
-        flex: 1,
-        backgroundColor: '#00000055',
-        justifyContent: 'center',
-        alignItems: 'center',
-        paddingHorizontal: 32,
-    },
-    modalCard: {
-        backgroundColor: '#FFFFFF',
-        borderRadius: 28,
-        paddingVertical: 36,
-        paddingHorizontal: 28,
-        alignItems: 'center',
-        width: '100%',
-        gap: 8,
-    },
-    modalEmoji: {
-        fontFamily: 'Inter-Bold',
-        fontSize: 36,
-        color: '#FFE600',
-        marginBottom: 4,
-    },
-    modalTitle: {
-        fontFamily: 'Inter-Bold',
-        fontSize: 36,
-        color: '#000000',
-    },
-    modalSub: {
-        fontFamily: 'Inter-SemiBold',
-        fontSize: 16,
-        color: '#666666',
-        textAlign: 'center',
-        marginBottom: 8,
-    },
-    modalBtn: {
-        backgroundColor: '#FFE600',
-        borderRadius: 26,
-        paddingVertical: 14,
-        paddingHorizontal: 40,
-        marginTop: 8,
-        width: '100%',
-        alignItems: 'center',
-    },
-    modalBtnText: {
-        fontFamily: 'Inter-Bold',
-        fontSize: 20,
-        color: '#000000',
-    },
-    modalDismiss: {
-        fontFamily: 'Inter-SemiBold',
-        fontSize: 14,
-        color: '#999999',
-    },
 });
 
 export default HuntScreen;

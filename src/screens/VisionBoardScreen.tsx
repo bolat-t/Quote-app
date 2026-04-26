@@ -12,7 +12,7 @@ import {
     TextInput as RNTextInput,
     FlatList,
 } from 'react-native';
-import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useFocusEffect } from '@react-navigation/native';
 import * as ImagePicker from 'expo-image-picker';
 import { Gesture, GestureDetector, GestureHandlerRootView } from 'react-native-gesture-handler';
@@ -33,9 +33,8 @@ import {
 } from 'react-native-paper';
 import { addVisionItem, deleteVisionItem, fetchVisionItems, updateVisionItemPosition, updateVisionItemStyle, VisionItem } from '../utils/visionBoardStorage';
 import { useHeaderHeight } from '../context/HeaderHeightContext';
-import { searchPhotos, UNSPLASH_ACCESS_KEY, UnsplashPhoto } from '../utils/unsplashApi';
-import { getDailyVisionBoard, saveDailyVisionBoard, DailyVisionBoard } from '../utils/dailyVisionStorage';
-import { getThemeForDate, VisionTheme } from '../data/visionThemes';
+import { searchPhotos, UnsplashPhoto } from '../utils/unsplashApi';
+import { getThemeForDate } from '../data/visionThemes';
 import {
     getInspirationCategories,
     createInspirationCategory,
@@ -2691,62 +2690,7 @@ const styles = StyleSheet.create({
         flex: 1,
     },
 
-    // ── Header ──
-    headerSafe: {
-        zIndex: 10,
-    },
-
-    // ── Header Card ──
-    headerCard: {
-        backgroundColor: WHITE,
-        borderRadius: 20,
-        borderWidth: 2,
-        borderColor: BLACK,
-        marginHorizontal: 12,
-        marginBottom: 8,
-        paddingHorizontal: 18,
-        paddingTop: 14,
-        paddingBottom: 14,
-    },
-    headerCardRow: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        justifyContent: 'space-between',
-        marginBottom: 12,
-    },
-    headerCardTitle: {
-        fontFamily: 'Inter-Bold',
-        fontSize: 22,
-        color: BLACK,
-        fontWeight: '800',
-    },
-    modeToggleRow: {
-        flexDirection: 'row',
-        gap: 8,
-    },
-    modeBtn: {
-        paddingVertical: 6,
-        paddingHorizontal: 18,
-        borderRadius: 20,
-        borderWidth: 1.5,
-        borderColor: BLACK + '25',
-        backgroundColor: 'transparent',
-    },
-    modeBtnActive: {
-        backgroundColor: YELLOW,
-        borderColor: YELLOW,
-    },
-    modeBtnText: {
-        fontFamily: 'Inter-Medium',
-        fontSize: 13,
-        color: BLACK + '60',
-    },
-    modeBtnTextActive: {
-        color: BLACK,
-        fontFamily: 'Inter-Medium',
-    },
-
-    // ── New Monthly / Inspiration pill toggle ──
+    // ── Monthly / Inspiration pill toggle ──
     modePillWrap: {
         marginHorizontal: 12,
         marginBottom: 10,
@@ -2842,30 +2786,6 @@ const styles = StyleSheet.create({
         marginTop: -2,
     },
 
-    // ── Mini Toolbar ──
-    miniToolbar: {
-        position: 'absolute',
-        bottom: 16,
-        left: 16,
-        flexDirection: 'row',
-        gap: 8,
-        zIndex: 200,
-    },
-    toolBtn: {
-        width: 42,
-        height: 42,
-        borderRadius: 21,
-        backgroundColor: WHITE,
-        borderWidth: 1.5,
-        borderColor: BLACK + '20',
-        alignItems: 'center',
-        justifyContent: 'center',
-        shadowColor: BLACK,
-        shadowOffset: { width: 0, height: 2 },
-        shadowOpacity: 0.08,
-        shadowRadius: 6,
-        elevation: 3,
-    },
     itemContainer: {
         width: 160,
         height: 160,
@@ -3022,55 +2942,6 @@ const styles = StyleSheet.create({
         alignItems: 'center',
         gap: 10,
     },
-    deleteText: {
-        fontFamily: 'Inter-Bold',
-        fontSize: 15,
-    },
-
-    // ── Bottom Actions Bar ──
-    bottomBar: {
-        position: 'absolute',
-        bottom: 0,
-        left: 0,
-        right: 0,
-        flexDirection: 'row',
-        justifyContent: 'center',
-        alignItems: 'center',
-        gap: 8,
-        paddingBottom: Platform.OS === 'ios' ? 36 : 20,
-        paddingTop: 14,
-    },
-    actionPill: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        justifyContent: 'center',
-        paddingHorizontal: 16,
-        paddingVertical: 12,
-        borderRadius: 24,
-        borderWidth: 1,
-        shadowColor: '#000',
-        shadowOffset: { width: 0, height: 2 },
-        shadowOpacity: 0.06,
-        shadowRadius: 8,
-        elevation: 3,
-    },
-    actionPillIconOnly: {
-        paddingHorizontal: 0,
-        width: 48,
-        height: 48,
-    },
-    actionPillText: {
-        fontFamily: 'Inter-Bold',
-        fontSize: 15,
-        fontWeight: '600',
-    },
-    vertDivider: {
-        width: 1,
-        height: 24,
-        backgroundColor: 'rgba(0,0,0,0.1)',
-        marginHorizontal: 4,
-    },
-
     // ── Layout Sheet ──
     layoutGrid: {
         flexDirection: 'row',
@@ -3123,29 +2994,6 @@ const styles = StyleSheet.create({
         marginTop: 1,
     },
 
-    // ── Stock Sheet ──
-    catScroll: {
-        paddingHorizontal: 20,
-        paddingVertical: 10,
-        gap: 8,
-    },
-    catChip: {
-        paddingHorizontal: 16,
-        paddingVertical: 8,
-        borderRadius: 20,
-        borderWidth: 1,
-        marginRight: 8,
-        justifyContent: 'center',
-        alignItems: 'center',
-    },
-    catText: {
-        fontFamily: 'InterBold',
-        fontSize: 14,
-        fontWeight: '600',
-        textAlign: 'center',
-        includeFontPadding: false,
-        lineHeight: 18,
-    },
     // ── Image Browser Sheet ──
     imageBrowserSheet: {
         position: 'absolute',
@@ -3252,37 +3100,12 @@ const styles = StyleSheet.create({
         backgroundColor: BLACK + '55',
         alignItems: 'center', justifyContent: 'center',
     },
-    browserMoreBadge: {
-        position: 'absolute',
-        bottom: 0,
-        left: 0,
-        right: 0,
-        backgroundColor: 'rgba(0,0,0,0.32)',
-        paddingVertical: 3,
-        paddingHorizontal: 4,
-        alignItems: 'center',
-    },
-    browserMoreText: {
-        color: '#FFF',
-        fontSize: 9,
-        fontFamily: 'Inter-Bold',
-    },
     browserCenterMsg: {
         flex: 1,
         alignItems: 'center',
         justifyContent: 'center',
         padding: 32,
         gap: 12,
-    },
-    browserMsgTitle: {
-        fontFamily: 'Inter-Bold',
-        fontSize: 22,
-    },
-    browserMsgBody: {
-        fontFamily: 'Inter-Bold',
-        fontSize: 14,
-        textAlign: 'center',
-        lineHeight: 22,
     },
 
     // ── Affirmation Sheet ──

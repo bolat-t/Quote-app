@@ -65,12 +65,6 @@ const CalendarIcon = () => (
     </Svg>
 );
 
-const ArrowIcon = () => (
-    <Svg width={20} height={20} viewBox="0 0 24 24" fill="none">
-        <Path d="M5 12h14M13 6l6 6-6 6" stroke={BLACK} strokeWidth={2.2} strokeLinecap="round" strokeLinejoin="round" />
-    </Svg>
-);
-
 // ─── Props ────────────────────────────────────────────────────────────────────
 
 interface AppHeaderProps {
@@ -235,7 +229,6 @@ export const AppHeader: React.FC<AppHeaderProps> = ({ title, subtitle, currentRo
 
                     {/* 3. Focus Timer — inline pills */}
                     <View style={styles.settingsRow}>
-                        <View style={styles.rowArrow}><ArrowIcon /></View>
                         <View style={[styles.rowBody, { flex: 1 }]}>
                             <Text style={styles.settingsLabel}>Focus Timer</Text>
                             <Text style={styles.settingsSubtext}>Default journaling session length</Text>
@@ -393,58 +386,11 @@ const styles = StyleSheet.create({
         alignSelf: 'center',
         gap: 4,
     },
-    timerPill: {
-        width: 40,
-        height: 40,
-        alignItems: 'center',
-        justifyContent: 'center',
-    },
-    timerPillText: {
-        fontFamily: 'Inter-Bold',
-        fontSize: 10,
-        color: BLACK,
-    },
     hamburgerBtn: {
         width: 44,
         height: 44,
         alignItems: 'center',
         justifyContent: 'center',
-    },
-    // Journal step dots
-    stepTrack: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        gap: 4,
-    },
-    stepDotWrap: {
-        alignItems: 'center',
-        gap: 3,
-        paddingHorizontal: 6,
-        paddingVertical: 2,
-    },
-    stepDot: {
-        width: 10,
-        height: 10,
-        borderRadius: 5,
-        backgroundColor: '#DDDDDD',
-    },
-    stepDotActive: {
-        backgroundColor: YELLOW,
-        width: 12,
-        height: 12,
-        borderRadius: 6,
-    },
-    stepDotDone: {
-        backgroundColor: BLACK,
-    },
-    stepDotLabel: {
-        fontFamily: 'Inter-Medium',
-        fontSize: 10,
-        color: '#888888',
-    },
-    stepDotLabelActive: {
-        color: BLACK,
-        fontFamily: 'Inter-SemiBold',
     },
     settingsPanel: {
         marginTop: 4,
@@ -459,11 +405,6 @@ const styles = StyleSheet.create({
         alignItems: 'center',
         paddingVertical: 12,
         gap: 12,
-    },
-    rowArrow: {
-        width: 20,
-        alignItems: 'center',
-        justifyContent: 'center',
     },
     rowBody: {
         flex: 1,

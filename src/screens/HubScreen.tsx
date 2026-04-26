@@ -35,7 +35,6 @@ import { useIsFocused } from '@react-navigation/native';
 import { useCommitmentMins } from '../context/CommitmentContext';
 import { useHeaderHeight } from '../context/HeaderHeightContext';
 import { calculateStreak, getJournalEntriesByDate, getTodayDateString } from '../utils/journalStorage';
-import { getUserName } from '../utils/storage';
 import { getXPProgress, LEVEL_TIERS, XP_REWARDS } from '../data/progressionConfig';
 import { XPToast } from '../components/XPToast';
 import { LevelModal } from '../components/LevelModal';
@@ -48,7 +47,6 @@ import { useDailyQuote } from '../hooks/useDailyQuote';
 const YELLOW = '#FFE600';
 const BLACK  = '#000000';
 const WHITE  = '#FFFFFF';
-const GRAY   = '#F2F2F2';
 
 const { width: SCREEN_W } = Dimensions.get('window');
 const BASE_JUMP_H = 80;
@@ -823,128 +821,8 @@ export const HubScreen: React.FC = () => {
 // ─────────────────────────────────────────────
 
 const styles = StyleSheet.create({
-    container: {
-        flex: 1,
-        backgroundColor: BLACK,
-    },
-    scrollContent: {
-        flex: 1,
-        paddingHorizontal: 16,
-    },
-    headerCard: {
-        backgroundColor: WHITE,
-        borderWidth: 2,
-        borderColor: BLACK,
-        borderRadius: 20,
-        paddingHorizontal: 16,
-        paddingTop: 14,
-        paddingBottom: 14,
-        marginBottom: 12,
-    },
-    headerTop: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        justifyContent: 'space-between',
-    },
-    greetingLine1: {
-        fontFamily: 'Inter-Bold',
-        fontSize: 24,
-        color: BLACK,
-        lineHeight: 28,
-    },
-    greetingLine2: {
-        fontFamily: 'Inter-Bold',
-        fontSize: 24,
-        color: BLACK,
-        lineHeight: 30,
-    },
-    hamburgerBtn: {
-        width: 44,
-        height: 44,
-        alignItems: 'center',
-        justifyContent: 'center',
-    },
-    settingsPanel: {
-        marginTop: 4,
-    },
-    settingsDivider: {
-        height: 1.5,
-        backgroundColor: '#E0E0E0',
-        marginVertical: 10,
-    },
-    settingsRow: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        justifyContent: 'space-between',
-        paddingVertical: 10,
-    },
-    settingsRowLabel: {
-        fontFamily: 'Inter-Medium',
-        fontSize: 15,
-        color: BLACK,
-    },
-    settingsRowDivider: {
-        height: 1,
-        backgroundColor: '#EEEEEE',
-    },
-    settingsToggle: {
-        paddingHorizontal: 10,
-        paddingVertical: 4,
-        borderRadius: 20,
-        borderWidth: 1.5,
-        borderColor: '#CCCCCC',
-    },
-    settingsToggleOn: {
-        backgroundColor: YELLOW,
-        borderColor: BLACK,
-    },
-    settingsToggleText: {
-        fontFamily: 'Inter-Bold',
-        fontSize: 11,
-        color: '#AAAAAA',
-        letterSpacing: 0.5,
-    },
-    settingsToggleTextOn: {
-        color: BLACK,
-    },
-    settingsRowSub: {
-        fontFamily: 'Inter-Medium',
-        fontSize: 12,
-        color: '#4B5563',
-        marginTop: 1,
-    },
-    settingsBadge: {
-        fontFamily: 'Inter-Bold',
-        fontSize: 12,
-        color: BLACK,
-        backgroundColor: GRAY,
-        paddingHorizontal: 10,
-        paddingVertical: 4,
-        borderRadius: 8,
-    },
-    reflectionCard: {
-        backgroundColor: YELLOW,
-        borderWidth: 2,
-        borderColor: BLACK,
-        borderRadius: 20,
-        paddingHorizontal: 20,
-        paddingVertical: 28,
-        alignItems: 'flex-start',
-    },
-    reflectionLabel: {
-        fontFamily: 'Inter-Bold',
-        fontSize: 16,
-        color: BLACK,
-        letterSpacing: 0.8,
-        marginBottom: 4,
-        textAlign: 'left',
-    },
-    reflectionSub: {
-        fontFamily: 'Inter-Medium',
-        fontSize: 14,
-        color: BLACK,
-        opacity: 0.7,
-    },
+    container:     { flex: 1, backgroundColor: BLACK },
+    scrollContent: { flex: 1, paddingHorizontal: 16 },
 });
 
 export default HubScreen;
