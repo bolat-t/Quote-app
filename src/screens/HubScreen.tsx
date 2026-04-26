@@ -255,7 +255,7 @@ const MainCard: React.FC<MainCardProps> = ({
                             }}
                         >
                             <View style={[mainCardStyles.actionIcon, isDone && mainCardStyles.actionIconDone]}>
-                                {isDone ? <CheckIcon /> : <ArrowIcon />}
+                                {isDone && <CheckIcon />}
                             </View>
                             <Text style={[mainCardStyles.actionLabel, isDone && mainCardStyles.actionLabelDone]}>
                                 {action.label}
@@ -732,7 +732,7 @@ export const HubScreen: React.FC = () => {
             <View style={[
                 styles.scrollContent,
                 {
-                    paddingTop: headerHeight || 12,
+                    paddingTop: (headerHeight || 0) + 16,
                     paddingBottom: 62 + insets.bottom + 16,
                 },
             ]}>

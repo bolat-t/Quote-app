@@ -19,6 +19,7 @@ import {
 } from '../utils/journalStorage';
 import { loadAllDailyHunts } from '../utils/progressionStorage';
 import { loadAllVisionActivities, VisionActivity } from '../utils/visionBoardStorage';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { trackEvent } from '../lib/analytics';
 import { useHeaderHeight } from '../context/HeaderHeightContext';
 import { useHistoryCalendar } from '../context/HistoryCalendarContext';
@@ -916,6 +917,8 @@ const dayStripStyles = StyleSheet.create({
     },
     circleActive: {
         backgroundColor: YELLOW,
+        borderWidth: 2,
+        borderColor: BLACK,
     },
     dayNum: {
         fontFamily: 'Inter-SemiBold',
@@ -1078,6 +1081,8 @@ const monthSt = StyleSheet.create({
     },
     dayInnerSelected: {
         backgroundColor: YELLOW,
+        borderWidth: 2,
+        borderColor: BLACK,
     },
     dayNum: {
         fontFamily: 'Inter-Bold',
@@ -1212,7 +1217,7 @@ const ThreeThingsCard: React.FC<{ date: string; items: string[] }> = ({ date, it
             {items.map((it, i) => (
                 <React.Fragment key={i}>
                     <View style={threeStyles.item}>
-                        <ArrowRight />
+                        <View style={threeStyles.bullet} />
                         <Text style={threeStyles.itemText}>{it}</Text>
                     </View>
                     {i < items.length - 1 && <View style={threeStyles.divider} />}
@@ -1228,6 +1233,11 @@ const threeStyles = StyleSheet.create({
         alignItems:      'center',
         gap:             14,
         paddingVertical: 14,
+    },
+    bullet: {
+        width: 8, height: 8, borderRadius: 4,
+        backgroundColor: BLACK,
+        flexShrink: 0,
     },
     itemText: {
         flex:       1,
@@ -1394,6 +1404,7 @@ const PAGE_SIZE = 7;
 export const JournalScreen: React.FC = () => {
     const navigation   = useNavigation<TabScreenNavigationProp<'History'>>();
     const headerHeight = useHeaderHeight();
+    const insets       = useSafeAreaInsets();
     const { expanded: calExpanded, setExpanded: setCalExpanded } = useHistoryCalendar();
 
     // ── Base data ─────────────────────────────────────────────────────────────
@@ -1538,8 +1549,8 @@ export const JournalScreen: React.FC = () => {
                 onScroll={handleScroll}
                 scrollEventThrottle={64}
                 contentContainerStyle={{
-                    paddingTop:    headerHeight + 12,
-                    paddingBottom: 130,
+                    paddingTop:        headerHeight + 16,
+                    paddingBottom:     62 + insets.bottom + 16,
                     paddingHorizontal: 16,
                     gap: 16,
                 }}

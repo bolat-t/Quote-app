@@ -1586,7 +1586,7 @@ const InspirationCard: React.FC<InspirationCardProps> = ({ category, onPress, on
         );
     }
 
-    const thumb   = category.images[0]?.uri;
+    const thumb   = category.thumbnailUri ?? category.images[0]?.uri;
     const title   = category.title || 'UNTITLED';
 
     return (
@@ -1621,6 +1621,8 @@ type DraggableInspirationImageProps = {
     onDragEnd:        () => void;
     isOverDeleteZone: SharedValue<boolean>;
     boardSize:        SharedValue<{ width: number; height: number }>;
+    isThumbnail?:     boolean;
+    onSetThumbnail?:  (id: string) => void;
 };
 
 const INSP_IMG_SIZE = 120;
@@ -1633,6 +1635,8 @@ const DraggableInspirationImage: React.FC<DraggableInspirationImageProps> = ({
     onDragEnd,
     isOverDeleteZone,
     boardSize,
+    isThumbnail = false,
+    onSetThumbnail,
 }) => {
     const x        = useSharedValue(image.position_x);
     const y        = useSharedValue(image.position_y);
@@ -1735,6 +1739,19 @@ const DraggableInspirationImage: React.FC<DraggableInspirationImageProps> = ({
                     style={inspStyles.draggableImg}
                     resizeMode="cover"
                 />
+                {/* Cover / thumbnail selector badge */}
+                {onSetThumbnail && (
+                    <TouchableOpacity
+                        style={[inspStyles.coverBtn, isThumbnail && inspStyles.coverBtnActive]}
+                        onPress={() => onSetThumbnail(image.id)}
+                        hitSlop={{ top: 6, bottom: 6, left: 6, right: 6 }}
+                        activeOpacity={0.7}
+                    >
+                        <Text style={[inspStyles.coverBtnText, isThumbnail && inspStyles.coverBtnTextActive]}>
+                            {isThumbnail ? '★' : '☆'}
+                        </Text>
+                    </TouchableOpacity>
+                )}
             </Animated.View>
         </GestureDetector>
     );
@@ -1798,7 +1815,19 @@ const InspirationDetail: React.FC<InspirationDetailProps> = ({
 
     const handleImageInstantRemove = (id: string) => {
         Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-        onChange({ images: category.images.filter(i => i.id !== id) });
+        const updated = category.images.filter(i => i.id !== id);
+        // If the deleted image was the thumbnail, clear it
+        const removedImg = category.images.find(i => i.id === id);
+        const wasThumb = removedImg && removedImg.uri === category.thumbnailUri;
+        onChange({ images: updated, ...(wasThumb ? { thumbnailUri: undefined } : {}) });
+    };
+
+    const handleSetThumbnail = (id: string) => {
+        const img = category.images.find(i => i.id === id);
+        if (!img) return;
+        const newThumb = category.thumbnailUri === img.uri ? undefined : img.uri;
+        Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+        onChange({ thumbnailUri: newThumb });
     };
 
     // Root = the white board card itself, so it matches the exact shape of
@@ -1847,6 +1876,12 @@ const InspirationDetail: React.FC<InspirationDetailProps> = ({
                     onDragEnd={()   => setIsDraggingAny(false)}
                     isOverDeleteZone={isOverDeleteZone}
                     boardSize={boardSize}
+                    isThumbnail={
+                        category.thumbnailUri
+                            ? img.uri === category.thumbnailUri
+                            : img.id === category.images[0]?.id
+                    }
+                    onSetThumbnail={handleSetThumbnail}
                 />
             ))}
 
@@ -1909,8 +1944,9 @@ const InspirationView: React.FC = () => {
         // Optimistic local update
         setCats(prev => prev.map(c => c.id === active.id ? { ...c, ...patch } : c));
         await updateInspirationCategory(active.id, {
-            title:  patch.title  ?? active.title,
-            images: patch.images ?? active.images,
+            title:        patch.title        ?? active.title,
+            images:       patch.images       ?? active.images,
+            thumbnailUri: 'thumbnailUri' in patch ? patch.thumbnailUri : active.thumbnailUri,
         });
     };
 
@@ -2018,8 +2054,6 @@ const inspStyles = StyleSheet.create({
         height: 56,
         borderRadius: 28,
         backgroundColor: YELLOW,
-        borderWidth: 2,
-        borderColor: BLACK,
         alignItems:  'center',
         justifyContent: 'center',
     },
@@ -2081,6 +2115,30 @@ const inspStyles = StyleSheet.create({
         height: '100%',
         borderRadius: 10,
         backgroundColor: '#F3F4F6',
+    },
+    // Cover / thumbnail selector
+    coverBtn: {
+        position:   'absolute',
+        top:        4,
+        right:      4,
+        width:      24,
+        height:     24,
+        borderRadius: 12,
+        backgroundColor: 'rgba(0,0,0,0.35)',
+        alignItems:     'center',
+        justifyContent: 'center',
+        zIndex: 10,
+    },
+    coverBtnActive: {
+        backgroundColor: YELLOW,
+    },
+    coverBtnText: {
+        fontSize: 13,
+        color:    WHITE,
+        lineHeight: 16,
+    },
+    coverBtnTextActive: {
+        color: BLACK,
     },
     boardFab: {
         position: 'absolute',

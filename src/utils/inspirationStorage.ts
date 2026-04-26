@@ -12,11 +12,12 @@ export type InspirationImage = {
 };
 
 export type InspirationCategory = {
-    id:        string;
-    title:     string;
-    images:    InspirationImage[];
-    createdAt: number;
-    updatedAt: number;
+    id:           string;
+    title:        string;
+    images:       InspirationImage[];
+    thumbnailUri?: string;  // explicitly chosen cover image; falls back to images[0].uri
+    createdAt:    number;
+    updatedAt:    number;
 };
 
 const genId = () =>
@@ -108,7 +109,7 @@ export const createInspirationCategory = async (): Promise<InspirationCategory> 
 
 export const updateInspirationCategory = async (
     id: string,
-    patch: Partial<Pick<InspirationCategory, 'title' | 'images'>>,
+    patch: Partial<Pick<InspirationCategory, 'title' | 'images' | 'thumbnailUri'>>,
 ): Promise<void> => {
     const existing = await getInspirationCategories();
     const next = existing.map(c =>

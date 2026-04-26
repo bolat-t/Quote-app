@@ -845,8 +845,7 @@ export const HuntScreen: React.FC = () => {
 
     // ── Animated square card when typing (RNAnimated = JS thread → flex recalculates) ──
     const CARD_W = SCREEN_W - 32;
-    const TAB_BAR_H = 66; // tab bar height (~50px outer) + marginBottom (16px)
-    const reflectCardHeight = SCREEN_H - (headerHeight || 80) - (62 + insets.bottom) - 8 - TAB_BAR_H;
+    const reflectCardHeight = SCREEN_H - (headerHeight || 80) - (62 + insets.bottom) - 16;
     const cardH = useRef(new RNAnimated.Value(reflectCardHeight)).current;
     const cardHStyle = { height: cardH };
     const kbOpen = useRef(false);
@@ -945,7 +944,7 @@ export const HuntScreen: React.FC = () => {
                     ref={outerScrollRef}
                     contentContainerStyle={[
                         styles.scroll,
-                        { paddingTop: headerHeight || 12 },
+                        { paddingTop: (headerHeight || 0) + 16, paddingBottom: 62 + insets.bottom + 16 },
                     ]}
                     scrollEnabled={false}
                     keyboardShouldPersistTaps="handled"
@@ -1081,11 +1080,17 @@ export const HuntScreen: React.FC = () => {
                                 return (
                                     <View key={i}>
                                         <View style={styles.gratitudeRow}>
-                                            {/* Arrow icon */}
-                                            <ArrowRightIcon
-                                                color={locked ? '#CCCCCC' : filled ? BLACK : BLACK}
-                                                size={18}
-                                            />
+                                            {/* Numbered bullet */}
+                                            <View style={[
+                                                styles.gratitudeBullet,
+                                                filled && styles.gratitudeBulletFilled,
+                                                locked && styles.gratitudeBulletLocked,
+                                            ]}>
+                                                <Text style={[
+                                                    styles.gratitudeBulletText,
+                                                    locked && styles.gratitudeBulletTextLocked,
+                                                ]}>{i + 1}</Text>
+                                            </View>
                                             {filled ? (
                                                 <Text style={styles.gratitudeFilled}>
                                                     {huntInputs[i] || hunt?.entries[i]?.text}
@@ -1260,8 +1265,6 @@ const styles = StyleSheet.create({
     },
     scroll: {
         paddingHorizontal: 16,
-        paddingTop: 12,
-        paddingBottom: 120,
     },
     // ── Tab Bar ──
     tabBar: {
@@ -1615,6 +1618,27 @@ const styles = StyleSheet.create({
         gap: 12,
         paddingVertical: 14,
         minHeight: 52,
+    },
+    gratitudeBullet: {
+        width: 26, height: 26, borderRadius: 13,
+        backgroundColor: '#F0F0F0',
+        borderWidth: 1.5, borderColor: BLACK,
+        alignItems: 'center', justifyContent: 'center',
+        flexShrink: 0,
+    },
+    gratitudeBulletFilled: {
+        backgroundColor: YELLOW,
+    },
+    gratitudeBulletLocked: {
+        borderColor: '#DDDDDD',
+    },
+    gratitudeBulletText: {
+        fontFamily: 'Inter-Bold',
+        fontSize: 12,
+        color: BLACK,
+    },
+    gratitudeBulletTextLocked: {
+        color: '#CCCCCC',
     },
     gratitudeFilled: {
         flex: 1,

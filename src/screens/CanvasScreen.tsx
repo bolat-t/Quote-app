@@ -151,8 +151,7 @@ export const CanvasScreen: React.FC = () => {
     useEffect(() => { loadProgress().then(setProgress); }, []);
 
     // ── Animated card height when keyboard opens ──
-    const TAB_BAR_H = 66;
-    const cardHeight = SCREEN_H - (headerHeight || 80) - (62 + insets.bottom) - 8 - TAB_BAR_H;
+    const cardHeight = SCREEN_H - (headerHeight || 80) - (62 + insets.bottom) - 16;
     const cardH = useRef(new RNAnimated.Value(cardHeight)).current;
     const cardHRef = useRef(cardHeight);
     const headerHeightRef = useRef(headerHeight);
