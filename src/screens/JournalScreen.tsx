@@ -5,7 +5,7 @@ import {
     NativeSyntheticEvent, NativeScrollEvent,
 } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
-const potatoAvatar = require('../../assets/mascot/potato_levels/level_2_potato.png');
+const potatoAvatar = require('../../assets/chat_potato.png');
 import Svg, {
     Path as SvgPath,
     Rect as SvgRect,

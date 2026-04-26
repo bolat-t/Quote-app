@@ -610,7 +610,7 @@ const DraggableItem = ({
                                         <SvgPath d="M3 9l4 4 4-4 6 6" />
                                         <SvgCircle cx="8.5" cy="7.5" r="1" />
                                     </Svg>
-                                    <Text style={{ fontSize: 11, color: BLACK, fontFamily: 'MontserratAlternates-ExtraBoldItalic', marginTop: 4 }}>Image unavailable</Text>
+                                    <Text style={{ fontSize: 11, color: BLACK, fontFamily: 'Inter-Bold', marginTop: 4 }}>Image unavailable</Text>
                                 </View>
                             )}
                         </View>
@@ -666,7 +666,7 @@ const DailyEmptyState = ({
                 <Text style={[styles.emptyTitle, { color: BLACK + 'AA', fontSize: 16 }]}>
                     This Week's Theme
                 </Text>
-                <Text style={[styles.emptySubtitle, { color: BLACK, fontFamily: 'Outfit-Bold', fontSize: 24, marginTop: 8, textAlign: 'center' }]}>
+                <Text style={[styles.emptySubtitle, { color: BLACK, fontFamily: 'Inter-Bold', fontSize: 24, marginTop: 8, textAlign: 'center' }]}>
                     {theme.title}
                 </Text>
                 <Text style={[styles.emptySubtitle, { color: BLACK + '80', marginTop: 12, textAlign: 'center', lineHeight: 22 }]}>
@@ -735,7 +735,7 @@ const EmptyState = ({
                 <Text style={[styles.emptyTitle, { color: BLACK }]}>
                     This space is yours
                 </Text>
-                <Text style={[styles.emptySubtitle, { color: BLACK + 'AA', fontFamily: 'OpenSans-SemiBold', fontSize: 15, lineHeight: 22 }]}>
+                <Text style={[styles.emptySubtitle, { color: BLACK + 'AA', fontFamily: 'Inter-SemiBold', fontSize: 15, lineHeight: 22 }]}>
                     Pin images & affirmations that light up your future
                 </Text>
             </Animated.View>
@@ -1508,7 +1508,7 @@ export const StockImageSheet = ({
                     </View>
                 ) : photos.length === 0 ? (
                     <View style={styles.browserCenterMsg}>
-                        <Text style={{ color: BLACK, fontFamily: 'MontserratAlternates-ExtraBoldItalic', fontSize: 14 }}>
+                        <Text style={{ color: BLACK, fontFamily: 'Inter-Bold', fontSize: 14 }}>
                             No images found
                         </Text>
                     </View>
@@ -2715,7 +2715,7 @@ const styles = StyleSheet.create({
         marginBottom: 12,
     },
     headerCardTitle: {
-        fontFamily: 'MontserratAlternates-ExtraBoldItalic',
+        fontFamily: 'Inter-Bold',
         fontSize: 22,
         color: BLACK,
         fontWeight: '800',
@@ -2737,13 +2737,13 @@ const styles = StyleSheet.create({
         borderColor: YELLOW,
     },
     modeBtnText: {
-        fontFamily: 'Outfit-Medium',
+        fontFamily: 'Inter-Medium',
         fontSize: 13,
         color: BLACK + '60',
     },
     modeBtnTextActive: {
         color: BLACK,
-        fontFamily: 'Outfit-Medium',
+        fontFamily: 'Inter-Medium',
     },
 
     // ── New Monthly / Inspiration pill toggle ──
@@ -2803,15 +2803,15 @@ const styles = StyleSheet.create({
     },
     monthHeaderName: {
         fontFamily: 'Inter-Bold',
-        fontSize: 28,
+        fontSize: 20,
         color: BLACK,
-        letterSpacing: 1.5,
+        letterSpacing: 0,
     },
     monthHeaderYear: {
         fontFamily: 'Inter-Bold',
-        fontSize: 22,
+        fontSize: 15,
         color: '#D1D5DB',
-        letterSpacing: 1.2,
+        letterSpacing: 0,
         marginTop: -2,
     },
 
@@ -2830,15 +2830,13 @@ const styles = StyleSheet.create({
         height: 56,
         borderRadius: 28,
         backgroundColor: YELLOW,
-        borderWidth: 2,
-        borderColor: BLACK,
         alignItems: 'center',
         justifyContent: 'center',
         zIndex: 200,
     },
     fabText: {
         color: BLACK,
-        fontSize: 28,
+        fontSize: 20,
         lineHeight: 30,
         fontFamily: 'Inter-Bold',
         marginTop: -2,
@@ -2901,7 +2899,7 @@ const styles = StyleSheet.create({
     overlayText: {
         fontSize: 12,
         color: '#FFF',
-        fontFamily: 'MontserratAlternates-ExtraBoldItalic',
+        fontFamily: 'Inter-Bold',
         fontWeight: '600',
         textAlign: 'center',
     },
@@ -2919,7 +2917,7 @@ const styles = StyleSheet.create({
         elevation: 2,
     },
     textItemContent: {
-        fontFamily: 'MontserratAlternates-ExtraBoldItalic',
+        fontFamily: 'Inter-Bold',
         fontSize: 17,
         lineHeight: 24,
         textAlign: 'center',
@@ -2955,11 +2953,11 @@ const styles = StyleSheet.create({
         alignItems: 'center', justifyContent: 'center',
     },
     emptyTitle: {
-        fontFamily: 'MontserratAlternates-ExtraBoldItalic',
+        fontFamily: 'Inter-Bold',
         fontSize: 24,
     },
     emptySubtitle: {
-        fontFamily: 'MontserratAlternates-ExtraBoldItalic',
+        fontFamily: 'Inter-Bold',
         fontSize: 14,
         marginTop: 6,
         textAlign: 'center',
@@ -2979,7 +2977,7 @@ const styles = StyleSheet.create({
         marginBottom: 4,
     },
     emptyBrowseBtnText: {
-        fontFamily: 'MontserratAlternates-ExtraBoldItalic',
+        fontFamily: 'Inter-Bold',
         fontSize: 16,
         fontWeight: '700',
     },
@@ -2998,7 +2996,7 @@ const styles = StyleSheet.create({
         borderWidth: 1,
     },
     emptyActionText: {
-        fontFamily: 'MontserratAlternates-ExtraBoldItalic',
+        fontFamily: 'Inter-Bold',
         fontSize: 14,
         fontWeight: '600',
     },
@@ -3062,7 +3060,7 @@ const styles = StyleSheet.create({
         height: 48,
     },
     actionPillText: {
-        fontFamily: 'MontserratAlternates-ExtraBoldItalic',
+        fontFamily: 'Inter-Bold',
         fontSize: 15,
         fontWeight: '600',
     },
@@ -3091,7 +3089,7 @@ const styles = StyleSheet.create({
         gap: 8,
     },
     layoutName: {
-        fontFamily: 'MontserratAlternates-ExtraBoldItalic',
+        fontFamily: 'Inter-Bold',
         fontSize: 14,
         fontWeight: '600',
     },
@@ -3115,12 +3113,12 @@ const styles = StyleSheet.create({
         justifyContent: 'center',
     },
     clearBoardText: {
-        fontFamily: 'MontserratAlternates-ExtraBoldItalic',
+        fontFamily: 'Inter-Bold',
         fontSize: 15,
         fontWeight: '600',
     },
     clearBoardSub: {
-        fontFamily: 'MontserratAlternates-ExtraBoldItalic',
+        fontFamily: 'Inter-Bold',
         fontSize: 12,
         marginTop: 1,
     },
@@ -3141,7 +3139,7 @@ const styles = StyleSheet.create({
         alignItems: 'center',
     },
     catText: {
-        fontFamily: 'MontserratAlternates-ExtraBoldItalic',
+        fontFamily: 'InterBold',
         fontSize: 14,
         fontWeight: '600',
         textAlign: 'center',
@@ -3184,17 +3182,17 @@ const styles = StyleSheet.create({
     },
     browserSearchInput: {
         flex: 1,
-        fontFamily: 'MontserratAlternates-ExtraBoldItalic',
+        fontFamily: 'Inter-Bold',
         fontSize: 15,
         padding: 0,
     },
     browserDrillHint: {
-        fontFamily: 'MontserratAlternates-ExtraBoldItalic',
+        fontFamily: 'Inter-Bold',
         fontSize: 11,
         opacity: 0.6,
     },
     browserDrillTitle: {
-        fontFamily: 'MontserratAlternates-ExtraBoldItalic',
+        fontFamily: 'Inter-Bold',
         fontSize: 22,
         lineHeight: 26,
     },
@@ -3230,7 +3228,7 @@ const styles = StyleSheet.create({
     },
     catCardLabel: {
         color: '#FFF',
-        fontFamily: 'MontserratAlternates-ExtraBoldItalic',
+        fontFamily: 'Inter-Bold',
         fontSize: 20,
     },
     // Photo grid
@@ -3267,7 +3265,7 @@ const styles = StyleSheet.create({
     browserMoreText: {
         color: '#FFF',
         fontSize: 9,
-        fontFamily: 'MontserratAlternates-ExtraBoldItalic',
+        fontFamily: 'Inter-Bold',
     },
     browserCenterMsg: {
         flex: 1,
@@ -3277,11 +3275,11 @@ const styles = StyleSheet.create({
         gap: 12,
     },
     browserMsgTitle: {
-        fontFamily: 'MontserratAlternates-ExtraBoldItalic',
+        fontFamily: 'Inter-Bold',
         fontSize: 22,
     },
     browserMsgBody: {
-        fontFamily: 'MontserratAlternates-ExtraBoldItalic',
+        fontFamily: 'Inter-Bold',
         fontSize: 14,
         textAlign: 'center',
         lineHeight: 22,
@@ -3321,11 +3319,11 @@ const styles = StyleSheet.create({
         paddingBottom: 8,
     },
     sheetTitle: {
-        fontFamily: 'MontserratAlternates-ExtraBoldItalic',
+        fontFamily: 'Inter-Bold',
         fontSize: 24,
     },
     sheetSubtitle: {
-        fontFamily: 'MontserratAlternates-ExtraBoldItalic',
+        fontFamily: 'Inter-Bold',
         fontSize: 13,
         marginTop: 2,
     },
@@ -3352,7 +3350,7 @@ const styles = StyleSheet.create({
         marginRight: 8,
     },
     templateText: {
-        fontFamily: 'MontserratAlternates-ExtraBoldItalic',
+        fontFamily: 'Inter-Bold',
         fontSize: 13,
         maxWidth: 180,
     },
@@ -3367,7 +3365,7 @@ const styles = StyleSheet.create({
     },
     sheetInput: {
         flex: 1,
-        fontFamily: 'MontserratAlternates-ExtraBoldItalic',
+        fontFamily: 'Inter-Bold',
         fontSize: 15,
         paddingHorizontal: 16,
         paddingVertical: 12,
@@ -3491,7 +3489,7 @@ const styles = StyleSheet.create({
         gap: 3,
     },
     bgChipLabel: {
-        fontFamily: 'MontserratAlternates-ExtraBoldItalic',
+        fontFamily: 'Inter-Bold',
         fontSize: 11,
         fontWeight: '600',
     },
@@ -3503,7 +3501,7 @@ const styles = StyleSheet.create({
         gap: 8,
     },
     bgPickerLabel: {
-        fontFamily: 'MontserratAlternates-ExtraBoldItalic',
+        fontFamily: 'Inter-Bold',
         fontSize: 11,
         fontWeight: '700',
         letterSpacing: 0.8,
@@ -3521,7 +3519,7 @@ const styles = StyleSheet.create({
         gap: 2,
     },
     boardBgChipLabel: {
-        fontFamily: 'MontserratAlternates-ExtraBoldItalic',
+        fontFamily: 'Inter-Bold',
         fontSize: 10,
         fontWeight: '600',
     },

@@ -845,7 +845,10 @@ export const HuntScreen: React.FC = () => {
 
     // ── Animated square card when typing (RNAnimated = JS thread → flex recalculates) ──
     const CARD_W = SCREEN_W - 32;
-    const reflectCardHeight = SCREEN_H - (headerHeight || 80) - (62 + insets.bottom) - 16;
+    // Account for the in-screen tab bar (Emotion/3things/Reflect) above the card
+    // and the bottom navigation tab bar so the card sits with a small gap to the footer.
+    const TAB_BAR_H = 66;
+    const reflectCardHeight = SCREEN_H - (headerHeight || 80) - (62 + insets.bottom) - 8 - TAB_BAR_H;
     const cardH = useRef(new RNAnimated.Value(reflectCardHeight)).current;
     const cardHStyle = { height: cardH };
     const kbOpen = useRef(false);

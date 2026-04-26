@@ -34,7 +34,7 @@ import { loadProgress, awardXP, loadDailyHunt } from '../utils/progressionStorag
 import { useIsFocused } from '@react-navigation/native';
 import { useCommitmentMins } from '../context/CommitmentContext';
 import { useHeaderHeight } from '../context/HeaderHeightContext';
-import { calculateStreak } from '../utils/journalStorage';
+import { calculateStreak, getJournalEntriesByDate, getTodayDateString } from '../utils/journalStorage';
 import { getUserName } from '../utils/storage';
 import { getXPProgress, LEVEL_TIERS, XP_REWARDS } from '../data/progressionConfig';
 import { XPToast } from '../components/XPToast';
@@ -69,6 +69,30 @@ const CheckIcon = () => (
         <SvgPath d="M5 12l5 5L20 7" stroke={BLACK} strokeWidth={2.8} strokeLinecap="round" strokeLinejoin="round" />
     </Svg>
 );
+
+// ─────────────────────────────────────────────
+// Mood-aware all-quests-complete speech
+// ─────────────────────────────────────────────
+
+const getCongratsSpeech = (moodScore?: number): string => {
+    if (!moodScore) {
+        return "ALL DONE FOR TODAY!\nI'M SO PROUD OF YOU.\n\nYOU SHOWED UP — THAT'S\nWHAT MATTERS MOST.";
+    }
+    // 1–3: rough/sad — gentle & encouraging
+    if (moodScore <= 3) {
+        return "TODAY WAS HEAVY, AND\nYOU STILL SHOWED UP.\n\nTHAT TAKES REAL STRENGTH.\nREST EASY — I'M HERE.";
+    }
+    // 4–5: meh/upset — calming
+    if (moodScore <= 5) {
+        return "BREATHE. YOU GOT THROUGH\nTODAY ONE STEP AT A TIME.\n\nLET TONIGHT BE QUIET.\nTOMORROW IS A NEW PAGE.";
+    }
+    // 6–7: okay — proud
+    if (moodScore <= 7) {
+        return "NICE WORK TODAY!\nALL QUESTS COMPLETE.\n\nYOU'RE BUILDING\nSOMETHING REAL.";
+    }
+    // 8–10: good/great — celebratory
+    return "AMAZING DAY!\nYOU CRUSHED EVERY QUEST.\n\nKEEP RIDING THIS WAVE —\nI'M CHEERING FOR YOU!";
+};
 
 // ─────────────────────────────────────────────
 // Week Strip
@@ -163,13 +187,14 @@ interface MainCardProps {
     cardLayouts: React.MutableRefObject<Partial<Record<TaskKey, { y: number; height: number }>>>;
     onNavigate: (nav: string) => void;
     completedCount: number;
+    todayMoodScore?: number;
 }
 
 const MainCard: React.FC<MainCardProps> = ({
     level, currentTitle, xpInCurrentLevel, xpNeededForNext,
     onPressLevel, getJumpHeight, onPeak,
     actions, dailyActions, brokenTasks, breakAnims,
-    cardLayouts, onNavigate, completedCount,
+    cardLayouts, onNavigate, completedCount, todayMoodScore,
 }) => {
 
     const xpPct = xpNeededForNext > 0 ? Math.min(1, xpInCurrentLevel / xpNeededForNext) : 0;
@@ -208,11 +233,11 @@ const MainCard: React.FC<MainCardProps> = ({
                 </View>
             )}
 
-            {/* ── All done: potato speech ── */}
+            {/* ── All done: potato speech (mood-aware) ── */}
             {completedCount === actions.length && (
                 <View style={mainCardStyles.speechBox}>
                     <Text style={mainCardStyles.speechText}>
-                        {"HOW WAS YOUR DAY?\nI'M SO PROUD OF YOU!\n\nCOMPLETE TODAY'S MISSION!\nI'M SPEAKING POTATO.\nI'M STILL LEARNING AND GROWING"}
+                        {getCongratsSpeech(todayMoodScore)}
                     </Text>
                 </View>
             )}
@@ -537,8 +562,9 @@ export const HubScreen: React.FC = () => {
     const commitmentMins = useCommitmentMins();
     useDailyQuote();
 
-    const [progress,     setProgress]     = useState<UserProgress | null>(null);
-    const [streak,       setStreak]       = useState(0);
+    const [progress,        setProgress]        = useState<UserProgress | null>(null);
+    const [streak,          setStreak]          = useState(0);
+    const [todayMoodScore,  setTodayMoodScore]  = useState<number | undefined>(undefined);
     const [dailyActions, setDailyActions] = useState<DailyActions>({
         openedApp: false, readQuote: false, wroteReflection: false,
         savedCanvas: false, completedHunt: false,
@@ -636,12 +662,19 @@ export const HubScreen: React.FC = () => {
     // ── Data loading ──────────────────────────────────────────────────────
 
     const loadData = useCallback(async () => {
-        const [p, s, hunt, commitVal] = await Promise.all([
+        const [p, s, hunt, commitVal, todayEntries] = await Promise.all([
             loadProgress(),
             calculateStreak(),
             loadDailyHunt(),
             AsyncStorage.getItem('@ulbo_commitment_minutes'),
+            getJournalEntriesByDate(getTodayDateString()),
         ]);
+
+        // Most recent mood-bearing entry today drives the congrats speech.
+        const todayMood = [...todayEntries]
+            .reverse()
+            .find(e => typeof e.moodScore === 'number')?.moodScore;
+        setTodayMoodScore(todayMood);
 
         setProgress(p);
         setStreak(s);
@@ -753,6 +786,7 @@ export const HubScreen: React.FC = () => {
                         cardLayouts={cardLayouts}
                         onNavigate={nav => navigation.navigate(nav as any)}
                         completedCount={completedCount}
+                        todayMoodScore={todayMoodScore}
                     />
                 )}
             </View>
