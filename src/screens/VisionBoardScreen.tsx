@@ -2427,7 +2427,7 @@ export const VisionBoardScreen: React.FC = () => {
         <GestureHandlerRootView style={{ flex: 1 }}>
             <View style={[styles.container, { backgroundColor: BLACK }]}>
                 {/* ── Mode toggle pill (below the floating AppHeader) ── */}
-                <View style={[styles.modePillWrap, { marginTop: headerHeight + 10 }]}>
+                <View style={[styles.modePillWrap, { marginTop: headerHeight + 16 }]}>
                     <View
                         style={styles.modePill}
                         onLayout={e => setPillWidth(e.nativeEvent.layout.width)}

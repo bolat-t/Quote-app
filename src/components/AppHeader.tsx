@@ -96,7 +96,6 @@ const SettingsRow: React.FC<RowProps> = ({ label, subtext, onPress, right, disab
         activeOpacity={onPress ? 0.7 : 1}
         disabled={disabled || !onPress}
     >
-        <View style={styles.rowArrow}><ArrowIcon /></View>
         <View style={styles.rowBody}>
             <Text style={styles.settingsLabel}>{label}</Text>
             {subtext ? <Text style={styles.settingsSubtext}>{subtext}</Text> : null}

@@ -255,7 +255,7 @@ const MainCard: React.FC<MainCardProps> = ({
                             }}
                         >
                             <View style={[mainCardStyles.actionIcon, isDone && mainCardStyles.actionIconDone]}>
-                                {isDone && <CheckIcon />}
+                                {isDone ? <CheckIcon /> : <ArrowIcon />}
                             </View>
                             <Text style={[mainCardStyles.actionLabel, isDone && mainCardStyles.actionLabelDone]}>
                                 {action.label}

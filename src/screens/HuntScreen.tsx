@@ -1080,17 +1080,11 @@ export const HuntScreen: React.FC = () => {
                                 return (
                                     <View key={i}>
                                         <View style={styles.gratitudeRow}>
-                                            {/* Numbered bullet */}
-                                            <View style={[
-                                                styles.gratitudeBullet,
-                                                filled && styles.gratitudeBulletFilled,
-                                                locked && styles.gratitudeBulletLocked,
-                                            ]}>
-                                                <Text style={[
-                                                    styles.gratitudeBulletText,
-                                                    locked && styles.gratitudeBulletTextLocked,
-                                                ]}>{i + 1}</Text>
-                                            </View>
+                                            {/* Arrow icon */}
+                                            <ArrowRightIcon
+                                                color={locked ? '#CCCCCC' : filled ? BLACK : BLACK}
+                                                size={18}
+                                            />
                                             {filled ? (
                                                 <Text style={styles.gratitudeFilled}>
                                                     {huntInputs[i] || hunt?.entries[i]?.text}

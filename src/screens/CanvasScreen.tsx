@@ -282,7 +282,7 @@ export const CanvasScreen: React.FC = () => {
                     ref={outerScrollRef}
                     contentContainerStyle={[
                         styles.scroll,
-                        { paddingTop: headerHeight || 12 },
+                        { paddingTop: (headerHeight || 0) + 16 },
                     ]}
                     scrollEnabled={false}
                     keyboardShouldPersistTaps="handled"

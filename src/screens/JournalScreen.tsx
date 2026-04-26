@@ -911,7 +911,8 @@ const dayStripStyles = StyleSheet.create({
     circle: {
         width:          36,
         height:         36,
-        borderRadius:   18,
+        borderRadius:   999,
+        overflow:       'hidden',
         alignItems:     'center',
         justifyContent: 'center',
     },
@@ -919,6 +920,7 @@ const dayStripStyles = StyleSheet.create({
         backgroundColor: YELLOW,
         borderWidth: 2,
         borderColor: BLACK,
+        borderRadius: 999,
     },
     dayNum: {
         fontFamily: 'Inter-SemiBold',
@@ -1217,7 +1219,7 @@ const ThreeThingsCard: React.FC<{ date: string; items: string[] }> = ({ date, it
             {items.map((it, i) => (
                 <React.Fragment key={i}>
                     <View style={threeStyles.item}>
-                        <View style={threeStyles.bullet} />
+                        <ArrowRight />
                         <Text style={threeStyles.itemText}>{it}</Text>
                     </View>
                     {i < items.length - 1 && <View style={threeStyles.divider} />}
