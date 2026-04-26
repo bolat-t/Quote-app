@@ -1,3 +1,10 @@
+/**
+ * CanvasScreen — renders the "Quote" tab.
+ *
+ * Shows today's quote and a chat conversation with Ulbo. The earlier version
+ * of this screen was a freeform drawing canvas; that flow was removed but
+ * the file/route name "Canvas" is kept stable to avoid churning imports.
+ */
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import {
     StyleSheet,

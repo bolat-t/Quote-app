@@ -33,10 +33,13 @@ import { useFonts } from 'expo-font';
 const Tab = createBottomTabNavigator<RootTabParamList>();
 const Stack = createNativeStackNavigator<RootStackParamList>();
 
+// Note on naming: route names are kept stable (Canvas/Journal/History) so existing
+// navigation calls keep working. ROUTE_TITLES drives the visible header text and
+// `tabBarLabel` overrides drive the visible tab-bar text.
 const ROUTE_TITLES: Record<string, { title: string; subtitle?: string }> = {
-    Canvas:  { title: 'Canvas' },
-    Journal: { title: 'Journal' },
-    History: { title: 'History' },
+    Canvas:  { title: 'Quote' },          // daily quote + Ulbo chat
+    Journal: { title: 'Journal' },        // emotion / 3 things / reflect
+    History: { title: 'History' },        // timeline of past entries
     Vision:  { title: 'Vision Board' },
     Home:    { title: 'Welcome' },
 };
@@ -124,11 +127,11 @@ const BottomTabsInner = () => {
                 },
             }}
         >
-            <Tab.Screen name="Canvas"  component={CanvasScreen}     />
-            <Tab.Screen name="Journal" component={HuntScreen}       />
-            <Tab.Screen name="History" component={JournalScreen}    />
-            <Tab.Screen name="Vision"  component={VisionBoardScreen} />
-            <Tab.Screen name="Home"    component={HubScreen}        />
+            <Tab.Screen name="Canvas"  component={CanvasScreen}      options={{ tabBarLabel: 'Quote' }} />
+            <Tab.Screen name="Journal" component={HuntScreen}        options={{ tabBarLabel: 'Journal' }} />
+            <Tab.Screen name="History" component={JournalScreen}     options={{ tabBarLabel: 'History' }} />
+            <Tab.Screen name="Vision"  component={VisionBoardScreen} options={{ tabBarLabel: 'Vision' }} />
+            <Tab.Screen name="Home"    component={HubScreen}         options={{ tabBarLabel: 'Home' }} />
         </Tab.Navigator>
         </View>
     );

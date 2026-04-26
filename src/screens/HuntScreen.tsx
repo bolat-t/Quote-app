@@ -1,3 +1,10 @@
+/**
+ * HuntScreen — renders the "Journal" tab.
+ *
+ * Three-step daily flow: Emotion → 3 Things (Positivity Hunt) → Reflect.
+ * Originally named after step 2 ("Hunt"); now hosts the full journal flow.
+ * The file name is kept stable to avoid churning imports across the app.
+ */
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import {
     StyleSheet,
@@ -1617,27 +1624,6 @@ const styles = StyleSheet.create({
         paddingVertical: 14,
         minHeight: 52,
     },
-    gratitudeBullet: {
-        width: 26, height: 26, borderRadius: 13,
-        backgroundColor: '#F0F0F0',
-        borderWidth: 1.5, borderColor: BLACK,
-        alignItems: 'center', justifyContent: 'center',
-        flexShrink: 0,
-    },
-    gratitudeBulletFilled: {
-        backgroundColor: YELLOW,
-    },
-    gratitudeBulletLocked: {
-        borderColor: '#DDDDDD',
-    },
-    gratitudeBulletText: {
-        fontFamily: 'Inter-Bold',
-        fontSize: 12,
-        color: BLACK,
-    },
-    gratitudeBulletTextLocked: {
-        color: '#CCCCCC',
-    },
     gratitudeFilled: {
         flex: 1,
         fontFamily: 'Inter-Medium',
@@ -1724,27 +1710,6 @@ const styles = StyleSheet.create({
         color: '#000000',
         fontFamily: 'Inter-Bold',
         fontSize: 18,
-    },
-
-    // ── Quote ──
-    quoteBox: {
-        paddingHorizontal: 18,
-        paddingVertical: 16,
-        borderRadius: 14,
-        backgroundColor: '#F8F8F8',
-    },
-    quoteText: {
-        fontFamily: 'Inter-SemiBold',
-        fontSize: 19,
-        lineHeight: 28,
-        color: '#000000',
-    },
-    quoteAuthor: {
-        fontFamily: 'Inter-SemiBold',
-        fontSize: 13,
-        marginTop: 8,
-        textAlign: 'right',
-        color: '#666666',
     },
 
     // ── Today Prompts ──
