@@ -520,9 +520,8 @@ const PotatoMascot: React.FC<PotatoMascotProps> = ({ level, getJumpHeight, onPea
 
 const ALL_ACTIONS = [
     { key: 'openedApp',       label: 'Open the app',             xp: XP_REWARDS.openApp,         nav: undefined  },
-    { key: 'readQuote',       label: 'Read a new quote',         xp: XP_REWARDS.readQuote,       nav: 'Canvas'   },
-    { key: 'wroteReflection', label: 'Write a reflection',       xp: XP_REWARDS.writeReflection, nav: 'Canvas'   },
-    { key: 'savedCanvas',     label: 'Save your canvas',         xp: XP_REWARDS.saveCanvas,      nav: 'Canvas'   },
+    { key: 'readQuote',       label: 'Reflect on today\'s quote', xp: XP_REWARDS.readQuote,      nav: 'Canvas'   },
+    { key: 'wroteReflection', label: 'Write in your journal',    xp: XP_REWARDS.writeReflection, nav: 'Journal'  },
     { key: 'completedHunt',   label: 'Complete Positivity Hunt', xp: XP_REWARDS.completeHunt,    nav: 'Journal'  },
 ] as const;
 
@@ -530,7 +529,7 @@ const ALL_ACTIONS = [
 const COMMITMENT_KEYS: Record<number, readonly string[]> = {
     5:  ['readQuote', 'wroteReflection'],
     10: ['readQuote', 'wroteReflection', 'completedHunt'],
-    20: ['openedApp', 'readQuote', 'wroteReflection', 'savedCanvas', 'completedHunt'],
+    20: ['openedApp', 'readQuote', 'wroteReflection', 'completedHunt'],
 };
 
 const getActionsForCommitment = (mins: number) => {
@@ -541,7 +540,7 @@ const getActionsForCommitment = (mins: number) => {
 // Keep TODO_ACTIONS as alias so breakAnims & types stay valid
 const TODO_ACTIONS = ALL_ACTIONS;
 type TaskKey = (typeof ALL_ACTIONS)[number]['key'];
-type DailyActions = { openedApp: boolean; readQuote: boolean; wroteReflection: boolean; savedCanvas: boolean; completedHunt: boolean };
+type DailyActions = { openedApp: boolean; readQuote: boolean; wroteReflection: boolean; completedHunt: boolean };
 
 interface BreakAnim {
     translateX: Animated.Value;
@@ -567,7 +566,7 @@ export const HubScreen: React.FC = () => {
     const [todayMoodScore,  setTodayMoodScore]  = useState<number | undefined>(undefined);
     const [dailyActions, setDailyActions] = useState<DailyActions>({
         openedApp: false, readQuote: false, wroteReflection: false,
-        savedCanvas: false, completedHunt: false,
+        completedHunt: false,
     });
 
     const [todoActions, setTodoActions] = useState(() => getActionsForCommitment(20));
@@ -682,7 +681,6 @@ export const HubScreen: React.FC = () => {
             openedApp:       p.dailyActions.openApp         || false,
             readQuote:       p.dailyActions.readQuote       || false,
             wroteReflection: p.dailyActions.wroteReflection || false,
-            savedCanvas:     p.dailyActions.savedCanvas     || false,
             completedHunt:   hunt?.xpAwarded                || false,
         });
 
