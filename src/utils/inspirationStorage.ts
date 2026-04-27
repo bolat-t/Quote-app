@@ -1,6 +1,7 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { STORAGE_KEYS } from '../constants/storageKeys';
 
-const STORAGE_KEY = '@ulbo_inspiration_categories';
+const STORAGE_KEY = STORAGE_KEYS.INSPIRATION_CATEGORIES;
 
 export type InspirationImage = {
     id:         string;

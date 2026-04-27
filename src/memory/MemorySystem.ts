@@ -6,8 +6,9 @@ import { MemoryContext } from './types';
 import { analyzeMoodHistory } from './MoodMemory';
 import { analyzeJournalHistory } from './JournalMemory';
 import { scanRecentImages } from './ImageMemory';
+import { STORAGE_KEYS } from '../constants/storageKeys';
 
-const NAMES_KEY = 'ulbo_mascot_names';
+const NAMES_KEY = STORAGE_KEYS.MASCOT_NAMES;
 
 // User said "mascots don't have a name, just ulbos".
 // capable of supporting future naming.
@@ -41,7 +42,7 @@ export const buildMemoryContext = async (): Promise<MemoryContext> => {
     // We could store this in AsyncStorage too
     let totalSessions = 0;
     try {
-        const count = await AsyncStorage.getItem('ulbo_session_count');
+        const count = await AsyncStorage.getItem(STORAGE_KEYS.SESSION_COUNT);
         totalSessions = count ? parseInt(count, 10) : 0;
     } catch { }
 

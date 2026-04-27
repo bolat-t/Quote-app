@@ -4,8 +4,10 @@ import { XP_REWARDS, getLevelForXP } from '../data/progressionConfig';
 import { getTodayDateString } from './dateHelpers';
 import { supabase } from '../lib/supabase';
 
-const PROGRESS_KEY = '@ulbo_user_progress';
-const HUNT_KEY_PREFIX = '@ulbo_hunt_';
+import { STORAGE_KEYS } from '../constants/storageKeys';
+
+const PROGRESS_KEY = STORAGE_KEYS.USER_PROGRESS;
+const HUNT_KEY_PREFIX = STORAGE_KEYS.HUNT_PREFIX;
 
 const createFreshDailyActions = (date: string): DailyActions => ({
     date,

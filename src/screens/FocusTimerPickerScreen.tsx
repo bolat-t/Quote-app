@@ -11,6 +11,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { WheelPicker } from '../components/WheelPicker';
 import { useSetCommitmentMins } from '../context/CommitmentContext';
 import { useSetTimerSecs } from '../context/TimerSecondsContext';
+import { STORAGE_KEYS } from '../constants/storageKeys';
 
 const MUTED  = '#AAAAAA';
 
@@ -36,7 +37,7 @@ export const FocusTimerPickerScreen: React.FC<Props> = ({ navigation }) => {
     // We gate WheelPicker rendering on `loaded` so the wheels mount exactly once
     // with the correct selectedIndex — WheelPicker's internal scroll only runs on mount.
     useEffect(() => {
-        AsyncStorage.getItem('@ulbo_focus_duration_seconds').then(val => {
+        AsyncStorage.getItem(STORAGE_KEYS.FOCUS_DURATION_SECONDS).then(val => {
             if (val) {
                 const total = parseInt(val, 10);
                 const savedM = Math.floor(total / 60);
@@ -71,9 +72,9 @@ export const FocusTimerPickerScreen: React.FC<Props> = ({ navigation }) => {
         btnScale.value = withSpring(0.94, { duration: 80 }, () => {
             btnScale.value = withSpring(1, { duration: 120 });
         });
-        await AsyncStorage.setItem('@ulbo_focus_duration_seconds', String(totalSec));
+        await AsyncStorage.setItem(STORAGE_KEYS.FOCUS_DURATION_SECONDS, String(totalSec));
         const commitMins = m <= 5 ? 5 : m <= 10 ? 10 : 20;
-        await AsyncStorage.setItem('@ulbo_commitment_minutes', String(commitMins));
+        await AsyncStorage.setItem(STORAGE_KEYS.COMMITMENT_MINS, String(commitMins));
         setCommitmentMins(commitMins);
         setTimerSecs(totalSec);
         navigation.goBack();

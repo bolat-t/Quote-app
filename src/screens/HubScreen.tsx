@@ -44,6 +44,7 @@ import { OnboardingModal } from '../components/OnboardingModal';
 import { isOnboardingCompleted, completeOnboarding } from '../utils/storage';
 import { trackEvent, setUserProperties } from '../lib/analytics';
 import { useDailyQuote } from '../hooks/useDailyQuote';
+import { STORAGE_KEYS } from '../constants/storageKeys';
 
 const { width: SCREEN_W } = Dimensions.get('window');
 const BASE_JUMP_H = 80;
@@ -657,7 +658,7 @@ export const HubScreen: React.FC = () => {
             loadProgress(),
             calculateStreak(),
             loadDailyHunt(),
-            AsyncStorage.getItem('@ulbo_commitment_minutes'),
+            AsyncStorage.getItem(STORAGE_KEYS.COMMITMENT_MINS),
             getJournalEntriesByDate(getTodayDateString()),
         ]);
 
@@ -731,11 +732,11 @@ export const HubScreen: React.FC = () => {
         const checkFeedbackPrompt = async () => {
             if (!progress || progress.level < 3) return;
             try {
-                const lastPrompt = await AsyncStorage.getItem('@ulbo_last_feedback_prompt');
+                const lastPrompt = await AsyncStorage.getItem(STORAGE_KEYS.LAST_FEEDBACK_PROMPT);
                 const now = Date.now();
                 const sevenDays = 7 * 24 * 60 * 60 * 1000;
                 if (!lastPrompt || (now - parseInt(lastPrompt, 10)) > sevenDays) {
-                    await AsyncStorage.setItem('@ulbo_last_feedback_prompt', now.toString());
+                    await AsyncStorage.setItem(STORAGE_KEYS.LAST_FEEDBACK_PROMPT, now.toString());
                 }
             } catch (e) {
                 console.error('Error checking feedback prompt', e);

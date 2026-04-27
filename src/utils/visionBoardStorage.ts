@@ -1,6 +1,6 @@
-
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { supabase } from '../lib/supabase';
+import { STORAGE_KEYS } from '../constants/storageKeys';
 
 export interface VisionItem {
     id: string;
@@ -142,7 +142,7 @@ export interface VisionActivity {
     addedAt: string;
 }
 
-const VISION_LOG_PREFIX = '@ulbo_vision_log_';
+const VISION_LOG_PREFIX = STORAGE_KEYS.VISION_LOG_PREFIX;
 
 const getTodayStr = (): string => {
     const d = new Date();

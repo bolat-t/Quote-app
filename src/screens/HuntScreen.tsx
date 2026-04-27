@@ -42,6 +42,7 @@ import { getTodayDateString, saveJournalEntry, generateJournalId, analyzeJournal
 import { SpiritResponseModal } from '../components/SpiritResponseModal';
 import { HUNT_PLACEHOLDERS } from '../data/gratitudePrompts';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { STORAGE_KEYS } from '../constants/storageKeys';
 import { useHeaderHeight } from '../context/HeaderHeightContext';
 import { useFocusEffect } from '@react-navigation/native';
 import { useSetTimerDisplay } from '../context/TimerContext';
@@ -750,7 +751,7 @@ export const HuntScreen: React.FC = () => {
         setSpiritVisible(true);
         setSpiritLoading(true);
         setSpiritData(null);
-        const name = await AsyncStorage.getItem('@ulbo_user_name') || 'Friend';
+        const name = await AsyncStorage.getItem(STORAGE_KEYS.USER_NAME) || 'Friend';
         analyzeJournalEntry(text, name)
             .then(async (analysis) => {
                 const result = analysis ?? SPIRIT_FALLBACK(name);
@@ -793,7 +794,7 @@ export const HuntScreen: React.FC = () => {
         setSpiritVisible(true);
         setSpiritLoading(true);
         setSpiritData(null);
-        const name = await AsyncStorage.getItem('@ulbo_user_name') || 'Friend';
+        const name = await AsyncStorage.getItem(STORAGE_KEYS.USER_NAME) || 'Friend';
         analyzeJournalEntry(text, name)
             .then(async (analysis) => {
                 const result = analysis ?? SPIRIT_FALLBACK(name);

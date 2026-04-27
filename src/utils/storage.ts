@@ -7,18 +7,13 @@
  */
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { ThemeMode } from '../types';
-
-// ─── Storage keys ────────────────────────────────────────────────────────────
-// Do NOT change these strings — that would orphan data on existing installs.
-const THEME_KEY      = '@ulbo_theme';
-const ONBOARDING_KEY = '@ulbo_onboarding_completed';
-const USER_NAME_KEY  = '@ulbo_user_name';
+import { STORAGE_KEYS } from '../constants/storageKeys';
 
 // ─── Theme ───────────────────────────────────────────────────────────────────
 
 export const saveTheme = async (theme: ThemeMode): Promise<void> => {
     try {
-        await AsyncStorage.setItem(THEME_KEY, theme);
+        await AsyncStorage.setItem(STORAGE_KEYS.THEME, theme);
     } catch (error) {
         console.error('[storage] saveTheme failed:', error);
     }
@@ -26,7 +21,7 @@ export const saveTheme = async (theme: ThemeMode): Promise<void> => {
 
 export const loadTheme = async (): Promise<ThemeMode | null> => {
     try {
-        const value = await AsyncStorage.getItem(THEME_KEY);
+        const value = await AsyncStorage.getItem(STORAGE_KEYS.THEME);
         return value as ThemeMode | null;
     } catch (error) {
         console.error('[storage] loadTheme failed:', error);
@@ -38,7 +33,7 @@ export const loadTheme = async (): Promise<ThemeMode | null> => {
 
 export const isOnboardingCompleted = async (): Promise<boolean> => {
     try {
-        const value = await AsyncStorage.getItem(ONBOARDING_KEY);
+        const value = await AsyncStorage.getItem(STORAGE_KEYS.ONBOARDING_DONE);
         return value === 'true';
     } catch {
         return false;
@@ -48,8 +43,8 @@ export const isOnboardingCompleted = async (): Promise<boolean> => {
 /** Marks onboarding done and stores the user-supplied display name. */
 export const completeOnboarding = async (name: string): Promise<void> => {
     try {
-        await AsyncStorage.setItem(ONBOARDING_KEY, 'true');
-        await AsyncStorage.setItem(USER_NAME_KEY, name);
+        await AsyncStorage.setItem(STORAGE_KEYS.ONBOARDING_DONE, 'true');
+        await AsyncStorage.setItem(STORAGE_KEYS.USER_NAME, name);
     } catch (error) {
         console.error('[storage] completeOnboarding failed:', error);
     }
@@ -60,7 +55,7 @@ export const completeOnboarding = async (name: string): Promise<void> => {
 /** Returns the user's display name, or 'Friend' if none is set yet. */
 export const getUserName = async (): Promise<string> => {
     try {
-        const name = await AsyncStorage.getItem(USER_NAME_KEY);
+        const name = await AsyncStorage.getItem(STORAGE_KEYS.USER_NAME);
         return name || 'Friend';
     } catch {
         return 'Friend';

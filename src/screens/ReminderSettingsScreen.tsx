@@ -11,6 +11,7 @@ import Animated, {
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { WheelPicker } from '../components/WheelPicker';
 import { requestNotificationPermissions, scheduleDailyReminder } from '../utils/notifications';
+import { STORAGE_KEYS } from '../constants/storageKeys';
 
 const MUTED  = '#AAAAAA';
 
@@ -96,7 +97,7 @@ const daySt = StyleSheet.create({
 
 interface Props { navigation: any }
 
-const STORAGE_KEY = '@ulbo_reminder_settings';
+const STORAGE_KEY = STORAGE_KEYS.REMINDER_SETTINGS;
 
 export const ReminderSettingsScreen: React.FC<Props> = ({ navigation }) => {
 

@@ -1,5 +1,6 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { STORAGE_KEYS } from '../constants/storageKeys';
 
 interface CommitmentCtx {
     commitmentMins: number;
@@ -15,7 +16,7 @@ export const CommitmentProvider: React.FC<{ children: React.ReactNode }> = ({ ch
     const [commitmentMins, setCommitmentMins] = useState(20);
 
     useEffect(() => {
-        AsyncStorage.getItem('@ulbo_commitment_minutes').then(val => {
+        AsyncStorage.getItem(STORAGE_KEYS.COMMITMENT_MINS).then(val => {
             if (!val) return;
             const n = parseInt(val, 10);
             if ([5, 10, 20].includes(n)) setCommitmentMins(n);

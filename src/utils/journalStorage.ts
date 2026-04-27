@@ -5,7 +5,10 @@ import { decode } from 'base64-arraybuffer';
 import * as FileSystem from 'expo-file-system/legacy';
 import { generateUUID } from './dateHelpers';
 
-const JOURNAL_KEY = 'ulbo_journal_entries';
+import { STORAGE_KEYS } from '../constants/storageKeys';
+import { logger } from './logger';
+
+const JOURNAL_KEY = STORAGE_KEYS.JOURNAL;
 const BUCKET_NAME = 'journal-images';
 
 export interface JournalEntry {
@@ -145,7 +148,7 @@ export const saveJournalEntry = async (entry: JournalEntry): Promise<void> => {
 
         // Background: Analyze if text exists and no reply
         if (entry.response && !entry.spiritReply && entry.response.length > 5) {
-            console.log("Triggering AI Analysis for entry:", entry.id);
+            logger.log("Triggering AI Analysis for entry:", entry.id);
             // Get user name for personalization
             // We can't import getUserName/storage.ts due to potential circular dependency if not careful.
             // But let's assume "Friend" if not available or pass it in. 
@@ -153,22 +156,22 @@ export const saveJournalEntry = async (entry: JournalEntry): Promise<void> => {
             // For now, let's just use "Friend" or fetch from AsyncStorage directly if needed, 
             // or better, rely on the storage.ts which IMPORTS types from here. 
             // Actually `journalStorage` does NOT import `storage.ts`. Good.
-            const name = await AsyncStorage.getItem('@ulbo_user_name') || 'Friend';
+            const name = await AsyncStorage.getItem(STORAGE_KEYS.USER_NAME) || 'Friend';
 
             analyzeJournalEntry(entry.response, name).then(async (analysis) => {
                 if (analysis) {
-                    console.log('AI Analysis success:', analysis);
+                    logger.log('AI Analysis success:', analysis);
                     await updateEntryWithAI(entry.id, analysis);
                 } else {
-                    console.warn('AI Analysis returned null result');
+                    logger.warn('AI Analysis returned null result');
                 }
             }).catch(e => console.error("AI Analysis process failed:", e));
         } else {
-            console.log("Skipping AI analysis. Criteria: len>5, no-reply. Entry:", { len: entry.response?.length, hasReply: !!entry.spiritReply });
+            logger.log("Skipping AI analysis. Criteria: len>5, no-reply. Entry:", { len: entry.response?.length, hasReply: !!entry.spiritReply });
         }
 
         // Attempt background sync if user is logged in
-        syncEntryToSupabase(entryToSave).catch(err => console.log('Background sync failed:', err));
+        syncEntryToSupabase(entryToSave).catch(err => logger.log('Background sync failed:', err));
     } catch (error: any) {
         console.error('Error saving journal entry:', error);
         throw error;
@@ -226,7 +229,7 @@ const syncEntryToSupabase = async (entry: JournalEntry) => {
     const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[4][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 
     if (!uuidRegex.test(entry.id)) {
-        console.log(`Migrating entry ${entry.id} to UUID before sync`);
+        logger.log(`Migrating entry ${entry.id} to UUID before sync`);
         // If it's not a UUID, we can't sync it as-is to Supabase.
         // We need to generate a valid UUID, update it locally, and THEN sync.
         // However, changing ID here might be risky if we don't update local storage.
@@ -248,7 +251,7 @@ const syncEntryToSupabase = async (entry: JournalEntry) => {
                 return e;
             });
             await AsyncStorage.setItem(JOURNAL_KEY, JSON.stringify(updatedEntries));
-            console.log(`Migrated local entry ${entry.id} -> ${newId}`);
+            logger.log(`Migrated local entry ${entry.id} -> ${newId}`);
         } catch (e) {
             console.error("Failed to migrate ID locally", e);
             return; // Abort sync
@@ -344,7 +347,7 @@ export const syncJournalWithSupabase = async (): Promise<void> => {
         const migratedLocalEntries = localEntries.map(entry => {
             if (!uuidRegex.test(entry.id)) {
                 const newId = generateUUID();
-                console.log(`[Sync] Migrating ID ${entry.id} -> ${newId}`);
+                logger.log(`[Sync] Migrating ID ${entry.id} -> ${newId}`);
                 migrationOccurred = true;
                 return { ...entry, id: newId };
             }

@@ -1,5 +1,6 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { STORAGE_KEYS } from '../constants/storageKeys';
 
 interface TimerSecondsCtx {
     timerSecs: number;
@@ -15,7 +16,7 @@ export const TimerSecondsProvider: React.FC<{ children: React.ReactNode }> = ({ 
     const [timerSecs, setTimerSecs] = useState(600);
 
     useEffect(() => {
-        AsyncStorage.getItem('@ulbo_focus_duration_seconds').then(val => {
+        AsyncStorage.getItem(STORAGE_KEYS.FOCUS_DURATION_SECONDS).then(val => {
             if (val) setTimerSecs(Number(val));
         });
     }, []);
