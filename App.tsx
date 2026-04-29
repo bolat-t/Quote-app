@@ -149,8 +149,6 @@ export default function App() {
         'Carlito':                     require('@expo-google-fonts/carlito/400Regular/Carlito_400Regular.ttf'),
         'Carlito-Bold':                require('@expo-google-fonts/carlito/700Bold/Carlito_700Bold.ttf'),
         'Carlito-Italic':              require('@expo-google-fonts/carlito/400Regular_Italic/Carlito_400Regular_Italic.ttf'),
-        'MontserratAlternates-ExtraBoldItalic': require('@expo-google-fonts/montserrat-alternates/800ExtraBold_Italic/MontserratAlternates_800ExtraBold_Italic.ttf'),
-        'MontserratAlternates-Bold':   require('@expo-google-fonts/montserrat-alternates/700Bold/MontserratAlternates_700Bold.ttf'),
         'OpenSans-SemiBold':           require('@expo-google-fonts/open-sans/600SemiBold/OpenSans_600SemiBold.ttf'),
         'Inter-Bold':                  require('@expo-google-fonts/inter/700Bold/Inter_700Bold.ttf'),
         'Inter-Medium':                require('@expo-google-fonts/inter/500Medium/Inter_500Medium.ttf'),

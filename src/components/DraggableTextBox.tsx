@@ -343,18 +343,18 @@ const styles = StyleSheet.create({
         textTransform: 'uppercase',
         letterSpacing: 0.5,
         marginBottom: 6,
-        fontFamily: 'MontserratAlternates-ExtraBoldItalic',
+        fontFamily: 'Inter-Bold',
         opacity: 0.6,
     },
     reflectionText: {
         fontSize: 20,
         lineHeight: 26,
-        fontFamily: 'MontserratAlternates-ExtraBoldItalic', // Handwriting
+        fontFamily: 'Inter-Bold', // Handwriting
     },
     plainText: {
         fontSize: 18,
         lineHeight: 24,
-        fontFamily: 'MontserratAlternates-ExtraBoldItalic', // "Typed" look
+        fontFamily: 'Inter-Bold', // "Typed" look
         textShadowColor: 'rgba(0, 0, 0, 0.1)',
         textShadowOffset: { width: 0, height: 1 },
         textShadowRadius: 2,
@@ -366,13 +366,13 @@ const styles = StyleSheet.create({
         minHeight: 30,
         borderWidth: 0,
         minWidth: 40,
-        fontFamily: 'MontserratAlternates-ExtraBoldItalic',
+        fontFamily: 'Inter-Bold',
         textAlignVertical: 'top',
     },
     plainInput: {
         fontSize: 18,
         lineHeight: 24,
-        fontFamily: 'MontserratAlternates-ExtraBoldItalic',
+        fontFamily: 'Inter-Bold',
     },
     doneButton: {
         paddingHorizontal: 12,
@@ -412,7 +412,7 @@ const styles = StyleSheet.create({
     },
     doneText: {
         fontSize: 12,
-        fontFamily: 'MontserratAlternates-ExtraBoldItalic',
+        fontFamily: 'Inter-Bold',
         fontWeight: 'bold',
         color: BLACK,
     },
@@ -420,7 +420,7 @@ const styles = StyleSheet.create({
         fontSize: 12,
         marginTop: 4,
         opacity: 0.6,
-        fontFamily: 'MontserratAlternates-ExtraBoldItalic',
+        fontFamily: 'Inter-Bold',
     },
     canvasImage: {
         width: 140,

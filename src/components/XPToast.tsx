@@ -116,13 +116,13 @@ const styles = StyleSheet.create({
     },
     xpAmount: {
         fontSize: 18,
-        fontFamily: 'MontserratAlternates-ExtraBoldItalic',
+        fontFamily: 'Inter-Bold',
         letterSpacing: 0.5,
         color: BLACK,
     },
     xpLabel: {
         fontSize: 13,
-        fontFamily: 'MontserratAlternates-ExtraBoldItalic',
+        fontFamily: 'Inter-Bold',
         color: BLACK + 'BB',
     },
     levelUpContainer: {
@@ -138,13 +138,13 @@ const styles = StyleSheet.create({
     },
     levelUpText: {
         fontSize: 20,
-        fontFamily: 'MontserratAlternates-ExtraBoldItalic',
+        fontFamily: 'Inter-Bold',
         textAlign: 'center',
         color: BLACK,
     },
     levelUpTitle: {
         fontSize: 14,
-        fontFamily: 'MontserratAlternates-ExtraBoldItalic',
+        fontFamily: 'Inter-Bold',
         textAlign: 'center',
         color: BLACK + 'BB',
     },

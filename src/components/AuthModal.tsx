@@ -162,14 +162,14 @@ const styles = StyleSheet.create({
     },
     modalTitle: {
         fontSize: 28,
-        fontFamily: 'MontserratAlternates-ExtraBoldItalic',
+        fontFamily: 'Inter-Bold',
         color: BLACK,
     },
     closeButton: {
         padding: 4,
     },
     subtitle: {
-        fontFamily: 'MontserratAlternates-ExtraBoldItalic',
+        fontFamily: 'Inter-Bold',
         fontSize: 16,
         marginBottom: 24,
         color: BLACK + '80',
@@ -182,7 +182,7 @@ const styles = StyleSheet.create({
         height: 52,
         borderRadius: 16,
         paddingHorizontal: 16,
-        fontFamily: 'MontserratAlternates-ExtraBoldItalic',
+        fontFamily: 'Inter-Bold',
         fontSize: 18,
         color: BLACK,
         backgroundColor: '#F0F4F8',
@@ -212,7 +212,7 @@ const styles = StyleSheet.create({
         opacity: 0.7,
     },
     authButtonText: {
-        fontFamily: 'MontserratAlternates-ExtraBoldItalic',
+        fontFamily: 'Inter-Bold',
         fontSize: 22,
         color: BLACK,
     },
@@ -221,7 +221,7 @@ const styles = StyleSheet.create({
         padding: 8,
     },
     switchText: {
-        fontFamily: 'MontserratAlternates-ExtraBoldItalic',
+        fontFamily: 'Inter-Bold',
         fontSize: 16,
         textDecorationLine: 'underline',
         color: BLACK,

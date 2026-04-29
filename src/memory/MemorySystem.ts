@@ -56,10 +56,3 @@ export const buildMemoryContext = async (): Promise<MemoryContext> => {
     };
 };
 
-export const clearMemory = async () => {
-    // We don't delete the journal entries (that's user data), 
-    // but we might reset derived memory caches if we had any.
-    // For now, this is a no-op as we re-analyze on the fly.
-    // Maybe verify privacy by clearing names?
-    await AsyncStorage.removeItem(NAMES_KEY);
-};

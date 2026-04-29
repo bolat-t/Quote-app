@@ -181,7 +181,7 @@ const styles = StyleSheet.create({
         marginBottom: 24,
     },
     title: {
-        fontFamily: 'MontserratAlternates-ExtraBoldItalic',
+        fontFamily: 'Inter-Bold',
         fontSize: 28,
         color: BLACK,
     },
@@ -192,7 +192,7 @@ const styles = StyleSheet.create({
         gap: 12,
     },
     sectionTitle: {
-        fontFamily: 'MontserratAlternates-ExtraBoldItalic',
+        fontFamily: 'Inter-Bold',
         fontSize: 16,
         color: BLACK + '80',
     },
@@ -224,13 +224,13 @@ const styles = StyleSheet.create({
         borderColor: BLACK,
     },
     typeText: {
-        fontFamily: 'MontserratAlternates-ExtraBoldItalic',
+        fontFamily: 'Inter-Bold',
         fontSize: 14,
         color: BLACK,
     },
     typeTextSelected: {
         color: BLACK,
-        fontFamily: 'MontserratAlternates-ExtraBoldItalic',
+        fontFamily: 'Inter-Bold',
     },
     textInput: {
         backgroundColor: '#F8FAFC',
@@ -240,7 +240,7 @@ const styles = StyleSheet.create({
         padding: 16,
         height: 120,
         textAlignVertical: 'top',
-        fontFamily: 'MontserratAlternates-ExtraBoldItalic',
+        fontFamily: 'Inter-Bold',
         fontSize: 16,
         color: BLACK,
     },
@@ -259,7 +259,7 @@ const styles = StyleSheet.create({
         opacity: 0.7,
     },
     submitButtonText: {
-        fontFamily: 'MontserratAlternates-ExtraBoldItalic',
+        fontFamily: 'Inter-Bold',
         fontSize: 20,
         color: BLACK,
     },

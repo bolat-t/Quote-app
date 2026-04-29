@@ -22,7 +22,6 @@ import { usePurchase } from '../context/PurchaseContext';
 import { useHistoryCalendar } from '../context/HistoryCalendarContext';
 import { requestNotificationPermissions, scheduleDailyReminder } from '../utils/notifications';
 import { exportJournalData } from '../utils/journalStorage';
-import { clearMemory } from '../memory/MemorySystem';
 import { completeOnboarding } from '../utils/storage';
 import { AuthModal } from './AuthModal';
 import { FeedbackModal } from './FeedbackModal';
@@ -231,22 +230,6 @@ export const AppHeader: React.FC<AppHeaderProps> = ({ title, subtitle, currentRo
                     <SettingsRow
                         label="Give Feedback"
                         onPress={() => { setIsExpanded(false); setTimeout(() => setIsFeedbackVisible(true), 300); }}
-                    />
-
-                    <View style={styles.divider} />
-
-                    {/* 6. Clear Mascot Memory */}
-                    <SettingsRow
-                        label="Clear Mascot Memory"
-                        subtext="Resets what your mascot remembers."
-                        onPress={() => Alert.alert(
-                            'Clear Mascot Memory?',
-                            'Resets what your mascot remembers about your mood.',
-                            [
-                                { text: 'Cancel', style: 'cancel' },
-                                { text: 'Clear', style: 'destructive', onPress: async () => { await clearMemory(); setIsExpanded(false); Alert.alert('Cleared', 'Mascot has a fresh start.'); } },
-                            ]
-                        )}
                     />
 
                     {/* ── Dev section ── */}

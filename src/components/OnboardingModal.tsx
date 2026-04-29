@@ -413,7 +413,7 @@ const styles = StyleSheet.create({
         minWidth: 40,
     },
     skipText: {
-        fontFamily: 'MontserratAlternates-ExtraBoldItalic',
+        fontFamily: 'Inter-Bold',
         fontSize: 15,
     },
     dotsRow: {
@@ -451,13 +451,13 @@ const styles = StyleSheet.create({
     },
     title: {
         fontSize: 36,
-        fontFamily: 'MontserratAlternates-ExtraBoldItalic',
+        fontFamily: 'Inter-Bold',
         marginBottom: 10,
         lineHeight: 42,
     },
     description: {
         fontSize: 17,
-        fontFamily: 'MontserratAlternates-ExtraBoldItalic',
+        fontFamily: 'Inter-Bold',
         lineHeight: 26,
         marginBottom: 28,
     },
@@ -481,7 +481,7 @@ const styles = StyleSheet.create({
         borderRadius: 4,
     },
     chipLabel: {
-        fontFamily: 'MontserratAlternates-ExtraBoldItalic',
+        fontFamily: 'Inter-Bold',
         fontSize: 14,
     },
     // Feature rows (slide 3)
@@ -509,12 +509,12 @@ const styles = StyleSheet.create({
         flex: 1,
     },
     featureLabel: {
-        fontFamily: 'MontserratAlternates-ExtraBoldItalic',
+        fontFamily: 'Inter-Bold',
         fontSize: 16,
         marginBottom: 2,
     },
     featureSublabel: {
-        fontFamily: 'MontserratAlternates-ExtraBoldItalic',
+        fontFamily: 'Inter-Bold',
         fontSize: 13,
     },
     // Commitment options (commit slide)
@@ -534,7 +534,7 @@ const styles = StyleSheet.create({
         backgroundColor: YELLOW,
     },
     commitLabel: {
-        fontFamily: 'MontserratAlternates-ExtraBoldItalic',
+        fontFamily: 'Inter-Bold',
         fontSize: 18,
         color: BLACK,
     },
@@ -542,7 +542,7 @@ const styles = StyleSheet.create({
         color: BLACK,
     },
     commitSub: {
-        fontFamily: 'MontserratAlternates-ExtraBoldItalic',
+        fontFamily: 'Inter-Bold',
         fontSize: 13,
         color: BLACK + '50',
         marginTop: 2,
@@ -553,7 +553,7 @@ const styles = StyleSheet.create({
     // Name input (slide 4)
     nameInput: {
         fontSize: 30,
-        fontFamily: 'MontserratAlternates-ExtraBoldItalic',
+        fontFamily: 'Inter-Bold',
         borderBottomWidth: 2,
         paddingBottom: 8,
         width: '100%',
@@ -564,7 +564,7 @@ const styles = StyleSheet.create({
         gap: 16,
     },
     contractText: {
-        fontFamily: 'MontserratAlternates-ExtraBoldItalic',
+        fontFamily: 'Inter-Bold',
         fontSize: 16,
         lineHeight: 26,
         fontStyle: 'italic',
@@ -580,7 +580,7 @@ const styles = StyleSheet.create({
         overflow: 'hidden',
     },
     signaturePlaceholder: {
-        fontFamily: 'MontserratAlternates-ExtraBoldItalic',
+        fontFamily: 'Inter-Bold',
         fontSize: 18,
     },
     clearBtn: {
@@ -588,7 +588,7 @@ const styles = StyleSheet.create({
         paddingVertical: 4,
     },
     clearBtnText: {
-        fontFamily: 'MontserratAlternates-ExtraBoldItalic',
+        fontFamily: 'Inter-Bold',
         fontSize: 13,
         textDecorationLine: 'underline',
     },
@@ -613,7 +613,7 @@ const styles = StyleSheet.create({
         opacity: 0.45,
     },
     ctaBtnText: {
-        fontFamily: 'MontserratAlternates-ExtraBoldItalic',
+        fontFamily: 'Inter-Bold',
         fontSize: 17,
         letterSpacing: 0.3,
     },

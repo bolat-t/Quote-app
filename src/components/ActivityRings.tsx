@@ -138,7 +138,7 @@ const detSt = StyleSheet.create({
         textTransform: 'uppercase', letterSpacing: 1, marginBottom: 1,
     },
     valueRow: { flexDirection: 'row', alignItems: 'baseline', gap: 2 },
-    value:  { fontFamily: 'MontserratAlternates-ExtraBoldItalic', fontSize: 17, lineHeight: 20 },
+    value:  { fontFamily: 'Inter-Bold', fontSize: 17, lineHeight: 20 },
     meta:   { fontFamily: 'OpenSans-SemiBold', fontSize: 11, color: '#AAAAAA' },
     pctPill: {
         borderRadius: 10, paddingHorizontal: 7, paddingVertical: 3,
@@ -231,7 +231,7 @@ const actSt = StyleSheet.create({
         justifyContent: 'space-between', marginBottom: 12,
     },
     title: {
-        fontFamily: 'MontserratAlternates-ExtraBoldItalic', fontSize: 18, color: BLACK,
+        fontFamily: 'Inter-Bold', fontSize: 18, color: BLACK,
     },
     legend: {
         flexDirection: 'row', gap: 10,

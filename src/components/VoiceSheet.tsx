@@ -388,7 +388,7 @@ const triggerStyles = StyleSheet.create({
         justifyContent: 'center',
     },
     label: {
-        fontFamily: 'MontserratAlternates-ExtraBoldItalic',
+        fontFamily: 'Inter-Bold',
         fontSize: 13,
         color: BLACK,
     },
@@ -423,7 +423,7 @@ const styles = StyleSheet.create({
         marginBottom: 2,
     },
     status: {
-        fontFamily: 'MontserratAlternates-ExtraBoldItalic',
+        fontFamily: 'Inter-Bold',
         fontSize: 12,
         letterSpacing: 2.5,
         color: '#BBBBBB',
@@ -437,13 +437,13 @@ const styles = StyleSheet.create({
         marginTop: -8,
     },
     timerElapsed: {
-        fontFamily: 'MontserratAlternates-ExtraBoldItalic',
+        fontFamily: 'Inter-Bold',
         fontSize: 32,
         color: BLACK,
         letterSpacing: 1,
     },
     timerRemaining: {
-        fontFamily: 'MontserratAlternates-ExtraBoldItalic',
+        fontFamily: 'Inter-Bold',
         fontSize: 16,
         color: '#AAAAAA',
     },
@@ -499,7 +499,7 @@ const styles = StyleSheet.create({
         borderRadius: 2,
     },
     hint: {
-        fontFamily: 'MontserratAlternates-ExtraBoldItalic',
+        fontFamily: 'Inter-Bold',
         fontSize: 13,
         color: '#999999',
         textAlign: 'center',
@@ -511,7 +511,7 @@ const styles = StyleSheet.create({
         marginTop: 4,
     },
     cancelText: {
-        fontFamily: 'MontserratAlternates-ExtraBoldItalic',
+        fontFamily: 'Inter-Bold',
         fontSize: 14,
         color: '#AAAAAA',
     },

@@ -261,13 +261,13 @@ const styles = StyleSheet.create({
         backgroundColor: YELLOW + '30',
     },
     streakNumber: {
-        fontFamily: 'MontserratAlternates-ExtraBoldItalic',
+        fontFamily: 'Inter-Bold',
         fontSize: 64,
         lineHeight: 78,
         includeFontPadding: false,
     },
     streakLabel: {
-        fontFamily: 'MontserratAlternates-ExtraBoldItalic',
+        fontFamily: 'Inter-Bold',
         fontSize: 15,
     },
 
@@ -288,11 +288,11 @@ const styles = StyleSheet.create({
         alignItems: 'center',
     },
     milestoneLabel: {
-        fontFamily: 'MontserratAlternates-ExtraBoldItalic',
+        fontFamily: 'Inter-Bold',
         fontSize: 13,
     },
     milestoneValue: {
-        fontFamily: 'MontserratAlternates-ExtraBoldItalic',
+        fontFamily: 'Inter-Bold',
         fontSize: 13,
         fontWeight: '700',
     },
@@ -332,13 +332,13 @@ const styles = StyleSheet.create({
         borderRadius: 4,
     },
     dayLabel: {
-        fontFamily: 'MontserratAlternates-ExtraBoldItalic',
+        fontFamily: 'Inter-Bold',
         fontSize: 11,
     },
 
     // ── Message ──
     message: {
-        fontFamily: 'MontserratAlternates-ExtraBoldItalic',
+        fontFamily: 'Inter-Bold',
         fontSize: 14,
         textAlign: 'center',
         lineHeight: 21,
@@ -358,7 +358,7 @@ const styles = StyleSheet.create({
         shadowRadius: 8,
     },
     actionBtnText: {
-        fontFamily: 'MontserratAlternates-ExtraBoldItalic',
+        fontFamily: 'Inter-Bold',
         fontSize: 15,
         fontWeight: '600',
         color: BLACK,

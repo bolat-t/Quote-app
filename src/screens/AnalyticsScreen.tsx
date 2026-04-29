@@ -67,7 +67,7 @@ export const AnalyticsScreen: React.FC<NavProps> = ({ navigation }) => {
     const renderMoodChart = () => {
         const data = entries.filter(e => e.moodScore).slice(-7); // Last 7 entries with mood
         if (data.length < 2) return (
-            <Text style={{ color: BLACK, opacity: 0.5, textAlign: 'center', marginVertical: 20, fontFamily: 'MontserratAlternates-ExtraBoldItalic' }}>
+            <Text style={{ color: BLACK, opacity: 0.5, textAlign: 'center', marginVertical: 20, fontFamily: 'Inter-Bold' }}>
                 Not enough data for chart yet. Keep journaling!
             </Text>
         );
@@ -143,14 +143,14 @@ export const AnalyticsScreen: React.FC<NavProps> = ({ navigation }) => {
         return (
             <SafeAreaView style={[styles.container, { justifyContent: 'center', alignItems: 'center', paddingHorizontal: 32 }]}>
                 <Text style={[styles.title, { fontSize: 18, textAlign: 'center', marginBottom: 16 }]}>Something went wrong</Text>
-                <Text style={{ fontFamily: 'MontserratAlternates-ExtraBoldItalic', fontSize: 14, color: BLACK, opacity: 0.5, textAlign: 'center', marginBottom: 24 }}>{error}</Text>
+                <Text style={{ fontFamily: 'Inter-Bold', fontSize: 14, color: BLACK, opacity: 0.5, textAlign: 'center', marginBottom: 24 }}>{error}</Text>
                 <TouchableOpacity
                     onPress={loadData}
                     style={{ backgroundColor: YELLOW, borderWidth: 2, borderColor: BLACK, borderRadius: 16, paddingVertical: 14, paddingHorizontal: 32 }}
                     accessibilityLabel="Retry loading analytics"
                     accessibilityRole="button"
                 >
-                    <Text style={{ fontFamily: 'MontserratAlternates-ExtraBoldItalic', fontSize: 16, color: BLACK }}>Try Again</Text>
+                    <Text style={{ fontFamily: 'Inter-Bold', fontSize: 16, color: BLACK }}>Try Again</Text>
                 </TouchableOpacity>
             </SafeAreaView>
         );
@@ -202,7 +202,7 @@ export const AnalyticsScreen: React.FC<NavProps> = ({ navigation }) => {
                                 </View>
                             ))}
                         {Object.keys(tagCounts).length === 0 && (
-                            <Text style={{ color: BLACK, opacity: 0.5, fontFamily: 'MontserratAlternates-ExtraBoldItalic' }}>
+                            <Text style={{ color: BLACK, opacity: 0.5, fontFamily: 'Inter-Bold' }}>
                                 No emotions tagged yet.
                             </Text>
                         )}
@@ -225,7 +225,7 @@ const styles = StyleSheet.create({
     },
     title: {
         fontSize: 28,
-        fontFamily: 'MontserratAlternates-ExtraBoldItalic',
+        fontFamily: 'Inter-Bold',
         color: BLACK,
     },
     content: {
@@ -245,7 +245,7 @@ const styles = StyleSheet.create({
     },
     sectionTitle: {
         fontSize: 18,
-        fontFamily: 'MontserratAlternates-ExtraBoldItalic',
+        fontFamily: 'Inter-Bold',
         marginBottom: 16,
         color: BLACK,
     },
@@ -266,7 +266,7 @@ const styles = StyleSheet.create({
     cloudTagText: {
         fontSize: 14,
         marginRight: 8,
-        fontFamily: 'MontserratAlternates-ExtraBoldItalic',
+        fontFamily: 'Inter-Bold',
         color: BLACK,
     },
     countBadge: {

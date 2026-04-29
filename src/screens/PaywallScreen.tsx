@@ -259,7 +259,7 @@ const styles = StyleSheet.create({
     },
     title: {
         fontSize: 32,
-        fontFamily: 'MontserratAlternates-ExtraBoldItalic',
+        fontFamily: 'Inter-Bold',
         textAlign: 'center',
         marginBottom: 28,
         color: BLACK,
@@ -285,13 +285,13 @@ const styles = StyleSheet.create({
     },
     featureTitle: {
         fontSize: 16,
-        fontFamily: 'MontserratAlternates-ExtraBoldItalic',
+        fontFamily: 'Inter-Bold',
         marginBottom: 1,
         color: BLACK,
     },
     featureDesc: {
         fontSize: 13,
-        fontFamily: 'MontserratAlternates-ExtraBoldItalic',
+        fontFamily: 'Inter-Bold',
         color: '#666',
     },
     planSection: {
@@ -350,13 +350,13 @@ const styles = StyleSheet.create({
     },
     planName: {
         fontSize: 16,
-        fontFamily: 'MontserratAlternates-ExtraBoldItalic',
+        fontFamily: 'Inter-Bold',
         marginBottom: 2,
         color: BLACK,
     },
     planPriceMain: {
         fontSize: 15,
-        fontFamily: 'MontserratAlternates-ExtraBoldItalic',
+        fontFamily: 'Inter-Bold',
         color: BLACK,
     },
     planPeriod: {
@@ -366,19 +366,19 @@ const styles = StyleSheet.create({
     },
     planSavingsNote: {
         fontSize: 11,
-        fontFamily: 'MontserratAlternates-ExtraBoldItalic',
+        fontFamily: 'Inter-Bold',
         color: BLACK + '60',
         marginTop: 2,
     },
     planWeekly: {
         fontSize: 13,
-        fontFamily: 'MontserratAlternates-ExtraBoldItalic',
+        fontFamily: 'Inter-Bold',
         color: BLACK + '88',
     },
     billingNote: {
         textAlign: 'center',
         fontSize: 13,
-        fontFamily: 'MontserratAlternates-ExtraBoldItalic',
+        fontFamily: 'Inter-Bold',
         marginBottom: 20,
         color: '#888',
     },
@@ -397,7 +397,7 @@ const styles = StyleSheet.create({
     },
     ctaText: {
         fontSize: 20,
-        fontFamily: 'MontserratAlternates-ExtraBoldItalic',
+        fontFamily: 'Inter-Bold',
         color: BLACK,
         letterSpacing: 0.3,
     },
@@ -409,7 +409,7 @@ const styles = StyleSheet.create({
     },
     footerLink: {
         fontSize: 13,
-        fontFamily: 'MontserratAlternates-ExtraBoldItalic',
+        fontFamily: 'Inter-Bold',
         color: '#888',
     },
     footerDot: {

@@ -423,7 +423,7 @@ const st = StyleSheet.create({
         width: 44, height: 44, borderRadius: 22,
         backgroundColor: GRAY, alignItems: 'center', justifyContent: 'center',
     },
-    headerTitle: { fontFamily: 'MontserratAlternates-ExtraBoldItalic', fontSize: 18, color: BLACK },
+    headerTitle: { fontFamily: 'Inter-Bold', fontSize: 18, color: BLACK },
 
     scroll: { paddingHorizontal: 20, paddingBottom: 48 },
 
@@ -434,7 +434,7 @@ const st = StyleSheet.create({
         marginTop: 12, marginBottom: 4, borderColor: BLACK + '30',
     },
     toggleCardActive: { borderColor: BLACK, backgroundColor: YELLOW + '22' },
-    toggleTitle: { fontFamily: 'MontserratAlternates-Bold', fontSize: 16, color: BLACK },
+    toggleTitle: { fontFamily: 'Inter-Bold', fontSize: 16, color: BLACK },
     toggleSub:   { fontFamily: 'OpenSans-SemiBold', fontSize: 12, color: MUTED, marginTop: 2 },
 
     block:         {},
@@ -447,7 +447,7 @@ const st = StyleSheet.create({
     emptyText: { fontFamily: 'OpenSans-SemiBold', fontSize: 13, color: MUTED, textAlign: 'center' },
     timeRow: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: 16, paddingVertical: 14 },
     timeRowBorder: { borderBottomWidth: 1, borderBottomColor: BLACK + '10' },
-    timeText: { fontFamily: 'MontserratAlternates-Bold', fontSize: 18, color: BLACK, flex: 1 },
+    timeText: { fontFamily: 'Inter-Bold', fontSize: 18, color: BLACK, flex: 1 },
     removeBtn: {
         width: 28, height: 28, borderRadius: 14,
         backgroundColor: GRAY, alignItems: 'center', justifyContent: 'center',
@@ -487,7 +487,7 @@ const st = StyleSheet.create({
         paddingVertical: 18,
     },
     saveBtnDisabled:     { backgroundColor: GRAY, borderColor: '#DDDDDD' },
-    saveBtnText:         { fontFamily: 'MontserratAlternates-Bold', fontSize: 16, color: BLACK },
+    saveBtnText:         { fontFamily: 'Inter-Bold', fontSize: 16, color: BLACK },
     saveBtnTextDisabled: { color: MUTED },
 
     // Modal
@@ -503,7 +503,7 @@ const st = StyleSheet.create({
         backgroundColor: BLACK + '20', alignSelf: 'center', marginBottom: 20,
     },
     sheetTitle: {
-        fontFamily: 'MontserratAlternates-ExtraBoldItalic',
+        fontFamily: 'Inter-Bold',
         fontSize: 18, color: BLACK, textAlign: 'center', marginBottom: 8,
     },
     wheelRow: {
@@ -521,12 +521,12 @@ const st = StyleSheet.create({
         flex: 1, paddingVertical: 16, borderRadius: 14,
         borderWidth: 2, borderColor: BLACK + '30', alignItems: 'center', backgroundColor: GRAY,
     },
-    sheetCancelText: { fontFamily: 'MontserratAlternates-Bold', fontSize: 16, color: MUTED },
+    sheetCancelText: { fontFamily: 'Inter-Bold', fontSize: 16, color: MUTED },
     sheetConfirmBtn: {
         flex: 2, paddingVertical: 16, borderRadius: 14,
         borderWidth: 2, borderColor: BLACK, alignItems: 'center', backgroundColor: YELLOW,
     },
-    sheetConfirmText: { fontFamily: 'MontserratAlternates-Bold', fontSize: 16, color: BLACK },
+    sheetConfirmText: { fontFamily: 'Inter-Bold', fontSize: 16, color: BLACK },
 });
 
 export default ReminderSettingsScreen;
