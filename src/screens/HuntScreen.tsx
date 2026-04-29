@@ -19,7 +19,6 @@ import {
     Keyboard,
     Platform,
     KeyboardAvoidingView,
-    Modal,
     Animated as RNAnimated,
 } from 'react-native';
 import * as Haptics from 'expo-haptics';
@@ -45,9 +44,6 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { STORAGE_KEYS } from '../constants/storageKeys';
 import { useHeaderHeight } from '../context/HeaderHeightContext';
 import { useFocusEffect } from '@react-navigation/native';
-import { useSetTimerDisplay } from '../context/TimerContext';
-import { useSetJournalSteps } from '../context/JournalStepsContext';
-import { useTimerSecs } from '../context/TimerSecondsContext';
 import { VoiceSheet } from '../components/VoiceSheet';
 
 // Assets
@@ -91,19 +87,8 @@ const EMOTION_IMAGES = {
 type Emotion = keyof typeof EMOTION_IMAGES;
 const EMOTIONS: Emotion[] = ['happy', 'sad', 'upset', 'bored'];
 
-// Coach messages — first is task-oriented, rest are encouragements
-const COACH_MESSAGES = [
-    "let's reflect on today~",
-    "you're doing great, keep it up!",
-    "every good thing you notice matters",
-    "gratitude is a superpower",
-    "I'm proud of you for being here",
-    "small moments, big feelings~",
-    "take your time, no rush",
-    "you're building a beautiful habit",
-];
 
-const STEP_LABELS = ['Emotion', '3things', 'Reflect'];
+const STEP_LABELS = ['Mood', 'Highlights', 'Reflect'];
 
 // Fallback Ulbo response when AI call fails or returns null
 const SPIRIT_FALLBACK = (name: string) => ({
@@ -119,11 +104,6 @@ const ArrowRightIcon = ({ color, size = 18 }: { color: string; size?: number }) 
     </Svg>
 );
 
-// ═══════════════════════════════════════════════
-// Confetti Rain
-// ═══════════════════════════════════════════════
-
-const CONFETTI_COLORS = ['#FFFF01', '#FF4757', '#2ED573', '#1E90FF', '#FF6B81', '#FFFFFF'];
 const SCREEN_W = Dimensions.get('window').width;
 const SCREEN_H = Dimensions.get('window').height;
 
@@ -134,233 +114,8 @@ const SCREEN_H = Dimensions.get('window').height;
 //   each of 3 equal tabs = (SCREEN_W - 40) / 3
 const TAB_SLIDER_W = (SCREEN_W - 40) / 3;
 
-const ConfettiRain: React.FC<{ active: boolean }> = ({ active }) => {
-    const pieces = useRef(
-        Array.from({ length: 30 }, () => ({
-            anim:     new RNAnimated.Value(0),
-            x:        Math.random() * SCREEN_W,
-            color:    CONFETTI_COLORS[Math.floor(Math.random() * CONFETTI_COLORS.length)],
-            duration: 1200 + Math.random() * 800,
-            delay:    Math.random() * 800,
-        }))
-    ).current;
 
-    useEffect(() => {
-        if (!active) return;
-        const anims = pieces.map(p =>
-            RNAnimated.loop(
-                RNAnimated.timing(p.anim, {
-                    toValue: 1,
-                    duration: p.duration,
-                    delay: p.delay,
-                    useNativeDriver: true,
-                })
-            )
-        );
-        anims.forEach(a => a.start());
-        return () => anims.forEach(a => a.stop());
-    }, [active, pieces]);
 
-    return (
-        <View style={StyleSheet.absoluteFill} pointerEvents="none">
-            {pieces.map((p, i) => {
-                const translateY = p.anim.interpolate({
-                    inputRange:  [0, 1],
-                    outputRange: [-20, SCREEN_H],
-                });
-                return (
-                    <RNAnimated.View
-                        key={i}
-                        style={{
-                            position:        'absolute',
-                            left:            p.x,
-                            top:             0,
-                            width:           8,
-                            height:          8,
-                            backgroundColor: p.color,
-                            transform:       [{ translateY }],
-                        }}
-                    />
-                );
-            })}
-        </View>
-    );
-};
-
-// ═══════════════════════════════════════════════
-// Alarm Overlay
-// ═══════════════════════════════════════════════
-
-interface AlarmOverlayProps {
-    visible:      boolean;
-    allTasksDone: boolean;
-    missionsLeft: number;
-    onKeepGoing:  () => void;
-    onStop:       () => void;
-    onGrowPotato: () => void;
-}
-
-const AlarmOverlay: React.FC<AlarmOverlayProps> = ({
-    visible, allTasksDone, missionsLeft, onKeepGoing, onStop, onGrowPotato,
-}) => {
-    const pulseAnim = useRef(new RNAnimated.Value(1)).current;
-
-    // Pulsing alarm for "not done" flow
-    useEffect(() => {
-        if (!visible || allTasksDone) { pulseAnim.setValue(1); return; }
-        const loop = RNAnimated.loop(
-            RNAnimated.sequence([
-                RNAnimated.timing(pulseAnim, { toValue: 1.08, duration: 300, useNativeDriver: true }),
-                RNAnimated.timing(pulseAnim, { toValue: 1,    duration: 300, useNativeDriver: true }),
-            ])
-        );
-        loop.start();
-        return () => loop.stop();
-    }, [visible, allTasksDone, pulseAnim]);
-
-    return (
-        <Modal visible={visible} transparent animationType="fade" onRequestClose={onStop}>
-            <View style={alarmStyles.backdrop}>
-                {allTasksDone && <ConfettiRain active={visible && allTasksDone} />}
-                <View style={alarmStyles.card}>
-                    {allTasksDone ? (
-                        <>
-                            <Text style={alarmStyles.bigEmoji}>🎉</Text>
-                            <Text style={alarmStyles.doneTitle}>All Done!</Text>
-                            <Text style={alarmStyles.doneSub}>You crushed all today's missions!</Text>
-                            <TouchableOpacity style={alarmStyles.growBtn} onPress={onGrowPotato} activeOpacity={0.8}>
-                                <Text style={alarmStyles.growBtnText}>Grow Your Potato 🥔</Text>
-                            </TouchableOpacity>
-                            <TouchableOpacity onPress={onStop} activeOpacity={0.6}>
-                                <Text style={alarmStyles.doneForNow}>Done for Now</Text>
-                            </TouchableOpacity>
-                        </>
-                    ) : (
-                        <>
-                            <RNAnimated.Text style={[alarmStyles.alarmEmoji, { transform: [{ scale: pulseAnim }] }]}>
-                                ⏰
-                            </RNAnimated.Text>
-                            <Text style={alarmStyles.timesUpTitle}>Time's Up!</Text>
-                            <Text style={alarmStyles.missionsLeftText}>
-                                {missionsLeft} mission{missionsLeft !== 1 ? 's' : ''} left
-                            </Text>
-                            <TouchableOpacity style={alarmStyles.keepGoingBtn} onPress={onKeepGoing} activeOpacity={0.8}>
-                                <Text style={alarmStyles.keepGoingText}>Keep Going</Text>
-                            </TouchableOpacity>
-                            <TouchableOpacity style={alarmStyles.stopBtn} onPress={onStop} activeOpacity={0.6}>
-                                <Text style={alarmStyles.stopText}>Stop</Text>
-                            </TouchableOpacity>
-                        </>
-                    )}
-                </View>
-            </View>
-        </Modal>
-    );
-};
-
-const alarmStyles = StyleSheet.create({
-    backdrop: {
-        flex:            1,
-        backgroundColor: 'rgba(0,0,0,0.95)',
-        justifyContent:  'center',
-        alignItems:      'center',
-    },
-    card: {
-        backgroundColor:  WHITE,
-        borderWidth:      2.5,
-        borderColor:      BLACK,
-        borderRadius:     28,
-        padding:          32,
-        marginHorizontal: 24,
-        alignItems:       'center',
-        width:            SCREEN_W - 48,
-    },
-    // Congrats flow
-    bigEmoji: {
-        fontSize: 56,
-        marginBottom: 8,
-    },
-    doneTitle: {
-        fontFamily: 'Inter-Bold',
-        fontSize:   32,
-        color:      BLACK,
-        marginBottom: 4,
-    },
-    doneSub: {
-        fontFamily:    'Inter-Medium',
-        fontSize:      16,
-        color:         '#666',
-        textAlign:     'center',
-        marginVertical: 12,
-    },
-    growBtn: {
-        backgroundColor: YELLOW,
-        borderWidth:     2,
-        borderColor:     BLACK,
-        borderRadius:    20,
-        paddingVertical:   16,
-        paddingHorizontal: 32,
-        marginTop:       8,
-    },
-    growBtnText: {
-        fontFamily: 'Inter-Bold',
-        fontSize:   16,
-        color:      BLACK,
-    },
-    doneForNow: {
-        fontFamily:   'Inter-Medium',
-        fontSize:     15,
-        color:        '#999',
-        paddingVertical: 16,
-    },
-    // Alarm / not done flow
-    alarmEmoji: {
-        fontSize: 56,
-        marginBottom: 4,
-    },
-    timesUpTitle: {
-        fontFamily: 'Inter-Bold',
-        fontSize:   36,
-        color:      BLACK,
-        marginTop:  16,
-        marginBottom: 4,
-    },
-    missionsLeftText: {
-        fontFamily: 'Inter-Medium',
-        fontSize:   16,
-        color:      '#666',
-    },
-    keepGoingBtn: {
-        backgroundColor: YELLOW,
-        borderWidth:     2,
-        borderColor:     BLACK,
-        borderRadius:    50,
-        paddingVertical: 18,
-        width:           200,
-        alignItems:      'center',
-        marginTop:       24,
-    },
-    keepGoingText: {
-        fontFamily: 'Inter-Bold',
-        fontSize:   20,
-        color:      BLACK,
-    },
-    stopBtn: {
-        backgroundColor: 'transparent',
-        borderWidth:     2,
-        borderColor:     '#CCCCCC',
-        borderRadius:    50,
-        paddingVertical: 14,
-        width:           160,
-        alignItems:      'center',
-        marginTop:       12,
-    },
-    stopText: {
-        fontFamily: 'Inter-Medium',
-        fontSize:   16,
-        color:      '#999',
-    },
-});
 
 // ═══════════════════════════════════════════════
 // Journal Screen — Daily Reflection & Gratitude
@@ -369,8 +124,6 @@ const alarmStyles = StyleSheet.create({
 export const HuntScreen: React.FC = () => {
     const headerHeight = useHeaderHeight();
     const insets = useSafeAreaInsets();
-    const setTimerDisplay = useSetTimerDisplay();
-    const setJournalSteps = useSetJournalSteps();
     const { quote: todayQuote } = useDailyQuote();
     const { mood } = useMascotState();
 
@@ -392,28 +145,6 @@ export const HuntScreen: React.FC = () => {
     const [huntInputs, setHuntInputs] = useState(['', '', '']);
     const [promptResponse, setPromptResponse] = useState('');
     const [isPromptSaved, setIsPromptSaved] = useState(false);
-
-    // ── Coach messages ──
-    const [coachMsgIndex, setCoachMsgIndex] = useState(0);
-
-    // ── Timer done modal ──
-    const [showTimerDone, setShowTimerDone] = useState(false);
-    const [potatoGrown, setPotatoGrown] = useState(false);
-
-    // ── Focus Timer ──
-    // timerSecs comes from shared context — updates instantly when settings change
-    const savedTimerSecs = useTimerSecs();
-    const [timerMinutes, setTimerMinutes] = useState(savedTimerSecs / 60);
-    const [isTimerRunning, setIsTimerRunning] = useState(false);
-    const [timerTotalSeconds, setTimerTotalSeconds] = useState(savedTimerSecs);
-    const timerRef = useRef<NodeJS.Timeout | null>(null);
-
-    // Sync timer preset whenever the saved duration changes (only when not running)
-    useEffect(() => {
-        if (isTimerRunning) return;
-        setTimerMinutes(savedTimerSecs / 60);
-        setTimerTotalSeconds(savedTimerSecs);
-    }, [savedTimerSecs]);
 
     // ── Emotion step ──
     const [selectedEmotion, setSelectedEmotion] = useState<Emotion | null>(null);
@@ -466,59 +197,9 @@ export const HuntScreen: React.FC = () => {
         newLevelTitle?: string;
     } | null>(null);
 
-    // ── Timer logic ──
-    const startTimer = useCallback(() => {
-        if (timerTotalSeconds <= 0) return;
-        setIsTimerRunning(true);
-        Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-    }, [timerTotalSeconds]);
-
-    const pauseTimer = useCallback(() => {
-        setIsTimerRunning(false);
-        Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-    }, []);
-
-    const setTimerPreset = useCallback((minutes: number) => {
-        setTimerMinutes(minutes);
-        setTimerTotalSeconds(minutes * 60);
-        setIsTimerRunning(false);
-        Haptics.selectionAsync();
-    }, []);
-
-    useEffect(() => {
-        if (isTimerRunning && timerTotalSeconds > 0) {
-            timerRef.current = setInterval(() => {
-                setTimerTotalSeconds(prev => {
-                    if (prev <= 1) {
-                        setIsTimerRunning(false);
-                        setShowTimerDone(true);
-                        Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-                        setTimeout(() => Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success), 350);
-                        setTimeout(() => Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success), 700);
-                        return 0;
-                    }
-                    return prev - 1;
-                });
-            }, 1000);
-        } else {
-            if (timerRef.current) clearInterval(timerRef.current);
-        }
-        return () => { if (timerRef.current) clearInterval(timerRef.current); };
-    }, [isTimerRunning]);
-
-    // Derive display from timerTotalSeconds
-    const displayMinutes = Math.floor(timerTotalSeconds / 60);
-    const displaySeconds = timerTotalSeconds % 60;
-    const timerProgress = timerMinutes > 0 ? 1 - (timerTotalSeconds / (timerMinutes * 60)) : 0;
-
-    // ── Derived (declared early so useFocusEffect can reference isHuntDone) ──
+    // ── Derived ──
     const huntCount = hunt?.entries?.length || 0;
     const isHuntDone = hunt?.completed || false;
-
-    // Clean up journal steps on unmount
-    useEffect(() => {
-        return () => setJournalSteps(null);
-    }, [setJournalSteps]);
 
     // Auto-focus relevant input when arriving on this tab
     useFocusEffect(
@@ -533,17 +214,6 @@ export const HuntScreen: React.FC = () => {
             }
         }, [activeStep, isHuntDone])
     );
-
-    // Sync timer into AppHeader context (used by other tabs if navigated away)
-    useEffect(() => {
-        setTimerDisplay({
-            text: `${String(displayMinutes).padStart(2, '0')}:${String(displaySeconds).padStart(2, '0')}`,
-            progress: timerProgress,
-            isRunning: isTimerRunning,
-            onPress: isTimerRunning ? pauseTimer : startTimer,
-        });
-        return () => setTimerDisplay(null);
-    }, [displayMinutes, displaySeconds, timerProgress, isTimerRunning, startTimer, pauseTimer, setTimerDisplay]);
 
     // ── Load ──
     const loadData = useCallback(async () => {
@@ -895,25 +565,6 @@ export const HuntScreen: React.FC = () => {
         return () => { show.remove(); hide.remove(); };
     }, []);
 
-    // ── Grow Potato handler ──
-    const handleGrowPotato = useCallback(async () => {
-        if (!progress) return;
-        const result = await awardXP('completeHunt', progress);
-        setProgress(result.progress);
-        if (result.xpGained > 0) {
-            setXpToast({
-                amount: result.xpGained,
-                label: 'Potato grown!',
-                leveledUp: result.leveledUp,
-                newLevelTitle: result.leveledUp
-                    ? LEVEL_TIERS.find(t => t.level === result.progress.level)?.title
-                    : undefined,
-            });
-        }
-        setShowTimerDone(false);
-        setPotatoGrown(true);
-    }, [progress]);
-
     // ═══════════ LOADING ═══════════
 
     if (isLoading) {
@@ -930,17 +581,6 @@ export const HuntScreen: React.FC = () => {
 
     return (
         <View style={styles.container}>
-
-            {/* ─── Alarm Overlay ─── */}
-            <AlarmOverlay
-                visible={showTimerDone}
-                allTasksDone={isHuntDone}
-                missionsLeft={isHuntDone ? 0 : 1}
-                onKeepGoing={() => { setShowTimerDone(false); setTimerPreset(timerMinutes); }}
-                onStop={() => setShowTimerDone(false)}
-                onGrowPotato={handleGrowPotato}
-            />
-
             <KeyboardAvoidingView
                 style={{ flex: 1 }}
                 behavior={Platform.OS === 'ios' ? 'padding' : undefined}
@@ -1546,8 +1186,6 @@ const styles = StyleSheet.create({
         fontSize: 14,
         color: '#000000',
     },
-
-    // ── Timer Done Modal ──
 });
 
 export default HuntScreen;

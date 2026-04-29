@@ -37,7 +37,6 @@ export type RootStackParamList = {
   Paywall: undefined;
   Analytics: undefined;
   VisionBoard: undefined;
-  FocusTimerPicker: undefined;
   ReminderSettings: undefined;
 };
 

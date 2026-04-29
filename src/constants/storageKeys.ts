@@ -30,8 +30,6 @@ export const STORAGE_KEYS = {
     SESSION_COUNT:              'ulbo_session_count',             // legacy: no '@' prefix
 
     // ── Settings & preferences ──
-    COMMITMENT_MINS:            '@ulbo_commitment_minutes',
-    FOCUS_DURATION_SECONDS:     '@ulbo_focus_duration_seconds',
     REMINDER_SETTINGS:          '@ulbo_reminder_settings',
     IS_PREMIUM:                 '@ulbo_is_premium',
     LAST_FEEDBACK_PROMPT:       '@ulbo_last_feedback_prompt',

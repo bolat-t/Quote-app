@@ -407,7 +407,7 @@ const EmotionCard: React.FC<{
 }> = ({ date, text, moodScore }) => {
     const mood = getMoodLevel(moodScore);
     return (
-        <CardFrame date={date} section="Emotion">
+        <CardFrame date={date} section="Mood">
             <View style={emotionStyles.row}>
                 <Text style={emotionStyles.text}>{text}</Text>
                 {mood && (
@@ -449,7 +449,7 @@ const ArrowRight = () => (
 );
 
 const ThreeThingsCard: React.FC<{ date: string; items: string[] }> = ({ date, items }) => (
-    <CardFrame date={date} section="3 things">
+    <CardFrame date={date} section="Highlights">
         <View>
             {items.map((it, i) => (
                 <React.Fragment key={i}>

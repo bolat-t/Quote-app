@@ -18,15 +18,10 @@ import { JournalScreen } from './src/screens/JournalScreen';
 import { VisionBoardScreen } from './src/screens/VisionBoardScreen';
 import { PaywallScreen } from './src/screens/PaywallScreen';
 import { AnalyticsScreen } from './src/screens/AnalyticsScreen';
-import { FocusTimerPickerScreen } from './src/screens/FocusTimerPickerScreen';
 import { ReminderSettingsScreen } from './src/screens/ReminderSettingsScreen';
 import { AppHeader } from './src/components/AppHeader';
 import { getUserName } from './src/utils/storage';
 import { HeaderHeightProvider, useSetHeaderHeight } from './src/context/HeaderHeightContext';
-import { TimerProvider } from './src/context/TimerContext';
-import { JournalStepsProvider } from './src/context/JournalStepsContext';
-import { CommitmentProvider } from './src/context/CommitmentContext';
-import { TimerSecondsProvider } from './src/context/TimerSecondsContext';
 import { HistoryCalendarProvider } from './src/context/HistoryCalendarContext';
 import { useFonts } from 'expo-font';
 
@@ -37,7 +32,7 @@ const Stack = createNativeStackNavigator<RootStackParamList>();
 // navigation calls keep working. ROUTE_TITLES drives the visible header text and
 // `tabBarLabel` overrides drive the visible tab-bar text.
 const ROUTE_TITLES: Record<string, { title: string; subtitle?: string }> = {
-    Canvas:  { title: 'Quote' },          // daily quote + Ulbo chat
+    Canvas:  { title: 'Wisdom' },         // daily quote + Ulbo chat
     Journal: { title: 'Journal' },        // emotion / 3 things / reflect
     History: { title: 'History' },        // timeline of past entries
     Vision:  { title: 'Vision Board' },
@@ -127,7 +122,7 @@ const BottomTabsInner = () => {
                 },
             }}
         >
-            <Tab.Screen name="Canvas"  component={CanvasScreen}      options={{ tabBarLabel: 'Quote' }} />
+            <Tab.Screen name="Canvas"  component={CanvasScreen}      options={{ tabBarLabel: 'Wisdom' }} />
             <Tab.Screen name="Journal" component={HuntScreen}        options={{ tabBarLabel: 'Journal' }} />
             <Tab.Screen name="History" component={JournalScreen}     options={{ tabBarLabel: 'History' }} />
             <Tab.Screen name="Vision"  component={VisionBoardScreen} options={{ tabBarLabel: 'Vision' }} />
@@ -139,17 +134,9 @@ const BottomTabsInner = () => {
 
 const BottomTabs = () => (
     <HeaderHeightProvider>
-        <TimerProvider>
-            <JournalStepsProvider>
-                <CommitmentProvider>
-                    <TimerSecondsProvider>
-                        <HistoryCalendarProvider>
-                            <BottomTabsInner />
-                        </HistoryCalendarProvider>
-                    </TimerSecondsProvider>
-                </CommitmentProvider>
-            </JournalStepsProvider>
-        </TimerProvider>
+        <HistoryCalendarProvider>
+            <BottomTabsInner />
+        </HistoryCalendarProvider>
     </HeaderHeightProvider>
 );
 
@@ -198,11 +185,6 @@ export default function App() {
                                     <Stack.Screen
                                         name="VisionBoard"
                                         component={VisionBoardScreen}
-                                        options={{ presentation: 'card' }}
-                                    />
-                                    <Stack.Screen
-                                        name="FocusTimerPicker"
-                                        component={FocusTimerPickerScreen}
                                         options={{ presentation: 'card' }}
                                     />
                                     <Stack.Screen

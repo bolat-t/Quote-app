@@ -33,7 +33,6 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { UserProgress, TabScreenNavigationProp } from '../types';
 import { loadProgress, awardXP, loadDailyHunt } from '../utils/progressionStorage';
 import { useIsFocused } from '@react-navigation/native';
-import { useCommitmentMins } from '../context/CommitmentContext';
 import { useHeaderHeight } from '../context/HeaderHeightContext';
 import { calculateStreak, getJournalEntriesByDate, getTodayDateString } from '../utils/journalStorage';
 import { getXPProgress, LEVEL_TIERS, XP_REWARDS } from '../data/progressionConfig';
@@ -175,7 +174,7 @@ interface MainCardProps {
     onPressLevel: () => void;
     getJumpHeight?: () => number;
     onPeak?: () => void;
-    actions: (typeof ALL_ACTIONS)[number][];
+    actions: readonly (typeof DAILY_QUESTS)[number][];
     dailyActions: DailyActions;
     brokenTasks: Set<TaskKey>;
     breakAnims: Record<TaskKey, BreakAnim>;
@@ -512,28 +511,15 @@ const PotatoMascot: React.FC<PotatoMascotProps> = ({ level, getJumpHeight, onPea
 // Todo action definitions
 // ─────────────────────────────────────────────
 
-const ALL_ACTIONS = [
-    { key: 'openedApp',       label: 'Open the app',             xp: XP_REWARDS.openApp,         nav: undefined  },
-    { key: 'readQuote',       label: 'Reflect on today\'s quote', xp: XP_REWARDS.readQuote,      nav: 'Canvas'   },
-    { key: 'wroteReflection', label: 'Write in your journal',    xp: XP_REWARDS.writeReflection, nav: 'Journal'  },
-    { key: 'completedHunt',   label: 'Complete Positivity Hunt', xp: XP_REWARDS.completeHunt,    nav: 'Journal'  },
+// Daily quests shown on the Home tab. The order here is the order on screen.
+const DAILY_QUESTS = [
+    { key: 'openedApp',       label: 'Open the app',              xp: XP_REWARDS.openApp,         nav: undefined  },
+    { key: 'readQuote',       label: "Reflect on today's quote",  xp: XP_REWARDS.readQuote,       nav: 'Canvas'   },
+    { key: 'wroteReflection', label: 'Write in your journal',     xp: XP_REWARDS.writeReflection, nav: 'Journal'  },
+    { key: 'completedHunt',   label: 'Complete Positivity Hunt',  xp: XP_REWARDS.completeHunt,    nav: 'Journal'  },
 ] as const;
 
-// Keys active per commitment level (driven by @ulbo_commitment_minutes)
-const COMMITMENT_KEYS: Record<number, readonly string[]> = {
-    5:  ['readQuote', 'wroteReflection'],
-    10: ['readQuote', 'wroteReflection', 'completedHunt'],
-    20: ['openedApp', 'readQuote', 'wroteReflection', 'completedHunt'],
-};
-
-const getActionsForCommitment = (mins: number) => {
-    const keys = COMMITMENT_KEYS[mins] ?? COMMITMENT_KEYS[20];
-    return ALL_ACTIONS.filter(a => keys.includes(a.key));
-};
-
-// Keep TODO_ACTIONS as alias so breakAnims & types stay valid
-const TODO_ACTIONS = ALL_ACTIONS;
-type TaskKey = (typeof ALL_ACTIONS)[number]['key'];
+type TaskKey = (typeof DAILY_QUESTS)[number]['key'];
 type DailyActions = { openedApp: boolean; readQuote: boolean; wroteReflection: boolean; completedHunt: boolean };
 
 interface BreakAnim {
@@ -551,7 +537,6 @@ export const HubScreen: React.FC = () => {
     const isFocused     = useIsFocused();
     const insets        = useSafeAreaInsets();
     const headerHeight  = useHeaderHeight();
-    const commitmentMins = useCommitmentMins();
     useDailyQuote();
 
     const [progress,        setProgress]        = useState<UserProgress | null>(null);
@@ -562,7 +547,6 @@ export const HubScreen: React.FC = () => {
         completedHunt: false,
     });
 
-    const [todoActions, setTodoActions] = useState(() => getActionsForCommitment(20));
     const [isLevelModalVisible,  setIsLevelModalVisible]  = useState(false);
     const [isStreakModalVisible,  setIsStreakModalVisible] = useState(false);
     const [xpToast, setXpToast] = useState<{
@@ -574,7 +558,7 @@ export const HubScreen: React.FC = () => {
 
     const breakAnims = useRef<Record<TaskKey, BreakAnim>>(
         Object.fromEntries(
-            TODO_ACTIONS.map(a => [a.key, {
+            DAILY_QUESTS.map(a => [a.key, {
                 translateX: new Animated.Value(0),
                 opacity:    new Animated.Value(1),
                 scale:      new Animated.Value(1),
@@ -621,7 +605,7 @@ export const HubScreen: React.FC = () => {
     // ── Jump height ───────────────────────────────────────────────────────
 
     const getJumpHeight = useCallback((): number => {
-        const target = [...TODO_ACTIONS].reverse().find(a =>
+        const target = [...DAILY_QUESTS].reverse().find(a =>
             dailyActionsRef.current[a.key as keyof DailyActions] &&
             !brokenTasksRef.current.has(a.key as TaskKey) &&
             !breakingInFlight.current.has(a.key as TaskKey)
@@ -654,11 +638,10 @@ export const HubScreen: React.FC = () => {
     // ── Data loading ──────────────────────────────────────────────────────
 
     const loadData = useCallback(async () => {
-        const [p, s, hunt, commitVal, todayEntries] = await Promise.all([
+        const [p, s, hunt, todayEntries] = await Promise.all([
             loadProgress(),
             calculateStreak(),
             loadDailyHunt(),
-            AsyncStorage.getItem(STORAGE_KEYS.COMMITMENT_MINS),
             getJournalEntriesByDate(getTodayDateString()),
         ]);
 
@@ -676,10 +659,6 @@ export const HubScreen: React.FC = () => {
             wroteReflection: p.dailyActions.wroteReflection || false,
             completedHunt:   hunt?.xpAwarded                || false,
         });
-
-        const mins  = commitVal ? parseInt(commitVal, 10) : 20;
-        const valid = [5, 10, 20].includes(mins) ? mins : 20;
-        setTodoActions(getActionsForCommitment(valid));
 
         const result = await awardXP('openApp', p);
         if (result.xpGained > 0) {
@@ -721,13 +700,6 @@ export const HubScreen: React.FC = () => {
         if (isFocused) loadData();
     }, [isFocused]); // eslint-disable-line react-hooks/exhaustive-deps
 
-    // commitmentMins from context updates immediately when AppHeader's inline pill is pressed,
-    // without any navigation (isFocused stays true), so handle it separately here.
-    useEffect(() => {
-        const valid = [5, 10, 20].includes(commitmentMins) ? commitmentMins : 20;
-        setTodoActions(getActionsForCommitment(valid));
-    }, [commitmentMins]);
-
     useEffect(() => {
         const checkFeedbackPrompt = async () => {
             if (!progress || progress.level < 3) return;
@@ -747,7 +719,7 @@ export const HubScreen: React.FC = () => {
 
     const xpProgress  = progress ? getXPProgress(progress.totalXP) : null;
     const currentTier = progress ? LEVEL_TIERS.find(t => t.level === progress.level) : null;
-    const completedCount = todoActions.filter(a => dailyActions[a.key as keyof DailyActions]).length;
+    const completedCount = DAILY_QUESTS.filter(a => dailyActions[a.key as keyof DailyActions]).length;
 
     if (!progress) return null;
 
@@ -770,7 +742,7 @@ export const HubScreen: React.FC = () => {
                         onPressLevel={() => setIsLevelModalVisible(true)}
                         getJumpHeight={getJumpHeight}
                         onPeak={handlePotatoPeak}
-                        actions={todoActions}
+                        actions={DAILY_QUESTS}
                         dailyActions={dailyActions}
                         brokenTasks={brokenTasks}
                         breakAnims={breakAnims}
