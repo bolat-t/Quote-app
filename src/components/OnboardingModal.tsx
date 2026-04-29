@@ -1,5 +1,16 @@
+/**
+ * OnboardingModal — first-run flow shown until the user finishes the
+ * promise / signature. After completion, `completeOnboarding(name)` is called
+ * by the host (HubScreen) and this modal is permanently dismissed.
+ *
+ * Visual language matches the rest of the app:
+ *   - White cards with 2px black border and 20px radius
+ *   - Yellow accent for the active state (dot, button, selected option)
+ *   - Inter typography end-to-end
+ *   - Ulbo (`ulbos_coloured.png`) is the only character — there is no second
+ *     mascot, no mint/teal/coral accents, no per-feature color coding
+ */
 import React, { useState, useRef, useEffect } from 'react';
-import { BLACK, WHITE, YELLOW } from '../constants/colors';
 import {
     View,
     Text,
@@ -17,112 +28,103 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Svg, Path } from 'react-native-svg';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-const ULBO = require('../../assets/mascot/ulbos_coloured.png');
-const COACH = require('../../assets/mascot/coach_bunny.png');
+import { BLACK, WHITE, YELLOW } from '../constants/colors';
 
+const ULBO = require('../../assets/mascot/ulbos_coloured.png');
 const { width } = Dimensions.get('window');
 
-const MINT = '#4ECCA3';
+// ─── Tunable layout ──────────────────────────────────────────────────────────
+// Edit these to adjust onboarding spacing without touching the styles below.
+const SLIDE_PADDING_X    = 28;
+const MASCOT_HERO_SIZE   = 220;   // hero slide (welcome)
+const MASCOT_DEFAULT_SIZE = 170;  // every other slide
+const CARD_RADIUS        = 20;
+const CARD_BORDER        = 2;
 
-interface OnboardingModalProps {
-    visible: boolean;
-    onComplete: (name: string) => void;
-}
+// ─── Slide model ─────────────────────────────────────────────────────────────
 
-type SlideId = '1' | '2' | '3' | 'commit' | '4' | '5';
+type SlideId = 'welcome' | 'features' | 'commit' | 'name' | 'promise';
 
 interface Slide {
-    id: SlideId;
-    title: string;
+    id:          SlideId;
+    title:       string;
     description: string;
-    mascot: any;
-    mascotSize: number;
-    mintBg?: boolean;
+    mascotSize:  number;
 }
 
 const SLIDES: Slide[] = [
     {
-        id: '1',
-        title: 'Hi, I\'m Ulbo!',
+        id:          'welcome',
+        title:       "Hi, I'm Ulbo!",
         description: 'Your daily companion for gratitude and mindful growth.',
-        mascot: ULBO,
-        mascotSize: 240,
-        mintBg: true,
+        mascotSize:  MASCOT_HERO_SIZE,
     },
     {
-        id: '2',
-        title: 'Grow with Ulbo',
-        description: 'Journal every day and Ulbo thrives. Miss a day and he gets a little sad — come back and watch him light up.',
-        mascot: ULBO,
-        mascotSize: 200,
-    },
-    {
-        id: '3',
-        title: 'Track, Reflect, Thrive',
+        id:          'features',
+        title:       'Track, reflect, thrive',
         description: 'Everything you need to build a lasting gratitude habit.',
-        mascot: COACH,
-        mascotSize: 190,
+        mascotSize:  MASCOT_DEFAULT_SIZE,
     },
     {
-        id: 'commit',
-        title: 'How much time can you give?',
-        description: 'Choose a daily commitment. You can always adjust it later.',
-        mascot: COACH,
-        mascotSize: 180,
+        id:          'commit',
+        title:       'How much time can you give?',
+        description: 'Choose a daily commitment. You can always change it later.',
+        mascotSize:  MASCOT_DEFAULT_SIZE,
     },
     {
-        id: '4',
-        title: 'What should I call you?',
-        description: 'Let\'s make this personal.',
-        mascot: COACH,
-        mascotSize: 170,
+        id:          'name',
+        title:       'What should I call you?',
+        description: "Let's make this personal.",
+        mascotSize:  MASCOT_DEFAULT_SIZE,
     },
     {
-        id: '5',
-        title: 'Our Promise',
+        id:          'promise',
+        title:       'Our promise',
         description: 'Sign below to commit to your practice.',
-        mascot: ULBO,
-        mascotSize: 140,
+        mascotSize:  140,
     },
 ];
 
-const FEATURES = [
-    { label: 'Daily Journaling', sublabel: 'Grow through consistent reflection', color: '#10B981' },
-    { label: 'Streak Tracking', sublabel: 'Build momentum day by day', color: '#F59E0B' },
-    { label: 'AI Mood Insights', sublabel: 'Understand your emotional patterns', color: '#7C5CFC' },
+const FEATURES: { label: string; sublabel: string }[] = [
+    { label: 'Daily journaling',  sublabel: 'Grow through consistent reflection' },
+    { label: 'Streak tracking',   sublabel: 'Build momentum day by day' },
+    { label: 'AI mood insights',  sublabel: 'Understand your emotional patterns' },
 ];
 
-const CHIPS = [
-    { label: 'Journaling', color: MINT },
-    { label: 'Streaks', color: '#F59E0B' },
-    { label: 'AI Insights', color: '#7C5CFC' },
+const COMMIT_OPTIONS: { mins: 5 | 10 | 20; label: string; sub: string }[] = [
+    { mins: 5,  label: '5 min / day',  sub: '2 daily missions' },
+    { mins: 10, label: '10 min / day', sub: '3 daily missions' },
+    { mins: 20, label: '20 min / day', sub: '5 daily missions' },
 ];
+
+interface OnboardingModalProps {
+    visible:    boolean;
+    onComplete: (name: string) => void;
+}
 
 export const OnboardingModal: React.FC<OnboardingModalProps> = ({ visible, onComplete }) => {
     const [currentIndex, setCurrentIndex] = useState(0);
     const [name, setName] = useState('');
     const [commitMins, setCommitMins] = useState<5 | 10 | 20>(20);
-    const flatListRef = useRef<FlatList>(null);
-    const floatAnim = useRef(new Animated.Value(0)).current;
-
-    // Signature State
     const [signaturePath, setSignaturePath] = useState('');
     const [isSigning, setIsSigning] = useState(false);
-    const signatureRef = useRef<View>(null);
 
-    // Mascot float animation
+    const flatListRef = useRef<FlatList>(null);
+    const floatAnim   = useRef(new Animated.Value(0)).current;
+
+    // ── Mascot float animation ──────────────────────────────────────────────
     useEffect(() => {
         const loop = Animated.loop(
             Animated.sequence([
                 Animated.timing(floatAnim, { toValue: -8, duration: 1800, useNativeDriver: true }),
-                Animated.timing(floatAnim, { toValue: 0, duration: 1800, useNativeDriver: true }),
+                Animated.timing(floatAnim, { toValue:  0, duration: 1800, useNativeDriver: true }),
             ])
         );
         if (visible) loop.start();
         return () => loop.stop();
     }, [visible, floatAnim]);
 
-    // Reset when re-opened
+    // ── Reset state every time the modal re-opens ───────────────────────────
     useEffect(() => {
         if (visible) {
             setCurrentIndex(0);
@@ -132,21 +134,21 @@ export const OnboardingModal: React.FC<OnboardingModalProps> = ({ visible, onCom
         }
     }, [visible]);
 
+    // ── Signature drawing ───────────────────────────────────────────────────
     const handleSignatureStart = (event: any) => {
         const { locationX, locationY } = event.nativeEvent;
         setSignaturePath(prev => prev + `M ${locationX} ${locationY}`);
         setIsSigning(true);
     };
-
     const handleSignatureMove = (event: any) => {
         if (!isSigning) return;
         const { locationX, locationY } = event.nativeEvent;
         setSignaturePath(prev => prev + ` L ${locationX} ${locationY}`);
     };
-
     const handleSignatureEnd = () => setIsSigning(false);
-    const clearSignature = () => setSignaturePath('');
+    const clearSignature     = () => setSignaturePath('');
 
+    // ── Navigation ──────────────────────────────────────────────────────────
     const goToIndex = (index: number) => {
         flatListRef.current?.scrollToIndex({ index });
         setCurrentIndex(index);
@@ -155,181 +157,153 @@ export const OnboardingModal: React.FC<OnboardingModalProps> = ({ visible, onCom
     const handleNext = async () => {
         if (currentIndex < SLIDES.length - 1) {
             goToIndex(currentIndex + 1);
-        } else {
-            const timerSec = commitMins * 60;
-            await AsyncStorage.setItem('@ulbo_commitment_minutes', String(commitMins));
-            await AsyncStorage.setItem('@ulbo_timer_minutes', String(commitMins));
-            await AsyncStorage.setItem('@ulbo_focus_duration_seconds', String(timerSec));
-            onComplete(name.trim());
+            return;
         }
+        // Final slide — persist commitment + finish onboarding.
+        await AsyncStorage.setItem('@ulbo_commitment_minutes', String(commitMins));
+        await AsyncStorage.setItem('@ulbo_focus_duration_seconds', String(commitMins * 60));
+        onComplete(name.trim());
     };
 
     const handleSkip = () => {
-        // Skip to name slide (index 4, after new commit slide)
-        goToIndex(4);
+        // Jump straight to the name slide (last two are required steps).
+        const nameIdx = SLIDES.findIndex(s => s.id === 'name');
+        goToIndex(nameIdx);
     };
 
+    // Disable the CTA on slides that need input
+    const currentSlide  = SLIDES[currentIndex];
     const isNextDisabled =
-        (currentIndex === 4 && !name.trim()) ||
-        (currentIndex === 5 && signaturePath.length < 20);
+        (currentSlide.id === 'name'    && !name.trim()) ||
+        (currentSlide.id === 'promise' && signaturePath.length < 20);
 
-    const btnBg = YELLOW;
-    const btnText = BLACK;
-
+    // ── Per-slide widget under the title/description ────────────────────────
     const renderWidget = (slide: Slide) => {
-        if (slide.id === '2') {
-            // Feature chips
-            return (
-                <View style={styles.chipsRow}>
-                    {CHIPS.map((chip, i) => (
-                        <View key={i} style={[styles.chip, { backgroundColor: chip.color + '18' }]}>
-                            <View style={[styles.chipDot, { backgroundColor: chip.color }]} />
-                            <Text style={[styles.chipLabel, { color: chip.color }]}>{chip.label}</Text>
-                        </View>
-                    ))}
-                </View>
-            );
-        }
-
-        if (slide.id === '3') {
-            // Feature rows
-            return (
-                <View style={styles.featureList}>
-                    {FEATURES.map((f, i) => (
-                        <View key={i} style={styles.featureRow}>
-                            <View style={[styles.featureIcon, { backgroundColor: f.color + '18' }]}>
-                                <View style={[styles.featureIconDot, { backgroundColor: f.color }]} />
+        switch (slide.id) {
+            case 'features':
+                return (
+                    <View style={styles.featureList}>
+                        {FEATURES.map((f, i) => (
+                            <View key={i} style={styles.featureRow}>
+                                <View style={styles.featureBullet} />
+                                <View style={styles.featureTextBlock}>
+                                    <Text style={styles.featureLabel}>{f.label}</Text>
+                                    <Text style={styles.featureSublabel}>{f.sublabel}</Text>
+                                </View>
                             </View>
-                            <View style={styles.featureTextBlock}>
-                                <Text style={[styles.featureLabel, { color: BLACK }]}>{f.label}</Text>
-                                <Text style={[styles.featureSublabel, { color: BLACK + '60' }]}>{f.sublabel}</Text>
-                            </View>
-                        </View>
-                    ))}
-                </View>
-            );
-        }
+                        ))}
+                    </View>
+                );
 
-        if (slide.id === 'commit') {
-            const options: { mins: 5 | 10 | 20; label: string; sub: string }[] = [
-                { mins: 5,  label: '5 min / day',  sub: '2 daily missions' },
-                { mins: 10, label: '10 min / day', sub: '3 daily missions' },
-                { mins: 20, label: '20 min / day', sub: '5 daily missions' },
-            ];
-            return (
-                <View style={styles.commitOptions}>
-                    {options.map(o => {
-                        const active = commitMins === o.mins;
-                        return (
-                            <TouchableOpacity
-                                key={o.mins}
-                                style={[styles.commitOption, active && styles.commitOptionActive]}
-                                onPress={() => setCommitMins(o.mins)}
-                                activeOpacity={0.8}
-                            >
-                                <Text style={[styles.commitLabel, active && styles.commitLabelActive]}>
-                                    {o.label}
-                                </Text>
-                                <Text style={[styles.commitSub, active && styles.commitSubActive]}>
-                                    {o.sub}
-                                </Text>
+            case 'commit':
+                return (
+                    <View style={styles.commitOptions}>
+                        {COMMIT_OPTIONS.map(o => {
+                            const active = commitMins === o.mins;
+                            return (
+                                <TouchableOpacity
+                                    key={o.mins}
+                                    style={[styles.commitOption, active && styles.commitOptionActive]}
+                                    onPress={() => setCommitMins(o.mins)}
+                                    activeOpacity={0.85}
+                                >
+                                    <Text style={styles.commitLabel}>{o.label}</Text>
+                                    <Text style={[styles.commitSub, active && styles.commitSubActive]}>
+                                        {o.sub}
+                                    </Text>
+                                </TouchableOpacity>
+                            );
+                        })}
+                    </View>
+                );
+
+            case 'name':
+                return (
+                    <TextInput
+                        style={styles.nameInput}
+                        placeholder="Your name..."
+                        placeholderTextColor={BLACK + '40'}
+                        value={name}
+                        onChangeText={setName}
+                        autoCorrect={false}
+                        returnKeyType="done"
+                        onSubmitEditing={() => { if (name.trim()) handleNext(); }}
+                    />
+                );
+
+            case 'promise': {
+                const displayName = name.trim() || 'I';
+                return (
+                    <View style={styles.contractBlock}>
+                        <Text style={styles.contractText}>
+                            {`"${displayName}, I promise to show up for myself.\nEven just 5 minutes a day.\nI'll show up for Ulbo, and\nin return, Ulbo will take care of me."`}
+                        </Text>
+                        <View
+                            style={styles.signatureBox}
+                            onTouchStart={handleSignatureStart}
+                            onTouchMove={handleSignatureMove}
+                            onTouchEnd={handleSignatureEnd}
+                        >
+                            <Svg style={StyleSheet.absoluteFill}>
+                                <Path
+                                    d={signaturePath}
+                                    stroke={BLACK}
+                                    strokeWidth={3}
+                                    fill="none"
+                                    strokeLinecap="round"
+                                    strokeLinejoin="round"
+                                />
+                            </Svg>
+                            {signaturePath.length === 0 && (
+                                <Text style={styles.signaturePlaceholder}>Sign here</Text>
+                            )}
+                        </View>
+                        {signaturePath.length > 0 && (
+                            <TouchableOpacity onPress={clearSignature} style={styles.clearBtn}>
+                                <Text style={styles.clearBtnText}>Clear</Text>
                             </TouchableOpacity>
-                        );
-                    })}
-                </View>
-            );
-        }
-
-        if (slide.id === '4') {
-            return (
-                <TextInput
-                    style={[styles.nameInput, { color: BLACK, borderBottomColor: MINT }]}
-                    placeholder="Your name..."
-                    placeholderTextColor={BLACK + '40'}
-                    value={name}
-                    onChangeText={setName}
-                    autoCorrect={false}
-                    returnKeyType="done"
-                    onSubmitEditing={() => { if (name.trim()) handleNext(); }}
-                />
-            );
-        }
-
-        if (slide.id === '5') {
-            const displayName = name.trim() || 'I';
-            return (
-                <View style={styles.contractBlock}>
-                    <Text style={[styles.contractText, { color: BLACK + '80' }]}>
-                        {`"${displayName}, I promise to show up for myself.\nEven just 5 minutes a day.\nI'll show up for Ulbo, and\nin return, Ulbo will take care of me."`}
-                    </Text>
-                    <View
-                        style={[styles.signatureBox, { borderColor: BLACK + '30' }]}
-                        onTouchStart={handleSignatureStart}
-                        onTouchMove={handleSignatureMove}
-                        onTouchEnd={handleSignatureEnd}
-                        ref={signatureRef}
-                    >
-                        <Svg style={StyleSheet.absoluteFill}>
-                            <Path
-                                d={signaturePath}
-                                stroke={MINT}
-                                strokeWidth={3}
-                                fill="none"
-                                strokeLinecap="round"
-                                strokeLinejoin="round"
-                            />
-                        </Svg>
-                        {signaturePath.length === 0 && (
-                            <Text style={[styles.signaturePlaceholder, { color: BLACK + '30' }]}>
-                                Sign here
-                            </Text>
                         )}
                     </View>
-                    {signaturePath.length > 0 && (
-                        <TouchableOpacity onPress={clearSignature} style={styles.clearBtn}>
-                            <Text style={[styles.clearBtnText, { color: BLACK + '50' }]}>Clear</Text>
-                        </TouchableOpacity>
-                    )}
-                </View>
-            );
+                );
+            }
+
+            default:
+                return null;
         }
-
-        return null;
     };
 
-    const renderItem = ({ item }: { item: Slide }) => {
-        const slideBg = item.mintBg ? '#EBF9F4' : WHITE;
+    // ── A single slide ──────────────────────────────────────────────────────
+    const renderItem = ({ item }: { item: Slide }) => (
+        <View style={[styles.slide, { width }]}>
+            {/* Mascot */}
+            <Animated.View style={[styles.mascotContainer, { transform: [{ translateY: floatAnim }] }]}>
+                <Image
+                    source={ULBO}
+                    style={{ width: item.mascotSize, height: item.mascotSize }}
+                    resizeMode="contain"
+                />
+            </Animated.View>
 
-        return (
-            <View style={[styles.slide, { width, backgroundColor: slideBg }]}>
-                {/* Mascot */}
-                <Animated.View style={[styles.mascotContainer, { transform: [{ translateY: floatAnim }] }]}>
-                    <Image
-                        source={item.mascot}
-                        style={{ width: item.mascotSize, height: item.mascotSize }}
-                        resizeMode="contain"
-                    />
-                </Animated.View>
-
-                {/* Text + Widget */}
-                <View style={styles.textBlock}>
-                    <Text style={[styles.title, { color: BLACK }]}>{item.title}</Text>
-                    <Text style={[styles.description, { color: BLACK + '70' }]}>{item.description}</Text>
-                    {renderWidget(item)}
-                </View>
+            {/* Title + description + per-slide widget */}
+            <View style={styles.textBlock}>
+                <Text style={styles.title}>{item.title}</Text>
+                <Text style={styles.description}>{item.description}</Text>
+                {renderWidget(item)}
             </View>
-        );
-    };
+        </View>
+    );
+
+    const nameIdx = SLIDES.findIndex(s => s.id === 'name');
 
     return (
         <Modal visible={visible} animationType="fade" transparent={false} statusBarTranslucent>
-            <SafeAreaView style={[styles.container, { backgroundColor: WHITE }]}>
+            <SafeAreaView style={styles.container}>
 
-                {/* Header: Skip + Dots */}
+                {/* ── Header: Skip + dot indicator ── */}
                 <View style={styles.header}>
-                    {currentIndex < 4 ? (
+                    {currentIndex < nameIdx ? (
                         <TouchableOpacity onPress={handleSkip} style={styles.skipBtn}>
-                            <Text style={[styles.skipText, { color: BLACK + '50' }]}>Skip</Text>
+                            <Text style={styles.skipText}>Skip</Text>
                         </TouchableOpacity>
                     ) : (
                         <View style={styles.skipBtn} />
@@ -341,16 +315,14 @@ export const OnboardingModal: React.FC<OnboardingModalProps> = ({ visible, onCom
                                 key={i}
                                 style={[
                                     styles.dot,
-                                    i === currentIndex
-                                        ? styles.dotActive
-                                        : [styles.dotInactive, { backgroundColor: MINT + '40' }]
+                                    i === currentIndex ? styles.dotActive : styles.dotInactive,
                                 ]}
                             />
                         ))}
                     </View>
                 </View>
 
-                {/* Slides */}
+                {/* ── Slides ── */}
                 <View style={{ flex: 1 }}>
                     <FlatList
                         ref={flatListRef}
@@ -369,22 +341,18 @@ export const OnboardingModal: React.FC<OnboardingModalProps> = ({ visible, onCom
                     />
                 </View>
 
-                {/* Footer: CTA Button */}
+                {/* ── Footer: CTA ── */}
                 <KeyboardAvoidingView
                     behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
                     style={styles.footer}
                 >
                     <TouchableOpacity
-                        style={[
-                            styles.ctaBtn,
-                            { backgroundColor: btnBg },
-                            isNextDisabled && styles.ctaBtnDisabled,
-                        ]}
+                        style={[styles.ctaBtn, isNextDisabled && styles.ctaBtnDisabled]}
                         onPress={handleNext}
                         disabled={isNextDisabled}
                         activeOpacity={0.85}
                     >
-                        <Text style={[styles.ctaBtnText, { color: btnText }]}>
+                        <Text style={styles.ctaBtnText}>
                             {currentIndex === SLIDES.length - 1 ? 'Begin' : 'Continue'}
                         </Text>
                     </TouchableOpacity>
@@ -395,226 +363,190 @@ export const OnboardingModal: React.FC<OnboardingModalProps> = ({ visible, onCom
     );
 };
 
+// ─── Styles ──────────────────────────────────────────────────────────────────
+
 const styles = StyleSheet.create({
     container: {
         flex: 1,
+        backgroundColor: WHITE,
     },
+
+    // Header
     header: {
-        flexDirection: 'row',
-        justifyContent: 'space-between',
-        alignItems: 'center',
+        flexDirection:    'row',
+        justifyContent:   'space-between',
+        alignItems:       'center',
         paddingHorizontal: 24,
-        paddingTop: 12,
-        paddingBottom: 8,
+        paddingTop:        12,
+        paddingBottom:     8,
     },
-    skipBtn: {
-        paddingVertical: 6,
-        paddingHorizontal: 4,
-        minWidth: 40,
-    },
-    skipText: {
-        fontFamily: 'Inter-Bold',
-        fontSize: 15,
-    },
-    dotsRow: {
-        flexDirection: 'row',
-        gap: 6,
-        alignItems: 'center',
-    },
-    dot: {
-        borderRadius: 4,
-    },
+    skipBtn:  { paddingVertical: 6, paddingHorizontal: 4, minWidth: 40 },
+    skipText: { fontFamily: 'Inter-Bold', fontSize: 15, color: BLACK + '60' },
+
+    dotsRow: { flexDirection: 'row', gap: 6, alignItems: 'center' },
+    dot:     { borderRadius: 4 },
     dotActive: {
-        width: 20,
-        height: 8,
-        backgroundColor: MINT,
-        borderRadius: 4,
+        width:           20,
+        height:          8,
+        backgroundColor: YELLOW,
+        borderWidth:     1.5,
+        borderColor:     BLACK,
     },
     dotInactive: {
-        width: 8,
-        height: 8,
-        borderRadius: 4,
+        width:           8,
+        height:          8,
+        backgroundColor: BLACK + '20',
     },
+
+    // Slide
     slide: {
-        flex: 1,
-        alignItems: 'center',
-        paddingHorizontal: 28,
-        paddingTop: 16,
+        flex:              1,
+        alignItems:        'center',
+        paddingHorizontal: SLIDE_PADDING_X,
+        paddingTop:        16,
     },
-    mascotContainer: {
-        marginBottom: 20,
-        alignItems: 'center',
-    },
-    textBlock: {
-        width: '100%',
-        flex: 1,
-    },
+    mascotContainer: { marginBottom: 20, alignItems: 'center' },
+    textBlock:       { width: '100%', flex: 1 },
     title: {
-        fontSize: 36,
         fontFamily: 'Inter-Bold',
+        fontSize:   32,
+        lineHeight: 38,
+        color:      BLACK,
         marginBottom: 10,
-        lineHeight: 42,
     },
     description: {
-        fontSize: 17,
-        fontFamily: 'Inter-Bold',
-        lineHeight: 26,
+        fontFamily: 'Inter-Medium',
+        fontSize:   16,
+        lineHeight: 24,
+        color:      BLACK + '70',
         marginBottom: 28,
     },
-    // Chips (slide 2)
-    chipsRow: {
-        flexDirection: 'row',
-        gap: 8,
-        flexWrap: 'wrap',
-    },
-    chip: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        paddingVertical: 8,
-        paddingHorizontal: 12,
-        borderRadius: 20,
-        gap: 6,
-    },
-    chipDot: {
-        width: 8,
-        height: 8,
-        borderRadius: 4,
-    },
-    chipLabel: {
-        fontFamily: 'Inter-Bold',
-        fontSize: 14,
-    },
-    // Feature rows (slide 3)
-    featureList: {
-        gap: 16,
-    },
+
+    // Features (slide 2)
+    featureList: { gap: 14 },
     featureRow: {
         flexDirection: 'row',
-        alignItems: 'center',
-        gap: 14,
+        alignItems:    'center',
+        gap:           14,
+        backgroundColor: WHITE,
+        borderWidth:    CARD_BORDER,
+        borderColor:    BLACK,
+        borderRadius:   CARD_RADIUS,
+        paddingVertical:   14,
+        paddingHorizontal: 16,
     },
-    featureIcon: {
-        width: 38,
-        height: 38,
-        borderRadius: 10,
-        justifyContent: 'center',
-        alignItems: 'center',
+    featureBullet: {
+        width:  10,
+        height: 10,
+        borderRadius: 5,
+        backgroundColor: YELLOW,
+        borderWidth: 1.5,
+        borderColor: BLACK,
     },
-    featureIconDot: {
-        width: 14,
-        height: 14,
-        borderRadius: 7,
-    },
-    featureTextBlock: {
-        flex: 1,
-    },
+    featureTextBlock: { flex: 1 },
     featureLabel: {
         fontFamily: 'Inter-Bold',
-        fontSize: 16,
+        fontSize:   16,
+        color:      BLACK,
         marginBottom: 2,
     },
     featureSublabel: {
-        fontFamily: 'Inter-Bold',
-        fontSize: 13,
+        fontFamily: 'Inter-Medium',
+        fontSize:   13,
+        color:      BLACK + '60',
     },
-    // Commitment options (commit slide)
-    commitOptions: {
-        gap: 12,
-        width: '100%',
-    },
+
+    // Commitment (slide 3)
+    commitOptions: { gap: 12, width: '100%' },
     commitOption: {
-        borderWidth: 2,
-        borderColor: BLACK + '20',
-        borderRadius: 16,
-        paddingVertical: 16,
+        backgroundColor: WHITE,
+        borderWidth:     CARD_BORDER,
+        borderColor:     BLACK + '25',
+        borderRadius:    16,
+        paddingVertical:   16,
         paddingHorizontal: 20,
     },
     commitOptionActive: {
-        borderColor: BLACK,
+        borderColor:     BLACK,
         backgroundColor: YELLOW,
     },
     commitLabel: {
         fontFamily: 'Inter-Bold',
-        fontSize: 18,
-        color: BLACK,
-    },
-    commitLabelActive: {
-        color: BLACK,
+        fontSize:   18,
+        color:      BLACK,
     },
     commitSub: {
-        fontFamily: 'Inter-Bold',
-        fontSize: 13,
-        color: BLACK + '50',
-        marginTop: 2,
+        fontFamily: 'Inter-Medium',
+        fontSize:   13,
+        color:      BLACK + '50',
+        marginTop:  2,
     },
-    commitSubActive: {
-        color: BLACK + '70',
-    },
-    // Name input (slide 4)
+    commitSubActive: { color: BLACK + '75' },
+
+    // Name (slide 4)
     nameInput: {
-        fontSize: 30,
         fontFamily: 'Inter-Bold',
+        fontSize:   28,
+        color:      BLACK,
         borderBottomWidth: 2,
+        borderBottomColor: BLACK,
         paddingBottom: 8,
         width: '100%',
     },
-    // Contract + signature (slide 5)
-    contractBlock: {
-        width: '100%',
-        gap: 16,
-    },
+
+    // Promise + signature (slide 5)
+    contractBlock: { width: '100%', gap: 16 },
     contractText: {
-        fontFamily: 'Inter-Bold',
-        fontSize: 16,
-        lineHeight: 26,
-        fontStyle: 'italic',
+        fontFamily: 'Inter-Medium',
+        fontSize:   15,
+        lineHeight: 24,
+        color:      BLACK + '85',
+        fontStyle:  'italic',
     },
     signatureBox: {
-        width: '100%',
-        height: 130,
-        borderWidth: 1.5,
-        borderStyle: 'solid',
-        borderRadius: 12,
-        justifyContent: 'center',
-        alignItems: 'center',
-        overflow: 'hidden',
+        width:           '100%',
+        height:          130,
+        backgroundColor: WHITE,
+        borderWidth:     CARD_BORDER,
+        borderColor:     BLACK,
+        borderRadius:    12,
+        justifyContent:  'center',
+        alignItems:      'center',
+        overflow:        'hidden',
     },
     signaturePlaceholder: {
-        fontFamily: 'Inter-Bold',
-        fontSize: 18,
+        fontFamily: 'Inter-Medium',
+        fontSize:   16,
+        color:      BLACK + '35',
     },
-    clearBtn: {
-        alignSelf: 'flex-end',
-        paddingVertical: 4,
-    },
+    clearBtn: { alignSelf: 'flex-end', paddingVertical: 4 },
     clearBtnText: {
         fontFamily: 'Inter-Bold',
-        fontSize: 13,
+        fontSize:   13,
+        color:      BLACK + '60',
         textDecorationLine: 'underline',
     },
-    // Footer
+
+    // Footer CTA
     footer: {
         paddingHorizontal: 24,
-        paddingBottom: 20,
-        paddingTop: 12,
+        paddingBottom:     20,
+        paddingTop:        12,
     },
     ctaBtn: {
-        height: 58,
-        borderRadius: 16,
-        justifyContent: 'center',
-        alignItems: 'center',
-        elevation: 4,
-        shadowColor: BLACK,
-        shadowOffset: { width: 0, height: 4 },
-        shadowOpacity: 0.1,
-        shadowRadius: 8,
+        height:          56,
+        borderRadius:    16,
+        backgroundColor: YELLOW,
+        borderWidth:     CARD_BORDER,
+        borderColor:     BLACK,
+        justifyContent:  'center',
+        alignItems:      'center',
     },
-    ctaBtnDisabled: {
-        opacity: 0.45,
-    },
+    ctaBtnDisabled: { opacity: 0.4 },
     ctaBtnText: {
         fontFamily: 'Inter-Bold',
-        fontSize: 17,
+        fontSize:   17,
+        color:      BLACK,
         letterSpacing: 0.3,
     },
 });
