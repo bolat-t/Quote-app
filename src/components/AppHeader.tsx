@@ -337,7 +337,7 @@ const styles = StyleSheet.create({
     },
     settingsPanel: {
         marginTop: 4,
-        paddingHorizontal: 16,
+        paddingHorizontal: 32, // matches headerTop padding so rows align with the title
     },
     divider: {
         height: 1,

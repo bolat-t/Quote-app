@@ -103,7 +103,7 @@ export const WheelPicker: React.FC<WheelPickerProps> = ({
     onIndexChange,
     width      = 90,
     fontSize   = 30,
-    fontFamily = 'GasoekOne',
+    fontFamily = 'Inter-Bold',
 }) => {
     const scrollRef = useRef<ScrollView>(null);
     const scrollY   = useSharedValue(selectedIndex * ITEM_H);

@@ -7,7 +7,7 @@
  *   - White cards with 2px black border and 20px radius
  *   - Yellow accent for the active state (dot, button, selected option)
  *   - Inter typography end-to-end
- *   - Ulbo (`ulbos_coloured.png`) is the only character — there is no second
+ *   - Ulbo (`chat_potato.png`) is the only character — there is no second
  *     mascot, no mint/teal/coral accents, no per-feature color coding
  */
 import React, { useState, useRef, useEffect } from 'react';
@@ -30,7 +30,7 @@ import { Svg, Path } from 'react-native-svg';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { BLACK, WHITE, YELLOW } from '../constants/colors';
 
-const ULBO = require('../../assets/mascot/ulbos_coloured.png');
+const ULBO = require('../../assets/chat_potato.png');
 const { width } = Dimensions.get('window');
 
 // ─── Tunable layout ──────────────────────────────────────────────────────────

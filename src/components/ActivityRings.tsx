@@ -134,16 +134,16 @@ const detSt = StyleSheet.create({
     dot: { width: 9, height: 9, borderRadius: 4.5, flexShrink: 0 },
     textCol: { flex: 1 },
     label: {
-        fontFamily: 'OpenSans-SemiBold', fontSize: 9, color: '#999999',
+        fontFamily: 'Inter-Medium', fontSize: 9, color: '#999999',
         textTransform: 'uppercase', letterSpacing: 1, marginBottom: 1,
     },
     valueRow: { flexDirection: 'row', alignItems: 'baseline', gap: 2 },
     value:  { fontFamily: 'Inter-Bold', fontSize: 17, lineHeight: 20 },
-    meta:   { fontFamily: 'OpenSans-SemiBold', fontSize: 11, color: '#AAAAAA' },
+    meta:   { fontFamily: 'Inter-Medium', fontSize: 11, color: '#AAAAAA' },
     pctPill: {
         borderRadius: 10, paddingHorizontal: 7, paddingVertical: 3,
     },
-    pct: { fontFamily: 'OpenSans-SemiBold', fontSize: 11 },
+    pct: { fontFamily: 'Inter-Medium', fontSize: 11 },
 });
 
 // ─── ActivityRings ────────────────────────────────────────────────────────────
@@ -241,7 +241,7 @@ const actSt = StyleSheet.create({
     },
     legendDot: { width: 6, height: 6, borderRadius: 3 },
     legendLabel: {
-        fontFamily: 'OpenSans-SemiBold', fontSize: 10, color: '#AAAAAA',
+        fontFamily: 'Inter-Medium', fontSize: 10, color: '#AAAAAA',
     },
     body: {
         flexDirection: 'row', alignItems: 'center', gap: 14,
