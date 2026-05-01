@@ -20,7 +20,6 @@ import type { RootStackParamList } from '../types';
 import { useAuth } from '../context/AuthContext';
 import { usePurchase } from '../context/PurchaseContext';
 import { useHistoryCalendar } from '../context/HistoryCalendarContext';
-import { requestNotificationPermissions, scheduleDailyReminder } from '../utils/notifications';
 import { exportJournalData } from '../utils/journalStorage';
 import { completeOnboarding } from '../utils/storage';
 import { AuthModal } from './AuthModal';
@@ -104,27 +103,12 @@ export const AppHeader: React.FC<AppHeaderProps> = ({ title, subtitle, currentRo
     const { expanded: calExpanded, toggle: toggleCal } = useHistoryCalendar();
     const isHistory = currentRoute === 'History';
 
-    const [isExpanded, setIsExpanded]               = useState(false);
-    const [isAuthVisible, setIsAuthVisible]         = useState(false);
-    const [isFeedbackVisible, setIsFeedbackVisible] = useState(false);
+    const [isExpanded, setIsExpanded]                   = useState(false);
+    const [isAuthVisible, setIsAuthVisible]             = useState(false);
+    const [isFeedbackVisible, setIsFeedbackVisible]     = useState(false);
     const [isOnboardingVisible, setIsOnboardingVisible] = useState(false);
-    const [areNotificationsOn, setAreNotificationsOn]   = useState(false);
     const [isExporting, setIsExporting]                 = useState(false);
     const [localPremium, setLocalPremium]               = useState(isPremium);
-
-    const handleNotificationToggle = async (value: boolean) => {
-        if (!value) {
-            setAreNotificationsOn(false);
-            Alert.alert('Notifications Disabled', 'Daily reminders turned off.');
-        } else {
-            const granted = await requestNotificationPermissions();
-            if (granted) {
-                await scheduleDailyReminder();
-                Alert.alert('Reminder Set', "You'll be notified daily at 8:00 AM to reflect.");
-                setAreNotificationsOn(true);
-            }
-        }
-    };
 
     return (
         <View style={styles.headerCard}>
@@ -184,24 +168,31 @@ export const AppHeader: React.FC<AppHeaderProps> = ({ title, subtitle, currentRo
 
                     <View style={styles.divider} />
 
-                    {/* 2. Daily Reminders */}
+                    {/* 2. Daily Reminders — opens the picker so the user chooses time + days */}
                     <SettingsRow
                         label="Daily Reminders"
-                        subtext="Receive a daily prompt to reflect."
-                        right={
-                            <Switch
-                                trackColor={{ false: '#D0D0D0', true: YELLOW }}
-                                thumbColor={areNotificationsOn ? BLACK : '#f4f3f4'}
-                                ios_backgroundColor="#D0D0D0"
-                                onValueChange={handleNotificationToggle}
-                                value={areNotificationsOn}
-                            />
-                        }
+                        subtext="Pick the time you want to be reminded."
+                        onPress={() => {
+                            setIsExpanded(false);
+                            navigation.navigate('ReminderSettings');
+                        }}
                     />
 
                     <View style={styles.divider} />
 
-                    {/* 3. Export Journal */}
+                    {/* 3. Mood Analytics */}
+                    <SettingsRow
+                        label="Mood Analytics"
+                        subtext="See your trends, streaks and emotional themes."
+                        onPress={() => {
+                            setIsExpanded(false);
+                            navigation.navigate('Analytics');
+                        }}
+                    />
+
+                    <View style={styles.divider} />
+
+                    {/* 4. Export Journal */}
                     <SettingsRow
                         label="Export Journal Data"
                         disabled={isExporting}

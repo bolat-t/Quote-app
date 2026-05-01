@@ -125,7 +125,7 @@ export const PaywallScreen = () => {
                 {/* Mascot */}
                 <View style={styles.mascotSection}>
                     <Image
-                        source={require('../../assets/chat_potato.png')}
+                        source={require('../../assets/mascot/potato.png')}
                         style={styles.mascotImage}
                         resizeMode="contain"
                     />
