@@ -429,21 +429,15 @@ const DraggableItem = ({
     onRetry,
     onEditStyle,
     onDragStart,
-    onDragEnd,
-    isOverDeleteZone,
     layoutVersion,
-    boardSize,
 }: {
     item: LocalVisionItem;
     onUpdate: (id: string, x: number, y: number, s: number, r: number) => void;
-    onDelete: (id: string, instant?: boolean) => void;
+    onDelete: (id: string) => void;
     onRetry?: (item: LocalVisionItem) => void;
     onEditStyle?: (id: string) => void;
     onDragStart: () => void;
-    onDragEnd: () => void;
-    isOverDeleteZone: SharedValue<boolean>;
     layoutVersion: number;
-    boardSize: SharedValue<{ width: number; height: number }>;
 }) => {
     const x = useSharedValue(item.position_x);
     const y = useSharedValue(item.position_y);
@@ -465,51 +459,16 @@ const DraggableItem = ({
         .onStart(() => {
             isDragging.value = true;
             context.value = { x: x.value, y: y.value };
+            runOnJS(setIsHeld)(false);
             runOnJS(onDragStart)();
         })
         .onUpdate((e) => {
             x.value = context.value.x + e.translationX;
             y.value = context.value.y + e.translationY;
-
-            // Hit-test in BOARD-LOCAL coords using AABB overlap so the item's
-            // ACTUAL visible footprint (after scale) is what matters — not just
-            // its center. The delete zone is rendered inside the board at
-            // `bottom: 40` and centered horizontally.
-            const boardW = boardSize.value.width;
-            const boardH = boardSize.value.height;
-            if (boardW > 0 && boardH > 0) {
-                const itemCX = x.value + ITEM_SIZE / 2;
-                const itemCY = y.value + ITEM_SIZE / 2;
-                const itemHalfW = (ITEM_SIZE * scale.value) / 2;
-                const itemHalfH = (ITEM_SIZE * scale.value) / 2;
-
-                const binCX     = boardW / 2;
-                const binCY     = boardH - 65;
-                const binHalfW  = 90;  // bin half-width  (with a small margin)
-                const binHalfH  = 45;  // bin half-height (with a small margin)
-
-                const isOver =
-                    Math.abs(itemCX - binCX) < (itemHalfW + binHalfW) &&
-                    Math.abs(itemCY - binCY) < (itemHalfH + binHalfH);
-
-                if (isOver !== isOverDeleteZone.value) {
-                    isOverDeleteZone.value = isOver;
-                    if (isOver) {
-                        runOnJS(Haptics.impactAsync)(Haptics.ImpactFeedbackStyle.Medium);
-                    }
-                }
-            }
         })
         .onFinalize(() => {
             isDragging.value = false;
-            runOnJS(onDragEnd)();
-
-            if (isOverDeleteZone.value) {
-                runOnJS(onDelete)(item.id, true);
-                isOverDeleteZone.value = false;
-            } else {
-                runOnJS(onUpdate)(item.id, x.value, y.value, scale.value, rotation.value);
-            }
+            runOnJS(onUpdate)(item.id, x.value, y.value, scale.value, rotation.value);
         });
 
     const pinch = Gesture.Pinch()
@@ -538,6 +497,7 @@ const DraggableItem = ({
         shadowOpacity: withTiming(isDragging.value ? 0.14 : 0.06, { duration: 180 }),
     }));
 
+    const [isHeld, setIsHeld] = React.useState(false);
     const [imgError, setImgError] = React.useState(false);
     const [signedUrl, setSignedUrl] = React.useState<string | null>(null);
 
@@ -562,8 +522,15 @@ const DraggableItem = ({
                 style={[styles.itemContainer, animatedStyle]}
             >
                 <TouchableOpacity
-                    onLongPress={() => onDelete(item.id)}
+                    onLongPress={() => {
+                        Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+                        setIsHeld(true);
+                    }}
                     onPress={() => {
+                        if (isHeld) {
+                            setIsHeld(false);
+                            return;
+                        }
                         if (item.syncStatus === 'error' && onRetry) {
                             onRetry(item);
                         } else if (item.type === 'text' && onEditStyle) {
@@ -627,6 +594,21 @@ const DraggableItem = ({
                         </View>
                     )}
                 </TouchableOpacity>
+                {isHeld && (
+                    <TouchableOpacity
+                        style={styles.deleteXBtn}
+                        onPress={() => {
+                            setIsHeld(false);
+                            onDelete(item.id);
+                        }}
+                        hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+                        activeOpacity={0.7}
+                    >
+                        <Svg width={10} height={10} viewBox="0 0 10 10" fill="none" stroke="#FFF" strokeWidth={2} strokeLinecap="round">
+                            <SvgPath d="M1 1l8 8M9 1L1 9" />
+                        </Svg>
+                    </TouchableOpacity>
+                )}
             </Animated.View>
         </GestureDetector>
     );
@@ -1607,18 +1589,12 @@ const InspirationCard: React.FC<InspirationCardProps> = ({ category, onPress, on
     );
 };
 
-// ── Draggable image inside the inspiration board ──
-// Pan + pinch + rotate. Drag onto the bin (when one's visible) to remove.
 type DraggableInspirationImageProps = {
-    image:            InspirationImage;
-    onUpdate:         (id: string, x: number, y: number, s: number, r: number) => void;
-    onInstantRemove:  (id: string) => void;
-    onDragStart:      () => void;
-    onDragEnd:        () => void;
-    isOverDeleteZone: SharedValue<boolean>;
-    boardSize:        SharedValue<{ width: number; height: number }>;
-    isThumbnail?:     boolean;
-    onSetThumbnail?:  (id: string) => void;
+    image:           InspirationImage;
+    onUpdate:        (id: string, x: number, y: number, s: number, r: number) => void;
+    onInstantRemove: (id: string) => void;
+    isThumbnail?:    boolean;
+    onSetThumbnail?: (id: string) => void;
 };
 
 const INSP_IMG_SIZE = 120;
@@ -1627,10 +1603,6 @@ const DraggableInspirationImage: React.FC<DraggableInspirationImageProps> = ({
     image,
     onUpdate,
     onInstantRemove,
-    onDragStart,
-    onDragEnd,
-    isOverDeleteZone,
-    boardSize,
     isThumbnail = false,
     onSetThumbnail,
 }) => {
@@ -1640,76 +1612,32 @@ const DraggableInspirationImage: React.FC<DraggableInspirationImageProps> = ({
     const rotation = useSharedValue(image.rotation);
     const ctx      = useSharedValue({ x: 0, y: 0 });
     const dragging = useSharedValue(false);
+    const [isHeld, setIsHeld] = useState(false);
 
     const pan = Gesture.Pan()
         .onStart(() => {
-            // Reset for this drag so a successful previous delete doesn't
-            // leave the flag latched true.
-            isOverDeleteZone.value = false;
             dragging.value = true;
             ctx.value = { x: x.value, y: y.value };
-            runOnJS(onDragStart)();
+            runOnJS(setIsHeld)(false);
         })
         .onUpdate((e) => {
             x.value = ctx.value.x + e.translationX;
             y.value = ctx.value.y + e.translationY;
-
-            // AABB overlap so the image's actual visible footprint (after
-            // scale) decides "over the bin", not just the geometric center.
-            const boardW = boardSize.value.width;
-            const boardH = boardSize.value.height;
-            if (boardW > 0 && boardH > 0) {
-                const itemCX = x.value + INSP_IMG_SIZE / 2;
-                const itemCY = y.value + INSP_IMG_SIZE / 2;
-                const itemHalfW = (INSP_IMG_SIZE * scale.value) / 2;
-                const itemHalfH = (INSP_IMG_SIZE * scale.value) / 2;
-
-                const binCX     = boardW / 2;
-                const binCY     = boardH - 65;
-                const binHalfW  = 90;
-                const binHalfH  = 45;
-
-                const isOver =
-                    Math.abs(itemCX - binCX) < (itemHalfW + binHalfW) &&
-                    Math.abs(itemCY - binCY) < (itemHalfH + binHalfH);
-
-                if (isOver !== isOverDeleteZone.value) {
-                    isOverDeleteZone.value = isOver;
-                    if (isOver) {
-                        runOnJS(Haptics.impactAsync)(Haptics.ImpactFeedbackStyle.Medium);
-                    }
-                }
-            }
         })
         .onFinalize(() => {
             dragging.value = false;
-            runOnJS(onDragEnd)();
-
-            // NB: do NOT reset isOverDeleteZone here — pinch/rot's onFinalize
-            // also fires on release, and they read this flag to decide
-            // whether to skip their own onUpdate (which would re-introduce
-            // the deleted image from closure state).
-            if (isOverDeleteZone.value) {
-                runOnJS(onInstantRemove)(image.id);
-            } else {
-                runOnJS(onUpdate)(image.id, x.value, y.value, scale.value, rotation.value);
-            }
+            runOnJS(onUpdate)(image.id, x.value, y.value, scale.value, rotation.value);
         });
 
     const pinch = Gesture.Pinch()
         .onChange((e) => { scale.value *= e.scaleChange; })
         .onFinalize(() => {
-            // Don't persist a position update if the release was over the
-            // bin — pan.onFinalize handles deletion, and re-writing state
-            // here would resurrect the deleted image.
-            if (isOverDeleteZone.value) return;
             runOnJS(onUpdate)(image.id, x.value, y.value, scale.value, rotation.value);
         });
 
     const rot = Gesture.Rotation()
         .onChange((e) => { rotation.value += e.rotationChange * (180 / Math.PI); })
         .onFinalize(() => {
-            if (isOverDeleteZone.value) return;
             runOnJS(onUpdate)(image.id, x.value, y.value, scale.value, rotation.value);
         });
 
@@ -1730,13 +1658,23 @@ const DraggableInspirationImage: React.FC<DraggableInspirationImageProps> = ({
     return (
         <GestureDetector gesture={composed}>
             <Animated.View style={[inspStyles.draggableImgWrap, animatedStyle]}>
-                <Image
-                    source={{ uri: image.uri }}
-                    style={inspStyles.draggableImg}
-                    resizeMode="cover"
-                />
+                <TouchableOpacity
+                    onLongPress={() => {
+                        Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+                        setIsHeld(true);
+                    }}
+                    onPress={() => isHeld && setIsHeld(false)}
+                    delayLongPress={500}
+                    activeOpacity={1}
+                >
+                    <Image
+                        source={{ uri: image.uri }}
+                        style={inspStyles.draggableImg}
+                        resizeMode="cover"
+                    />
+                </TouchableOpacity>
                 {/* Cover / thumbnail selector badge */}
-                {onSetThumbnail && (
+                {onSetThumbnail && !isHeld && (
                     <TouchableOpacity
                         style={[inspStyles.coverBtn, isThumbnail && inspStyles.coverBtnActive]}
                         onPress={() => onSetThumbnail(image.id)}
@@ -1746,6 +1684,21 @@ const DraggableInspirationImage: React.FC<DraggableInspirationImageProps> = ({
                         <Text style={[inspStyles.coverBtnText, isThumbnail && inspStyles.coverBtnTextActive]}>
                             {isThumbnail ? '★' : '☆'}
                         </Text>
+                    </TouchableOpacity>
+                )}
+                {isHeld && (
+                    <TouchableOpacity
+                        style={styles.deleteXBtn}
+                        onPress={() => {
+                            setIsHeld(false);
+                            onInstantRemove(image.id);
+                        }}
+                        hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+                        activeOpacity={0.7}
+                    >
+                        <Svg width={10} height={10} viewBox="0 0 10 10" fill="none" stroke="#FFF" strokeWidth={2} strokeLinecap="round">
+                            <SvgPath d="M1 1l8 8M9 1L1 9" />
+                        </Svg>
                     </TouchableOpacity>
                 )}
             </Animated.View>
@@ -1765,18 +1718,6 @@ const InspirationDetail: React.FC<InspirationDetailProps> = ({
     onChange,
 }) => {
     const [title, setTitle] = useState(category.title);
-    const [isDraggingAny, setIsDraggingAny] = useState(false);
-    const isOverDeleteZone = useSharedValue(false);
-    const boardSize        = useSharedValue({ width: 0, height: 0 });
-
-    const deleteZoneStyle = useAnimatedStyle(() => ({
-        backgroundColor: isOverDeleteZone.value ? '#FF3B30' : WHITE,
-        borderColor:     isOverDeleteZone.value ? '#FF3B30' : BLACK + '20',
-        transform: [{ scale: withTiming(isOverDeleteZone.value ? 1.1 : 1, { duration: 180 }) }],
-    }));
-    const deleteIconProps = useAnimatedProps(() => ({
-        stroke: isOverDeleteZone.value ? '#FFF' : BLACK,
-    }));
 
     const commitTitle = () => {
         const trimmed = title.trim();
@@ -1826,16 +1767,8 @@ const InspirationDetail: React.FC<InspirationDetailProps> = ({
         onChange({ thumbnailUri: newThumb });
     };
 
-    // Root = the white board card itself, so it matches the exact shape of
-    // the Monthly board / Inspiration grid (same marginHorizontal, radius).
     return (
-        <View
-            style={inspStyles.boardCard}
-            onLayout={e => {
-                const { width: w, height: h } = e.nativeEvent.layout;
-                boardSize.value = { width: w, height: h };
-            }}
-        >
+        <View style={inspStyles.boardCard}>
             {/* Subtle back chevron, top-left, no background */}
             <TouchableOpacity
                 onPress={onBack}
@@ -1868,10 +1801,6 @@ const InspirationDetail: React.FC<InspirationDetailProps> = ({
                     image={img}
                     onUpdate={handleImageUpdate}
                     onInstantRemove={handleImageInstantRemove}
-                    onDragStart={() => setIsDraggingAny(true)}
-                    onDragEnd={()   => setIsDraggingAny(false)}
-                    isOverDeleteZone={isOverDeleteZone}
-                    boardSize={boardSize}
                     isThumbnail={
                         category.thumbnailUri
                             ? img.uri === category.thumbnailUri
@@ -1881,37 +1810,14 @@ const InspirationDetail: React.FC<InspirationDetailProps> = ({
                 />
             ))}
 
-            {/* Drag-to-delete bin (matches Monthly board) */}
-            {isDraggingAny && (
-                <Animated.View
-                    entering={SlideInDown.duration(200)}
-                    exiting={SlideOutDown.duration(200)}
-                    style={[styles.deleteZoneWrapper, deleteZoneStyle]}
-                >
-                    <View style={styles.deleteZoneInner}>
-                        <Svg width={22} height={22} viewBox="0 0 24 24" fill="none">
-                            <AnimatedPath
-                                d="M3 6h18M8 6V4a2 2 0 012-2h4a2 2 0 012 2v2M19 6v14a2 2 0 01-2 2H7a2 2 0 01-2-2V6M10 11v6M14 11v6"
-                                animatedProps={deleteIconProps}
-                                strokeWidth={1.5}
-                                strokeLinecap="round"
-                                strokeLinejoin="round"
-                            />
-                        </Svg>
-                    </View>
-                </Animated.View>
-            )}
-
-            {/* + FAB inside the card, bottom-right (hidden during drag) */}
-            {!isDraggingAny && (
-                <TouchableOpacity
-                    style={inspStyles.boardFab}
-                    onPress={handleAddImage}
-                    activeOpacity={0.8}
-                >
-                    <Text style={inspStyles.boardFabText}>+</Text>
-                </TouchableOpacity>
-            )}
+            {/* + FAB inside the card, bottom-right */}
+            <TouchableOpacity
+                style={inspStyles.boardFab}
+                onPress={handleAddImage}
+                activeOpacity={0.8}
+            >
+                <Text style={inspStyles.boardFabText}>+</Text>
+            </TouchableOpacity>
         </View>
     );
 };
@@ -2190,33 +2096,12 @@ export const VisionBoardScreen: React.FC = () => {
     const [isStockVisible, setIsStockVisible] = useState(false);
     const [stockThemeCategory, setStockThemeCategory] = useState<{ label: string; subcategories: { label: string; query: string }[] } | undefined>(undefined);
     const [isLayoutVisible, setIsLayoutVisible] = useState(false);
-    const [deleteId, setDeleteId] = useState<string | null>(null);
     const [showClearConfirm, setShowClearConfirm] = useState(false);
     const [editingTextItem, setEditingTextItem] = useState<LocalVisionItem | null>(null);
     const [boardBgId, setBoardBgId] = useState('default');
     const [layoutVersion, setLayoutVersion] = useState(0);
 
     const activeBgPreset = BOARD_BG_PRESETS.find(b => b.id === boardBgId) ?? BOARD_BG_PRESETS[0];
-
-    // Drag-to-delete state
-    const [isDraggingAny, setIsDraggingAny] = useState(false);
-    const isOverDeleteZone = useSharedValue(false);
-    // Measured size of the board (used for board-local drag-to-delete hit-test)
-    const boardSize = useSharedValue({ width: 0, height: 0 });
-
-    const deleteZoneStyle = useAnimatedStyle(() => ({
-        backgroundColor: isOverDeleteZone.value ? '#FF3B30' : WHITE,
-        borderColor: isOverDeleteZone.value ? '#FF3B30' : BLACK + '20',
-        transform: [{ scale: withTiming(isOverDeleteZone.value ? 1.1 : 1, { duration: 180 }) }],
-    }));
-
-    const deleteTextStyle = useAnimatedStyle(() => ({
-        color: isOverDeleteZone.value ? '#FFF' : BLACK,
-    }));
-
-    const deleteIconProps = useAnimatedProps(() => ({
-        stroke: isOverDeleteZone.value ? '#FFF' : BLACK,
-    }));
 
     // Item count text
     const itemCountText = useMemo(() => {
@@ -2400,14 +2285,6 @@ export const VisionBoardScreen: React.FC = () => {
         updateVisionItemPosition(id, x, y, s, r);
     };
 
-    const confirmDelete = async () => {
-        if (deleteId) {
-            await deleteVisionItem(deleteId);
-            setItems(prev => prev.filter(i => i.id !== deleteId));
-            setDeleteId(null);
-        }
-    };
-
     const handleUpdateTextStyle = (style: { text_color?: string; font_family?: string; bg_style?: string }) => {
         if (!editingTextItem) return;
 
@@ -2460,10 +2337,6 @@ export const VisionBoardScreen: React.FC = () => {
                         style={styles.board}
                         ref={boardRef}
                         collapsable={false}
-                        onLayout={e => {
-                            const { width: w, height: h } = e.nativeEvent.layout;
-                            boardSize.value = { width: w, height: h };
-                        }}
                     >
                         {/* Canvas background layer */}
                         {activeBgPreset.type === 'gradient' && activeBgPreset.colors ? (
@@ -2494,20 +2367,15 @@ export const VisionBoardScreen: React.FC = () => {
                                 layoutVersion={layoutVersion}
                                 onUpdate={handleUpdate}
                                 onRetry={handleRetry}
-                                onDelete={(id, instant) => {
+                                onDelete={(id) => {
                                     Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-                                    if (instant) {
-                                        setItems(prev => prev.filter(i => i.id !== id));
-                                        if (!id.startsWith('temp-') && !id.startsWith('stock-')) {
-                                            deleteVisionItem(id);
-                                        }
-                                    } else {
-                                        setDeleteId(id);
+                                    setItems(prev => prev.filter(i => i.id !== id));
+                                    if (!id.startsWith('temp-') && !id.startsWith('stock-')) {
+                                        deleteVisionItem(id);
                                     }
                                 }}
                                 onEditStyle={(id) => setEditingTextItem(items.find(i => i.id === id) ?? null)}
                                 onDragStart={() => {
-                                    setIsDraggingAny(true);
                                     // Bring to front by moving to end of render list
                                     setItems(prev => {
                                         const idx = prev.findIndex(i => i.id === item.id);
@@ -2517,48 +2385,23 @@ export const VisionBoardScreen: React.FC = () => {
                                         return next;
                                     });
                                 }}
-                                onDragEnd={() => setIsDraggingAny(false)}
-                                isOverDeleteZone={isOverDeleteZone}
-                                boardSize={boardSize}
                             />
                         ))}
 
-                        {/* Delete zone */}
-                        {isDraggingAny && (
-                            <Animated.View
-                                entering={SlideInDown.duration(200)}
-                                exiting={SlideOutDown.duration(200)}
-                                style={[styles.deleteZoneWrapper, deleteZoneStyle]}
-                            >
-                                <View style={styles.deleteZoneInner}>
-                                    <Svg width={22} height={22} viewBox="0 0 24 24" fill="none">
-                                        <AnimatedPath
-                                            d="M3 6h18M8 6V4a2 2 0 012-2h4a2 2 0 012 2v2M19 6v14a2 2 0 01-2 2H7a2 2 0 01-2-2V6M10 11v6M14 11v6"
-                                            animatedProps={deleteIconProps}
-                                            strokeWidth={1.5}
-                                            strokeLinecap="round"
-                                            strokeLinejoin="round"
-                                        />
-                                    </Svg>
-                                </View>
-                            </Animated.View>
-                        )}
                     </View>
 
                     {/* ── FAB: + Add button ── */}
-                    {!isDraggingAny && (
-                        <TouchableOpacity
-                            style={styles.fab}
-                            onPress={() => {
-                                Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-                                setStockThemeCategory(undefined);
-                                setIsStockVisible(true);
-                            }}
-                            activeOpacity={0.75}
-                        >
-                            <Text style={styles.fabText}>+</Text>
-                        </TouchableOpacity>
-                    )}
+                    <TouchableOpacity
+                        style={styles.fab}
+                        onPress={() => {
+                            Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                            setStockThemeCategory(undefined);
+                            setIsStockVisible(true);
+                        }}
+                        activeOpacity={0.75}
+                    >
+                        <Text style={styles.fabText}>+</Text>
+                    </TouchableOpacity>
                 </View>
                 )}
 
@@ -2595,39 +2438,6 @@ export const VisionBoardScreen: React.FC = () => {
                         />
                     )}
                 </Portal>
-
-                {/* ── Delete Confirmation ── */}
-                {deleteId && (
-                    <Portal>
-                        <Animated.View entering={FadeIn.duration(200)} style={styles.dialogOverlay}>
-                            <View style={[styles.dialogCard, { backgroundColor: WHITE }]}>
-                                <TrashIcon color='#D32F2F' size={28} />
-                                <Text style={[styles.dialogTitle, { color: BLACK }]}>
-                                    Remove this?
-                                </Text>
-                                <Text style={[styles.dialogBody, { color: BLACK }]}>
-                                    It'll be removed from your vision board
-                                </Text>
-                                <View style={styles.dialogActions}>
-                                    <TouchableOpacity
-                                        onPress={() => setDeleteId(null)}
-                                        style={[styles.dialogBtn, { backgroundColor: '#F0F0F0' }]}
-                                        activeOpacity={0.7}
-                                    >
-                                        <Text style={[styles.dialogBtnText, { color: BLACK }]}>Keep</Text>
-                                    </TouchableOpacity>
-                                    <TouchableOpacity
-                                        onPress={confirmDelete}
-                                        style={[styles.dialogBtn, { backgroundColor: '#D32F2F' }]}
-                                        activeOpacity={0.7}
-                                    >
-                                        <Text style={[styles.dialogBtnText, { color: '#FFF' }]}>Remove</Text>
-                                    </TouchableOpacity>
-                                </View>
-                            </View>
-                        </Animated.View>
-                    </Portal>
-                )}
 
                 {/* ── Clear Board Confirmation ── */}
                 {showClearConfirm && (
@@ -2801,6 +2611,23 @@ const styles = StyleSheet.create({
         shadowRadius: 20,
         elevation: 6,
     },
+    deleteXBtn: {
+        position: 'absolute',
+        top: 2,
+        right: 2,
+        width: 22,
+        height: 22,
+        borderRadius: 11,
+        backgroundColor: '#FF3B30',
+        alignItems: 'center',
+        justifyContent: 'center',
+        zIndex: 200,
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 2 },
+        shadowOpacity: 0.25,
+        shadowRadius: 4,
+        elevation: 8,
+    },
     imageItem: {
         width: 150,
         height: 150,
@@ -2917,27 +2744,6 @@ const styles = StyleSheet.create({
         fontWeight: '600',
     },
 
-    // ── Delete Zone ──
-    deleteZoneWrapper: {
-        position: 'absolute',
-        bottom: Platform.OS === 'ios' ? 40 : 20,
-        alignSelf: 'center',
-        paddingHorizontal: 28,
-        paddingVertical: 14,
-        borderRadius: 22,
-        borderWidth: 1.5,
-        zIndex: 100,
-        shadowColor: '#000',
-        shadowOffset: { width: 0, height: 4 },
-        shadowOpacity: 0.10,
-        shadowRadius: 12,
-        elevation: 8,
-    },
-    deleteZoneInner: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        gap: 10,
-    },
     // ── Layout Sheet ──
     layoutGrid: {
         flexDirection: 'row',
