@@ -4,6 +4,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import Constants, { ExecutionEnvironment } from 'expo-constants';
 import Purchases, { PurchasesPackage as RCPackage, LOG_LEVEL } from 'react-native-purchases';
 import { STORAGE_KEYS } from '../constants/storageKeys';
+import { PLANS } from '../config/pricing';
 
 // Heuristic to check if we are in Expo Go
 const isExpoGo = Constants.executionEnvironment === ExecutionEnvironment.StoreClient;
@@ -51,29 +52,18 @@ export const PurchaseProvider: React.FC<{ children: React.ReactNode }> = ({ chil
     const [isMock, setIsMock] = useState(isExpoGo);
     const [rcPackages, setRcPackages] = useState<PurchasesPackage[]>([]);
 
-    // Mock packages
-    const packages: PurchasesPackage[] = [
-        {
-            identifier: 'ulbo_monthly',
-            packageType: 'MONTHLY',
-            product: {
-                identifier: 'ulbo_monthly',
-                priceString: '$4.99',
-                title: 'Monthly Premium',
-                description: 'Unlock all features for 1 month'
-            }
+    // Mock packages — derived from pricing config so prices/SKUs stay in lockstep.
+    // Real RevenueCat offerings replace these in production (see init() below).
+    const packages: PurchasesPackage[] = PLANS.map(plan => ({
+        identifier:  plan.rcProductId,
+        packageType: plan.rcPackageType,
+        product: {
+            identifier:  plan.rcProductId,
+            priceString: plan.priceString,
+            title:       plan.displayName,
+            description: '',
         },
-        {
-            identifier: 'ulbo_annual',
-            packageType: 'ANNUAL',
-            product: {
-                identifier: 'ulbo_annual',
-                priceString: '$39.99',
-                title: 'Yearly Premium',
-                description: 'Unlock all features for 1 year'
-            }
-        }
-    ];
+    }));
 
     useEffect(() => {
         const init = async () => {
