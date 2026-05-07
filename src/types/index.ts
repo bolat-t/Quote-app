@@ -31,14 +31,35 @@ export interface Theme {
 import type { CompositeNavigationProp } from '@react-navigation/native';
 import type { BottomTabNavigationProp } from '@react-navigation/bottom-tabs';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
+import type { PaywallTriggerId } from '../config/pricing';
 
 export type RootStackParamList = {
   Tabs: undefined;
-  Paywall: undefined;
-  Analytics: undefined;
+  Paywall: {
+    /** Set when navigating from a specific in-app moment; drives copy + analytics. */
+    trigger?: PaywallTriggerId;
+    /** Activates the gift banner + countdown if the 24h window is still open. */
+    offer?: 'first_promise_gift';
+  } | undefined;
   VisionBoard: undefined;
   ReminderSettings: undefined;
 };
+
+// ── Onboarding ──
+export type OnboardingMood = 'happy' | 'sad' | 'upset' | 'bored';
+
+export interface OnboardingAnswers {
+  name:        string;
+  intents:     string[];          // ids from ONBOARDING_CONTENT.intent.options
+  moodNow:     OnboardingMood | null;
+  moodNote:    string;            // free-text journal entry alongside the mood pick
+  frequency:   string | null;     // id from ONBOARDING_CONTENT.frequency.options
+  area:        string | null;     // id from ONBOARDING_CONTENT.area.options
+  stakes:      string | null;     // id from ONBOARDING_CONTENT.stakes.options
+  notifyOptIn: boolean | null;
+  journalEntries: string[];       // up to 3
+  signaturePath:  string;
+}
 
 export type RootTabParamList = {
   Home: undefined;
