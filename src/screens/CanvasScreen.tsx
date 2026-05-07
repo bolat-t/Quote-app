@@ -1,4 +1,12 @@
+/**
+ * CanvasScreen — renders the "Quote" tab.
+ *
+ * Shows today's quote and a chat conversation with Ulbo. The earlier version
+ * of this screen was a freeform drawing canvas; that flow was removed but
+ * the file/route name "Canvas" is kept stable to avoid churning imports.
+ */
 import React, { useState, useEffect, useCallback, useRef } from 'react';
+import { BLACK, WHITE, YELLOW } from '../constants/colors';
 import {
     StyleSheet,
     View,
@@ -103,10 +111,6 @@ const POTATO_IMAGES: Record<number, any> = {
     9: require('../../assets/mascot/potato_levels/level_9_potato.png'),
 };
 
-const YELLOW = '#FFE600';
-const BLACK  = '#000000';
-const WHITE  = '#FFFFFF';
-
 const SCREEN_W = Dimensions.get('window').width;
 const SCREEN_H = Dimensions.get('window').height;
 
@@ -151,8 +155,7 @@ export const CanvasScreen: React.FC = () => {
     useEffect(() => { loadProgress().then(setProgress); }, []);
 
     // ── Animated card height when keyboard opens ──
-    const TAB_BAR_H = 66;
-    const cardHeight = SCREEN_H - (headerHeight || 80) - (62 + insets.bottom) - 8 - TAB_BAR_H;
+    const cardHeight = SCREEN_H - (headerHeight || 80) - (62 + insets.bottom) - 16;
     const cardH = useRef(new RNAnimated.Value(cardHeight)).current;
     const cardHRef = useRef(cardHeight);
     const headerHeightRef = useRef(headerHeight);
@@ -283,7 +286,7 @@ export const CanvasScreen: React.FC = () => {
                     ref={outerScrollRef}
                     contentContainerStyle={[
                         styles.scroll,
-                        { paddingTop: headerHeight || 12 },
+                        { paddingTop: (headerHeight || 0) + 16 },
                     ]}
                     scrollEnabled={false}
                     keyboardShouldPersistTaps="handled"

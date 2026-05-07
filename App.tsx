@@ -18,25 +18,23 @@ import { JournalScreen } from './src/screens/JournalScreen';
 import { VisionBoardScreen } from './src/screens/VisionBoardScreen';
 import { PaywallScreen } from './src/screens/PaywallScreen';
 import { AnalyticsScreen } from './src/screens/AnalyticsScreen';
-import { FocusTimerPickerScreen } from './src/screens/FocusTimerPickerScreen';
 import { ReminderSettingsScreen } from './src/screens/ReminderSettingsScreen';
 import { AppHeader } from './src/components/AppHeader';
 import { getUserName } from './src/utils/storage';
 import { HeaderHeightProvider, useSetHeaderHeight } from './src/context/HeaderHeightContext';
-import { TimerProvider } from './src/context/TimerContext';
-import { JournalStepsProvider } from './src/context/JournalStepsContext';
-import { CommitmentProvider } from './src/context/CommitmentContext';
-import { TimerSecondsProvider } from './src/context/TimerSecondsContext';
 import { HistoryCalendarProvider } from './src/context/HistoryCalendarContext';
 import { useFonts } from 'expo-font';
 
 const Tab = createBottomTabNavigator<RootTabParamList>();
 const Stack = createNativeStackNavigator<RootStackParamList>();
 
+// Note on naming: route names are kept stable (Canvas/Journal/History) so existing
+// navigation calls keep working. ROUTE_TITLES drives the visible header text and
+// `tabBarLabel` overrides drive the visible tab-bar text.
 const ROUTE_TITLES: Record<string, { title: string; subtitle?: string }> = {
-    Canvas:  { title: 'Canvas' },
-    Journal: { title: 'Journal' },
-    History: { title: 'History' },
+    Canvas:  { title: 'Wisdom' },         // daily quote + Ulbo chat
+    Journal: { title: 'Journal' },        // emotion / 3 things / reflect
+    History: { title: 'History' },        // timeline of past entries
     Vision:  { title: 'Vision Board' },
     Home:    { title: 'Welcome' },
 };
@@ -124,11 +122,11 @@ const BottomTabsInner = () => {
                 },
             }}
         >
-            <Tab.Screen name="Canvas"  component={CanvasScreen}     />
-            <Tab.Screen name="Journal" component={HuntScreen}       />
-            <Tab.Screen name="History" component={JournalScreen}    />
-            <Tab.Screen name="Vision"  component={VisionBoardScreen} />
-            <Tab.Screen name="Home"    component={HubScreen}        />
+            <Tab.Screen name="Canvas"  component={CanvasScreen}      options={{ tabBarLabel: 'Wisdom' }} />
+            <Tab.Screen name="Journal" component={HuntScreen}        options={{ tabBarLabel: 'Journal' }} />
+            <Tab.Screen name="History" component={JournalScreen}     options={{ tabBarLabel: 'History' }} />
+            <Tab.Screen name="Vision"  component={VisionBoardScreen} options={{ tabBarLabel: 'Vision' }} />
+            <Tab.Screen name="Home"    component={HubScreen}         options={{ tabBarLabel: 'Home' }} />
         </Tab.Navigator>
         </View>
     );
@@ -136,17 +134,9 @@ const BottomTabsInner = () => {
 
 const BottomTabs = () => (
     <HeaderHeightProvider>
-        <TimerProvider>
-            <JournalStepsProvider>
-                <CommitmentProvider>
-                    <TimerSecondsProvider>
-                        <HistoryCalendarProvider>
-                            <BottomTabsInner />
-                        </HistoryCalendarProvider>
-                    </TimerSecondsProvider>
-                </CommitmentProvider>
-            </JournalStepsProvider>
-        </TimerProvider>
+        <HistoryCalendarProvider>
+            <BottomTabsInner />
+        </HistoryCalendarProvider>
     </HeaderHeightProvider>
 );
 
@@ -159,8 +149,6 @@ export default function App() {
         'Carlito':                     require('@expo-google-fonts/carlito/400Regular/Carlito_400Regular.ttf'),
         'Carlito-Bold':                require('@expo-google-fonts/carlito/700Bold/Carlito_700Bold.ttf'),
         'Carlito-Italic':              require('@expo-google-fonts/carlito/400Regular_Italic/Carlito_400Regular_Italic.ttf'),
-        'MontserratAlternates-ExtraBoldItalic': require('@expo-google-fonts/montserrat-alternates/800ExtraBold_Italic/MontserratAlternates_800ExtraBold_Italic.ttf'),
-        'MontserratAlternates-Bold':   require('@expo-google-fonts/montserrat-alternates/700Bold/MontserratAlternates_700Bold.ttf'),
         'OpenSans-SemiBold':           require('@expo-google-fonts/open-sans/600SemiBold/OpenSans_600SemiBold.ttf'),
         'Inter-Bold':                  require('@expo-google-fonts/inter/700Bold/Inter_700Bold.ttf'),
         'Inter-Medium':                require('@expo-google-fonts/inter/500Medium/Inter_500Medium.ttf'),
@@ -195,11 +183,6 @@ export default function App() {
                                     <Stack.Screen
                                         name="VisionBoard"
                                         component={VisionBoardScreen}
-                                        options={{ presentation: 'card' }}
-                                    />
-                                    <Stack.Screen
-                                        name="FocusTimerPicker"
-                                        component={FocusTimerPickerScreen}
                                         options={{ presentation: 'card' }}
                                     />
                                     <Stack.Screen

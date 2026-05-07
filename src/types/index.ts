@@ -27,27 +27,6 @@ export interface Theme {
   colors: ThemeColors;
 }
 
-// Drawing types
-export interface Point {
-  x: number;
-  y: number;
-}
-
-export interface Stroke {
-  id: string;
-  points: Point[];
-  color: string;
-  width: number;
-  opacity?: number;
-}
-
-export interface Drawing {
-  id: string;
-  strokes: Stroke[];
-  createdAt: number;
-  thumbnail?: string;
-}
-
 // Navigation types
 import type { CompositeNavigationProp } from '@react-navigation/native';
 import type { BottomTabNavigationProp } from '@react-navigation/bottom-tabs';
@@ -58,7 +37,6 @@ export type RootStackParamList = {
   Paywall: undefined;
   Analytics: undefined;
   VisionBoard: undefined;
-  FocusTimerPicker: undefined;
   ReminderSettings: undefined;
 };
 

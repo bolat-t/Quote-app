@@ -19,21 +19,21 @@ import { ThemeMode } from '../types';
 
 // Custom Fonts
 const fontConfig = {
-    displayLarge: { fontFamily: 'MontserratAlternates-ExtraBoldItalic', fontSize: 57, lineHeight: 64, letterSpacing: 0, fontWeight: '400' as const },
-    displayMedium: { fontFamily: 'MontserratAlternates-ExtraBoldItalic', fontSize: 45, lineHeight: 52, letterSpacing: 0, fontWeight: '400' as const },
-    displaySmall: { fontFamily: 'MontserratAlternates-ExtraBoldItalic', fontSize: 36, lineHeight: 44, letterSpacing: 0, fontWeight: '400' as const },
-    headlineLarge: { fontFamily: 'MontserratAlternates-ExtraBoldItalic', fontSize: 32, lineHeight: 40, letterSpacing: 0, fontWeight: '400' as const },
-    headlineMedium: { fontFamily: 'MontserratAlternates-ExtraBoldItalic', fontSize: 28, lineHeight: 36, letterSpacing: 0, fontWeight: '400' as const },
-    headlineSmall: { fontFamily: 'MontserratAlternates-ExtraBoldItalic', fontSize: 24, lineHeight: 32, letterSpacing: 0, fontWeight: '400' as const },
-    titleLarge: { fontFamily: 'MontserratAlternates-ExtraBoldItalic', fontSize: 22, lineHeight: 28, letterSpacing: 0, fontWeight: '400' as const },
-    titleMedium: { fontFamily: 'MontserratAlternates-ExtraBoldItalic', fontSize: 16, lineHeight: 24, letterSpacing: 0.15, fontWeight: '500' as const },
-    titleSmall: { fontFamily: 'MontserratAlternates-ExtraBoldItalic', fontSize: 14, lineHeight: 20, letterSpacing: 0.1, fontWeight: '500' as const },
-    bodyLarge: { fontFamily: 'MontserratAlternates-ExtraBoldItalic', fontSize: 16, lineHeight: 24, letterSpacing: 0.5, fontWeight: '400' as const },
-    bodyMedium: { fontFamily: 'MontserratAlternates-ExtraBoldItalic', fontSize: 14, lineHeight: 20, letterSpacing: 0.25, fontWeight: '400' as const },
-    bodySmall: { fontFamily: 'MontserratAlternates-ExtraBoldItalic', fontSize: 12, lineHeight: 16, letterSpacing: 0.4, fontWeight: '400' as const },
-    labelLarge: { fontFamily: 'MontserratAlternates-ExtraBoldItalic', fontSize: 14, lineHeight: 20, letterSpacing: 0.1, fontWeight: '500' as const },
-    labelMedium: { fontFamily: 'MontserratAlternates-ExtraBoldItalic', fontSize: 12, lineHeight: 16, letterSpacing: 0.5, fontWeight: '500' as const },
-    labelSmall: { fontFamily: 'MontserratAlternates-ExtraBoldItalic', fontSize: 11, lineHeight: 16, letterSpacing: 0.5, fontWeight: '500' as const },
+    displayLarge: { fontFamily: 'Inter-Bold', fontSize: 57, lineHeight: 64, letterSpacing: 0, fontWeight: '400' as const },
+    displayMedium: { fontFamily: 'Inter-Bold', fontSize: 45, lineHeight: 52, letterSpacing: 0, fontWeight: '400' as const },
+    displaySmall: { fontFamily: 'Inter-Bold', fontSize: 36, lineHeight: 44, letterSpacing: 0, fontWeight: '400' as const },
+    headlineLarge: { fontFamily: 'Inter-Bold', fontSize: 32, lineHeight: 40, letterSpacing: 0, fontWeight: '400' as const },
+    headlineMedium: { fontFamily: 'Inter-Bold', fontSize: 28, lineHeight: 36, letterSpacing: 0, fontWeight: '400' as const },
+    headlineSmall: { fontFamily: 'Inter-Bold', fontSize: 24, lineHeight: 32, letterSpacing: 0, fontWeight: '400' as const },
+    titleLarge: { fontFamily: 'Inter-Bold', fontSize: 22, lineHeight: 28, letterSpacing: 0, fontWeight: '400' as const },
+    titleMedium: { fontFamily: 'Inter-Bold', fontSize: 16, lineHeight: 24, letterSpacing: 0.15, fontWeight: '500' as const },
+    titleSmall: { fontFamily: 'Inter-Bold', fontSize: 14, lineHeight: 20, letterSpacing: 0.1, fontWeight: '500' as const },
+    bodyLarge: { fontFamily: 'Inter-Bold', fontSize: 16, lineHeight: 24, letterSpacing: 0.5, fontWeight: '400' as const },
+    bodyMedium: { fontFamily: 'Inter-Bold', fontSize: 14, lineHeight: 20, letterSpacing: 0.25, fontWeight: '400' as const },
+    bodySmall: { fontFamily: 'Inter-Bold', fontSize: 12, lineHeight: 16, letterSpacing: 0.4, fontWeight: '400' as const },
+    labelLarge: { fontFamily: 'Inter-Bold', fontSize: 14, lineHeight: 20, letterSpacing: 0.1, fontWeight: '500' as const },
+    labelMedium: { fontFamily: 'Inter-Bold', fontSize: 12, lineHeight: 16, letterSpacing: 0.5, fontWeight: '500' as const },
+    labelSmall: { fontFamily: 'Inter-Bold', fontSize: 11, lineHeight: 16, letterSpacing: 0.5, fontWeight: '500' as const },
 };
 
 // Material 3 Colors

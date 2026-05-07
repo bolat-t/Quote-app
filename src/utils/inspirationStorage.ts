@@ -1,6 +1,7 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { STORAGE_KEYS } from '../constants/storageKeys';
 
-const STORAGE_KEY = '@ulbo_inspiration_categories';
+const STORAGE_KEY = STORAGE_KEYS.INSPIRATION_CATEGORIES;
 
 export type InspirationImage = {
     id:         string;
@@ -12,11 +13,12 @@ export type InspirationImage = {
 };
 
 export type InspirationCategory = {
-    id:        string;
-    title:     string;
-    images:    InspirationImage[];
-    createdAt: number;
-    updatedAt: number;
+    id:           string;
+    title:        string;
+    images:       InspirationImage[];
+    thumbnailUri?: string;  // explicitly chosen cover image; falls back to images[0].uri
+    createdAt:    number;
+    updatedAt:    number;
 };
 
 const genId = () =>
@@ -84,7 +86,7 @@ export const getInspirationCategories = async (): Promise<InspirationCategory[]>
     }
 };
 
-export const saveInspirationCategories = async (cats: InspirationCategory[]): Promise<void> => {
+const saveInspirationCategories = async (cats: InspirationCategory[]): Promise<void> => {
     try {
         await AsyncStorage.setItem(STORAGE_KEY, JSON.stringify(cats));
     } catch (e) {
@@ -108,7 +110,7 @@ export const createInspirationCategory = async (): Promise<InspirationCategory> 
 
 export const updateInspirationCategory = async (
     id: string,
-    patch: Partial<Pick<InspirationCategory, 'title' | 'images'>>,
+    patch: Partial<Pick<InspirationCategory, 'title' | 'images' | 'thumbnailUri'>>,
 ): Promise<void> => {
     const existing = await getInspirationCategories();
     const next = existing.map(c =>

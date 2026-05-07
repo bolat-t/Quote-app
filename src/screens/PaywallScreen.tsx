@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { BLACK, WHITE, YELLOW } from '../constants/colors';
 import {
     View,
     Text,
@@ -17,26 +18,22 @@ import * as Haptics from 'expo-haptics';
 import { usePurchase, PurchasesPackage } from '../context/PurchaseContext';
 import { Svg, Path } from 'react-native-svg';
 
-const YELLOW = '#FFE600';
-const BLACK = '#000000';
-const WHITE = '#FFFFFF';
-
-const FEATURES = [
-    { title: 'Deeper Reflections', desc: 'Unlock guided prompts & themes', color: '#7C5CFC' },
-    { title: 'AI Insights', desc: 'Smart mood analysis & patterns', color: '#3B82F6' },
-    { title: 'Evolving Journal', desc: 'Custom backgrounds & fonts', color: '#10B981' },
-    { title: 'Mood Dashboard', desc: 'Track your emotional journey', color: '#F59E0B' },
-    { title: 'Longer Recordings', desc: 'Unlimited voice reflections', color: '#EC4899' },
-    { title: 'Weekly Summaries', desc: 'AI-powered weekly insights', color: '#8B5CF6' },
+const FEATURES: { title: string; desc: string }[] = [
+    { title: 'Deeper Reflections', desc: 'Unlock guided prompts & themes' },
+    { title: 'AI Insights',        desc: 'Smart mood analysis & patterns' },
+    { title: 'Evolving Journal',   desc: 'Custom backgrounds & fonts' },
+    { title: 'Mood Dashboard',     desc: 'Track your emotional journey' },
+    { title: 'Longer Recordings',  desc: 'Unlimited voice reflections' },
+    { title: 'Weekly Summaries',   desc: 'AI-powered weekly insights' },
 ];
 
-/** Small rounded-square icon for feature rows */
-const FeatureIcon: React.FC<{ color: string }> = ({ color }) => (
-    <View style={[styles.featureIcon, { backgroundColor: color + '18' }]}>
+/** Small yellow check icon for feature rows. */
+const FeatureIcon: React.FC = () => (
+    <View style={styles.featureIcon}>
         <Svg width={16} height={16} viewBox="0 0 24 24" fill="none">
             <Path
                 d="M20 6L9 17l-5-5"
-                stroke={color}
+                stroke={BLACK}
                 strokeWidth={2.5}
                 strokeLinecap="round"
                 strokeLinejoin="round"
@@ -45,7 +42,7 @@ const FeatureIcon: React.FC<{ color: string }> = ({ color }) => (
     </View>
 );
 
-/** Checkmark circle for plan selection */
+/** Checkmark circle for plan selection. */
 const CheckCircle: React.FC<{ selected: boolean }> = ({ selected }) => (
     <View style={[styles.checkCircle, selected && styles.checkCircleSelected]}>
         {selected && (
@@ -99,9 +96,16 @@ export const PaywallScreen = () => {
     const annualPrice = annualPkg?.product.priceString || '$29.99';
     const weeklyPrice = weeklyPkg?.product.priceString || '$2.99';
 
-    // Calculate savings % for annual vs weekly
-    const annualRaw = annualPkg?.product.price ?? 29.99;
-    const weeklyRaw = weeklyPkg?.product.price ?? 2.99;
+    // Calculate savings % for annual vs weekly. RevenueCat exposes a numeric
+    // `price`, but our mock package type only carries `priceString`, so we
+    // parse the digits out of the formatted string.
+    const parsePrice = (s?: string, fallback = 0): number => {
+        if (!s) return fallback;
+        const match = s.match(/[\d.]+/);
+        return match ? parseFloat(match[0]) : fallback;
+    };
+    const annualRaw = parsePrice(annualPkg?.product.priceString, 29.99);
+    const weeklyRaw = parsePrice(weeklyPkg?.product.priceString, 2.99);
     const weeklyAnnualised = weeklyRaw * 52;
     const savingsPct = weeklyAnnualised > 0
         ? Math.round(((weeklyAnnualised - annualRaw) / weeklyAnnualised) * 100)
@@ -121,7 +125,7 @@ export const PaywallScreen = () => {
                 {/* Mascot */}
                 <View style={styles.mascotSection}>
                     <Image
-                        source={require('../../assets/mascot/ulbos_coloured.png')}
+                        source={require('../../assets/mascot/potato.png')}
                         style={styles.mascotImage}
                         resizeMode="contain"
                     />
@@ -134,7 +138,7 @@ export const PaywallScreen = () => {
                 <View style={styles.featureList}>
                     {FEATURES.map((f, i) => (
                         <View key={i} style={styles.featureRow}>
-                            <FeatureIcon color={f.color} />
+                            <FeatureIcon />
                             <View style={styles.featureText}>
                                 <Text style={styles.featureTitle}>{f.title}</Text>
                                 <Text style={styles.featureDesc}>{f.desc}</Text>
@@ -262,7 +266,7 @@ const styles = StyleSheet.create({
     },
     title: {
         fontSize: 32,
-        fontFamily: 'MontserratAlternates-ExtraBoldItalic',
+        fontFamily: 'Inter-Bold',
         textAlign: 'center',
         marginBottom: 28,
         color: BLACK,
@@ -277,89 +281,87 @@ const styles = StyleSheet.create({
         gap: 14,
     },
     featureIcon: {
-        width: 36,
-        height: 36,
-        borderRadius: 10,
-        justifyContent: 'center',
-        alignItems: 'center',
+        width:           28,
+        height:          28,
+        borderRadius:    14,
+        backgroundColor: YELLOW,
+        borderWidth:     1.5,
+        borderColor:     BLACK,
+        justifyContent:  'center',
+        alignItems:      'center',
     },
-    featureText: {
-        flex: 1,
-    },
+    featureText: { flex: 1 },
     featureTitle: {
-        fontSize: 16,
-        fontFamily: 'MontserratAlternates-ExtraBoldItalic',
+        fontSize:   16,
+        fontFamily: 'Inter-Bold',
         marginBottom: 1,
-        color: BLACK,
+        color:      BLACK,
     },
     featureDesc: {
-        fontSize: 13,
-        fontFamily: 'MontserratAlternates-ExtraBoldItalic',
-        color: '#666',
+        fontSize:   13,
+        fontFamily: 'Inter-Medium',
+        color:      BLACK + '70',
     },
     planSection: {
-        gap: 12,
+        gap:          12,
         marginBottom: 12,
     },
     planCard: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        paddingVertical: 18,
+        flexDirection:   'row',
+        alignItems:      'center',
+        paddingVertical:   18,
         paddingHorizontal: 16,
-        borderRadius: 14,
-        position: 'relative',
-        gap: 12,
+        borderRadius:    16,
+        borderWidth:     2,
+        borderColor:     BLACK + '25',
+        position:        'relative',
+        gap:             12,
         backgroundColor: WHITE,
-        elevation: 4,
-        shadowColor: BLACK,
-        shadowOffset: { width: 0, height: 2 },
-        shadowOpacity: 0.1,
-        shadowRadius: 6,
     },
     planCardSelected: {
-        backgroundColor: '#FFFBE6',
-        elevation: 8,
-        shadowOpacity: 0.15,
-        shadowRadius: 10,
+        borderColor:     BLACK,
+        backgroundColor: YELLOW,
     },
     bestOfferBadge: {
-        position: 'absolute',
-        top: -10,
-        left: 16,
+        position:        'absolute',
+        top:             -10,
+        left:            16,
         paddingHorizontal: 10,
-        paddingVertical: 3,
-        borderRadius: 6,
+        paddingVertical:   3,
+        borderRadius:    6,
         backgroundColor: BLACK,
     },
     bestOfferText: {
-        color: YELLOW,
-        fontSize: 10,
-        fontWeight: '800',
+        color:        YELLOW,
+        fontFamily:   'Inter-Bold',
+        fontSize:     10,
         letterSpacing: 0.8,
     },
     checkCircle: {
-        width: 24,
-        height: 24,
-        borderRadius: 12,
-        backgroundColor: '#F0F0F0',
-        justifyContent: 'center',
-        alignItems: 'center',
+        width:           24,
+        height:          24,
+        borderRadius:    12,
+        backgroundColor: WHITE,
+        borderWidth:     1.5,
+        borderColor:     BLACK,
+        justifyContent:  'center',
+        alignItems:      'center',
     },
     checkCircleSelected: {
-        backgroundColor: YELLOW,
+        backgroundColor: WHITE,
     },
     planInfo: {
         flex: 1,
     },
     planName: {
         fontSize: 16,
-        fontFamily: 'MontserratAlternates-ExtraBoldItalic',
+        fontFamily: 'Inter-Bold',
         marginBottom: 2,
         color: BLACK,
     },
     planPriceMain: {
         fontSize: 15,
-        fontFamily: 'MontserratAlternates-ExtraBoldItalic',
+        fontFamily: 'Inter-Bold',
         color: BLACK,
     },
     planPeriod: {
@@ -369,54 +371,51 @@ const styles = StyleSheet.create({
     },
     planSavingsNote: {
         fontSize: 11,
-        fontFamily: 'MontserratAlternates-ExtraBoldItalic',
+        fontFamily: 'Inter-Bold',
         color: BLACK + '60',
         marginTop: 2,
     },
     planWeekly: {
         fontSize: 13,
-        fontFamily: 'MontserratAlternates-ExtraBoldItalic',
+        fontFamily: 'Inter-Bold',
         color: BLACK + '88',
     },
     billingNote: {
-        textAlign: 'center',
-        fontSize: 13,
-        fontFamily: 'MontserratAlternates-ExtraBoldItalic',
+        textAlign:    'center',
+        fontSize:     13,
+        fontFamily:   'Inter-Medium',
         marginBottom: 20,
-        color: '#888',
+        color:        BLACK + '60',
     },
     ctaButton: {
         paddingVertical: 18,
-        borderRadius: 50,
-        alignItems: 'center',
-        justifyContent: 'center',
-        marginBottom: 20,
+        borderRadius:    50,
+        alignItems:      'center',
+        justifyContent:  'center',
+        marginBottom:    20,
         backgroundColor: YELLOW,
-        elevation: 6,
-        shadowColor: BLACK,
-        shadowOffset: { width: 0, height: 4 },
-        shadowOpacity: 0.15,
-        shadowRadius: 8,
+        borderWidth:     2,
+        borderColor:     BLACK,
     },
     ctaText: {
-        fontSize: 20,
-        fontFamily: 'MontserratAlternates-ExtraBoldItalic',
-        color: BLACK,
+        fontSize:   18,
+        fontFamily: 'Inter-Bold',
+        color:      BLACK,
         letterSpacing: 0.3,
     },
     footerLinks: {
-        flexDirection: 'row',
+        flexDirection:  'row',
         justifyContent: 'center',
-        alignItems: 'center',
-        gap: 8,
+        alignItems:     'center',
+        gap:            8,
     },
     footerLink: {
-        fontSize: 13,
-        fontFamily: 'MontserratAlternates-ExtraBoldItalic',
-        color: '#888',
+        fontSize:   13,
+        fontFamily: 'Inter-Medium',
+        color:      BLACK + '60',
     },
     footerDot: {
         fontSize: 13,
-        color: '#CCC',
+        color:    BLACK + '30',
     },
 });

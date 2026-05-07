@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { BLACK, GRAY, WHITE, YELLOW } from '../constants/colors';
 import {
     View, Text, StyleSheet, TouchableOpacity,
     ScrollView, SafeAreaView, Modal, Alert,
@@ -10,11 +11,8 @@ import Animated, {
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { WheelPicker } from '../components/WheelPicker';
 import { requestNotificationPermissions, scheduleDailyReminder } from '../utils/notifications';
+import { STORAGE_KEYS } from '../constants/storageKeys';
 
-const BLACK  = '#000000';
-const WHITE  = '#FFFFFF';
-const YELLOW = '#FFE600';
-const GRAY   = '#F2F2F2';
 const MUTED  = '#AAAAAA';
 
 const HOURS   = ['1','2','3','4','5','6','7','8','9','10','11','12'];
@@ -44,7 +42,7 @@ const SectionLabel: React.FC<{ label: string }> = ({ label }) => (
 );
 const secSt = StyleSheet.create({
     row:  { flexDirection: 'row', alignItems: 'center', gap: 10, marginBottom: 12, marginTop: 20 },
-    text: { fontFamily: 'OpenSans-SemiBold', fontSize: 10, color: MUTED, textTransform: 'uppercase', letterSpacing: 1.2 },
+    text: { fontFamily: 'Inter-Medium', fontSize: 10, color: MUTED, textTransform: 'uppercase', letterSpacing: 1.2 },
     line: { flex: 1, height: 1, backgroundColor: BLACK + '14' },
 });
 
@@ -91,7 +89,7 @@ const DayBubble: React.FC<{ label: string; active: boolean; onPress: () => void 
 const daySt = StyleSheet.create({
     bubble:      { width: 38, height: 38, borderRadius: 19, backgroundColor: GRAY, alignItems: 'center', justifyContent: 'center', borderWidth: 0 },
     active:      { backgroundColor: YELLOW, borderWidth: 2, borderColor: BLACK },
-    label:       { fontFamily: 'OpenSans-SemiBold', fontSize: 13, color: MUTED },
+    label:       { fontFamily: 'Inter-Medium', fontSize: 13, color: MUTED },
     labelActive: { color: BLACK },
 });
 
@@ -99,7 +97,7 @@ const daySt = StyleSheet.create({
 
 interface Props { navigation: any }
 
-const STORAGE_KEY = '@ulbo_reminder_settings';
+const STORAGE_KEY = STORAGE_KEYS.REMINDER_SETTINGS;
 
 export const ReminderSettingsScreen: React.FC<Props> = ({ navigation }) => {
 
@@ -425,7 +423,7 @@ const st = StyleSheet.create({
         width: 44, height: 44, borderRadius: 22,
         backgroundColor: GRAY, alignItems: 'center', justifyContent: 'center',
     },
-    headerTitle: { fontFamily: 'MontserratAlternates-ExtraBoldItalic', fontSize: 18, color: BLACK },
+    headerTitle: { fontFamily: 'Inter-Bold', fontSize: 18, color: BLACK },
 
     scroll: { paddingHorizontal: 20, paddingBottom: 48 },
 
@@ -436,8 +434,8 @@ const st = StyleSheet.create({
         marginTop: 12, marginBottom: 4, borderColor: BLACK + '30',
     },
     toggleCardActive: { borderColor: BLACK, backgroundColor: YELLOW + '22' },
-    toggleTitle: { fontFamily: 'MontserratAlternates-Bold', fontSize: 16, color: BLACK },
-    toggleSub:   { fontFamily: 'OpenSans-SemiBold', fontSize: 12, color: MUTED, marginTop: 2 },
+    toggleTitle: { fontFamily: 'Inter-Bold', fontSize: 16, color: BLACK },
+    toggleSub:   { fontFamily: 'Inter-Medium', fontSize: 12, color: MUTED, marginTop: 2 },
 
     block:         {},
     blockDisabled: { opacity: 0.35 },
@@ -446,10 +444,10 @@ const st = StyleSheet.create({
 
     // Reminder rows
     emptyRow: { paddingVertical: 18, paddingHorizontal: 16 },
-    emptyText: { fontFamily: 'OpenSans-SemiBold', fontSize: 13, color: MUTED, textAlign: 'center' },
+    emptyText: { fontFamily: 'Inter-Medium', fontSize: 13, color: MUTED, textAlign: 'center' },
     timeRow: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: 16, paddingVertical: 14 },
     timeRowBorder: { borderBottomWidth: 1, borderBottomColor: BLACK + '10' },
-    timeText: { fontFamily: 'MontserratAlternates-Bold', fontSize: 18, color: BLACK, flex: 1 },
+    timeText: { fontFamily: 'Inter-Bold', fontSize: 18, color: BLACK, flex: 1 },
     removeBtn: {
         width: 28, height: 28, borderRadius: 14,
         backgroundColor: GRAY, alignItems: 'center', justifyContent: 'center',
@@ -459,16 +457,16 @@ const st = StyleSheet.create({
         paddingHorizontal: 16, paddingVertical: 14,
         borderTopWidth: 1, borderTopColor: BLACK + '10',
     },
-    addText: { fontFamily: 'OpenSans-SemiBold', fontSize: 14, color: BLACK },
+    addText: { fontFamily: 'Inter-Medium', fontSize: 14, color: BLACK },
 
     // Frequency
     freqRow: { flexDirection: 'row', alignItems: 'center', paddingVertical: 14, paddingHorizontal: 14, gap: 12 },
     freqRowBorder: { borderBottomWidth: 1, borderBottomColor: BLACK + '10' },
     freqAccent:       { width: 4, height: 32, borderRadius: 2, backgroundColor: 'transparent' },
     freqAccentActive: { backgroundColor: YELLOW, borderWidth: 1, borderColor: BLACK },
-    freqLabel:        { fontFamily: 'OpenSans-SemiBold', fontSize: 14, color: MUTED },
+    freqLabel:        { fontFamily: 'Inter-Medium', fontSize: 14, color: MUTED },
     freqLabelActive:  { color: BLACK },
-    freqSub:          { fontFamily: 'OpenSans-SemiBold', fontSize: 11, color: '#CCCCCC', marginTop: 2 },
+    freqSub:          { fontFamily: 'Inter-Medium', fontSize: 11, color: '#CCCCCC', marginTop: 2 },
     radioDot: {
         width: 20, height: 20, borderRadius: 10,
         borderWidth: 2, borderColor: '#CCCCCC',
@@ -478,7 +476,7 @@ const st = StyleSheet.create({
     radioFill: { width: 10, height: 10, borderRadius: 5, backgroundColor: BLACK },
 
     // Days
-    daysHint: { fontFamily: 'OpenSans-SemiBold', fontSize: 10, color: MUTED, marginBottom: 12, textAlign: 'center' },
+    daysHint: { fontFamily: 'Inter-Medium', fontSize: 10, color: MUTED, marginBottom: 12, textAlign: 'center' },
     daysRow:  { flexDirection: 'row', justifyContent: 'space-between' },
 
     // Save
@@ -489,7 +487,7 @@ const st = StyleSheet.create({
         paddingVertical: 18,
     },
     saveBtnDisabled:     { backgroundColor: GRAY, borderColor: '#DDDDDD' },
-    saveBtnText:         { fontFamily: 'MontserratAlternates-Bold', fontSize: 16, color: BLACK },
+    saveBtnText:         { fontFamily: 'Inter-Bold', fontSize: 16, color: BLACK },
     saveBtnTextDisabled: { color: MUTED },
 
     // Modal
@@ -505,30 +503,37 @@ const st = StyleSheet.create({
         backgroundColor: BLACK + '20', alignSelf: 'center', marginBottom: 20,
     },
     sheetTitle: {
-        fontFamily: 'MontserratAlternates-ExtraBoldItalic',
+        fontFamily: 'Inter-Bold',
         fontSize: 18, color: BLACK, textAlign: 'center', marginBottom: 8,
     },
     wheelRow: {
         flexDirection: 'row', alignItems: 'center',
         justifyContent: 'center', gap: 4,
     },
-    colonText: { fontFamily: 'GasoekOne', fontSize: 28, color: BLACK, width: 20, textAlign: 'center' },
-    ampmWrap:  { marginLeft: 12, gap: 6 },
-    ampmBtn:   { paddingHorizontal: 14, paddingVertical: 8, borderRadius: 10, backgroundColor: GRAY },
-    ampmActive:      { backgroundColor: BLACK },
-    ampmText:        { fontFamily: 'OpenSans-SemiBold', fontSize: 13, color: MUTED },
-    ampmTextActive:  { color: WHITE },
+    colonText: { fontFamily: 'Inter-Bold', fontSize: 28, color: BLACK, width: 20, textAlign: 'center' },
+    ampmWrap: { marginLeft: 12, gap: 6 },
+    ampmBtn: {
+        paddingHorizontal: 14,
+        paddingVertical:   8,
+        borderRadius:      10,
+        backgroundColor:   WHITE,
+        borderWidth:       1.5,
+        borderColor:       BLACK + '25',
+    },
+    ampmActive:     { backgroundColor: YELLOW, borderColor: BLACK },
+    ampmText:       { fontFamily: 'Inter-Medium', fontSize: 13, color: BLACK + '60' },
+    ampmTextActive: { color: BLACK, fontFamily: 'Inter-Bold' },
     sheetActions: { flexDirection: 'row', gap: 12, marginTop: 24 },
     sheetCancelBtn: {
         flex: 1, paddingVertical: 16, borderRadius: 14,
         borderWidth: 2, borderColor: BLACK + '30', alignItems: 'center', backgroundColor: GRAY,
     },
-    sheetCancelText: { fontFamily: 'MontserratAlternates-Bold', fontSize: 16, color: MUTED },
+    sheetCancelText: { fontFamily: 'Inter-Bold', fontSize: 16, color: MUTED },
     sheetConfirmBtn: {
         flex: 2, paddingVertical: 16, borderRadius: 14,
         borderWidth: 2, borderColor: BLACK, alignItems: 'center', backgroundColor: YELLOW,
     },
-    sheetConfirmText: { fontFamily: 'MontserratAlternates-Bold', fontSize: 16, color: BLACK },
+    sheetConfirmText: { fontFamily: 'Inter-Bold', fontSize: 16, color: BLACK },
 });
 
 export default ReminderSettingsScreen;

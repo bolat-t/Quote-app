@@ -3,6 +3,7 @@ import { Alert, Platform } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import Constants, { ExecutionEnvironment } from 'expo-constants';
 import Purchases, { PurchasesPackage as RCPackage, LOG_LEVEL } from 'react-native-purchases';
+import { STORAGE_KEYS } from '../constants/storageKeys';
 
 // Heuristic to check if we are in Expo Go
 const isExpoGo = Constants.executionEnvironment === ExecutionEnvironment.StoreClient;
@@ -122,7 +123,7 @@ export const PurchaseProvider: React.FC<{ children: React.ReactNode }> = ({ chil
 
         const checkMockPremiumStatus = async () => {
             try {
-                const status = await AsyncStorage.getItem('@ulbo_is_premium');
+                const status = await AsyncStorage.getItem(STORAGE_KEYS.IS_PREMIUM);
                 setIsPremium(status === 'true');
             } catch (e) {
                 console.error('Error checking premium status', e);
@@ -138,7 +139,7 @@ export const PurchaseProvider: React.FC<{ children: React.ReactNode }> = ({ chil
         if (isMock) {
             // Simulate network request
             await new Promise(resolve => setTimeout(resolve, 1500));
-            await AsyncStorage.setItem('@ulbo_is_premium', 'true');
+            await AsyncStorage.setItem(STORAGE_KEYS.IS_PREMIUM, 'true');
             setIsPremium(true);
             Alert.alert('Success (Mock)', 'Welcome to Ulbo Premium!');
             return true;
@@ -162,7 +163,7 @@ export const PurchaseProvider: React.FC<{ children: React.ReactNode }> = ({ chil
     const restorePurchases = async (): Promise<boolean> => {
         if (isMock) {
             await new Promise(resolve => setTimeout(resolve, 1500));
-            const status = await AsyncStorage.getItem('@ulbo_is_premium');
+            const status = await AsyncStorage.getItem(STORAGE_KEYS.IS_PREMIUM);
             if (status === 'true') {
                 setIsPremium(true);
                 Alert.alert('Restored (Mock)', 'Your purchases have been restored.');

@@ -2,9 +2,10 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { PROMPTS, GratitudePrompt, PromptCategory } from '../data/gratitudePrompts';
 import { MascotMood } from '../hooks/useMascotState';
+import { STORAGE_KEYS } from '../constants/storageKeys';
 
-const PROMPT_HISTORY_KEY = 'ulbo_prompt_history';
-const LAST_PROMPT_DATE_KEY = 'ulbo_last_prompt_date';
+const PROMPT_HISTORY_KEY = STORAGE_KEYS.PROMPT_HISTORY;
+const LAST_PROMPT_DATE_KEY = STORAGE_KEYS.LAST_PROMPT_DATE;
 
 interface PromptHistory {
     lastCategory: PromptCategory | null;

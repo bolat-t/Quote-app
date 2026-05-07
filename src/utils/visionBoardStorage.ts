@@ -1,6 +1,6 @@
-
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { supabase } from '../lib/supabase';
+import { STORAGE_KEYS } from '../constants/storageKeys';
 
 export interface VisionItem {
     id: string;
@@ -142,14 +142,16 @@ export interface VisionActivity {
     addedAt: string;
 }
 
-const VISION_LOG_PREFIX = '@ulbo_vision_log_';
+const VISION_LOG_PREFIX = STORAGE_KEYS.VISION_LOG_PREFIX;
 
 const getTodayStr = (): string => {
     const d = new Date();
     return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
 };
 
-export const logVisionActivity = async (type: 'image' | 'text', content: string): Promise<void> => {
+// Internal-only — invoked by addVisionItem above. Not exported because the
+// History screen uses the bulk loader (loadAllVisionActivities) instead.
+const logVisionActivity = async (type: 'image' | 'text', content: string): Promise<void> => {
     try {
         const key = VISION_LOG_PREFIX + getTodayStr();
         const raw = await AsyncStorage.getItem(key);
@@ -158,15 +160,6 @@ export const logVisionActivity = async (type: 'image' | 'text', content: string)
         await AsyncStorage.setItem(key, JSON.stringify(log));
     } catch (e) {
         console.error('Error logging vision activity:', e);
-    }
-};
-
-export const getVisionActivity = async (date: string): Promise<VisionActivity[]> => {
-    try {
-        const raw = await AsyncStorage.getItem(VISION_LOG_PREFIX + date);
-        return raw ? JSON.parse(raw) : [];
-    } catch {
-        return [];
     }
 };
 

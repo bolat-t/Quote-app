@@ -3,6 +3,7 @@ import React, { createContext, useContext, useEffect, useState, ReactNode } from
 import { Session, User } from '@supabase/supabase-js';
 import { supabase } from '../lib/supabase';
 import { Alert } from 'react-native';
+import { logger } from '../utils/logger';
 
 interface AuthContextType {
     session: Session | null;
@@ -29,14 +30,14 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
                 setIsLoading(false);
             } else {
                 // No session? Try anonymous sign in for "Open Gates" access
-                console.log("[Auth] No session, attempting anonymous sign-in...");
+                logger.log("[Auth] No session, attempting anonymous sign-in...");
                 supabase.auth.signInAnonymously()
                     .then(({ data, error }) => {
                         if (error) {
-                            console.warn("[Auth] Anon sign-in failed (likely disabled in Supabase):", error.message);
+                            logger.warn("[Auth] Anon sign-in failed (likely disabled in Supabase):", error.message);
                             // Fallback: stay unauthenticated (features requiring auth will fail)
                         } else if (data.session) {
-                            console.log("[Auth] Anon sign-in success:", data.user?.id);
+                            logger.log("[Auth] Anon sign-in success:", data.user?.id);
                             setSession(data.session);
                             setUser(data.user);
 
@@ -47,7 +48,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
                                     username: `guest_${data.user.id.slice(0, 6)}`,
                                     updated_at: new Date(),
                                 }]).then(({ error }) => {
-                                    if (error) console.log("Profile creation skipped/failed:", error.message);
+                                    if (error) logger.log("Profile creation skipped/failed:", error.message);
                                 });
                             }
                         }

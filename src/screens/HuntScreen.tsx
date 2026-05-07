@@ -1,4 +1,12 @@
+/**
+ * HuntScreen — renders the "Journal" tab.
+ *
+ * Three-step daily flow: Emotion → 3 Things (Positivity Hunt) → Reflect.
+ * Originally named after step 2 ("Hunt"); now hosts the full journal flow.
+ * The file name is kept stable to avoid churning imports across the app.
+ */
 import React, { useState, useEffect, useCallback, useRef } from 'react';
+import { BLACK, WHITE, YELLOW } from '../constants/colors';
 import {
     StyleSheet,
     View,
@@ -11,7 +19,6 @@ import {
     Keyboard,
     Platform,
     KeyboardAvoidingView,
-    Modal,
     Animated as RNAnimated,
 } from 'react-native';
 import * as Haptics from 'expo-haptics';
@@ -34,11 +41,9 @@ import { getTodayDateString, saveJournalEntry, generateJournalId, analyzeJournal
 import { SpiritResponseModal } from '../components/SpiritResponseModal';
 import { HUNT_PLACEHOLDERS } from '../data/gratitudePrompts';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { STORAGE_KEYS } from '../constants/storageKeys';
 import { useHeaderHeight } from '../context/HeaderHeightContext';
 import { useFocusEffect } from '@react-navigation/native';
-import { useSetTimerDisplay } from '../context/TimerContext';
-import { useSetJournalSteps } from '../context/JournalStepsContext';
-import { useTimerSecs } from '../context/TimerSecondsContext';
 import { VoiceSheet } from '../components/VoiceSheet';
 
 // Assets
@@ -82,23 +87,8 @@ const EMOTION_IMAGES = {
 type Emotion = keyof typeof EMOTION_IMAGES;
 const EMOTIONS: Emotion[] = ['happy', 'sad', 'upset', 'bored'];
 
-// Coach messages — first is task-oriented, rest are encouragements
-const COACH_MESSAGES = [
-    "let's reflect on today~",
-    "you're doing great, keep it up!",
-    "every good thing you notice matters",
-    "gratitude is a superpower",
-    "I'm proud of you for being here",
-    "small moments, big feelings~",
-    "take your time, no rush",
-    "you're building a beautiful habit",
-];
 
-const STEP_LABELS = ['Emotion', '3things', 'Reflect'];
-
-const YELLOW = '#FFE600';
-const BLACK  = '#000000';
-const WHITE  = '#FFFFFF';
+const STEP_LABELS = ['Mood', 'Highlights', 'Reflect'];
 
 // Fallback Ulbo response when AI call fails or returns null
 const SPIRIT_FALLBACK = (name: string) => ({
@@ -108,19 +98,12 @@ const SPIRIT_FALLBACK = (name: string) => ({
     followUp: "What's one thing from today you want to remember tomorrow?",
 });
 
-
-
 const ArrowRightIcon = ({ color, size = 18 }: { color: string; size?: number }) => (
     <Svg width={size} height={size} viewBox="0 0 24 24" fill="none">
         <Path d="M5 12h14M13 6l6 6-6 6" stroke={color} strokeWidth={2.2} strokeLinecap="round" strokeLinejoin="round" />
     </Svg>
 );
 
-// ═══════════════════════════════════════════════
-// Confetti Rain
-// ═══════════════════════════════════════════════
-
-const CONFETTI_COLORS = ['#FFFF01', '#FF4757', '#2ED573', '#1E90FF', '#FF6B81', '#FFFFFF'];
 const SCREEN_W = Dimensions.get('window').width;
 const SCREEN_H = Dimensions.get('window').height;
 
@@ -131,233 +114,8 @@ const SCREEN_H = Dimensions.get('window').height;
 //   each of 3 equal tabs = (SCREEN_W - 40) / 3
 const TAB_SLIDER_W = (SCREEN_W - 40) / 3;
 
-const ConfettiRain: React.FC<{ active: boolean }> = ({ active }) => {
-    const pieces = useRef(
-        Array.from({ length: 30 }, () => ({
-            anim:     new RNAnimated.Value(0),
-            x:        Math.random() * SCREEN_W,
-            color:    CONFETTI_COLORS[Math.floor(Math.random() * CONFETTI_COLORS.length)],
-            duration: 1200 + Math.random() * 800,
-            delay:    Math.random() * 800,
-        }))
-    ).current;
 
-    useEffect(() => {
-        if (!active) return;
-        const anims = pieces.map(p =>
-            RNAnimated.loop(
-                RNAnimated.timing(p.anim, {
-                    toValue: 1,
-                    duration: p.duration,
-                    delay: p.delay,
-                    useNativeDriver: true,
-                })
-            )
-        );
-        anims.forEach(a => a.start());
-        return () => anims.forEach(a => a.stop());
-    }, [active, pieces]);
 
-    return (
-        <View style={StyleSheet.absoluteFill} pointerEvents="none">
-            {pieces.map((p, i) => {
-                const translateY = p.anim.interpolate({
-                    inputRange:  [0, 1],
-                    outputRange: [-20, SCREEN_H],
-                });
-                return (
-                    <RNAnimated.View
-                        key={i}
-                        style={{
-                            position:        'absolute',
-                            left:            p.x,
-                            top:             0,
-                            width:           8,
-                            height:          8,
-                            backgroundColor: p.color,
-                            transform:       [{ translateY }],
-                        }}
-                    />
-                );
-            })}
-        </View>
-    );
-};
-
-// ═══════════════════════════════════════════════
-// Alarm Overlay
-// ═══════════════════════════════════════════════
-
-interface AlarmOverlayProps {
-    visible:      boolean;
-    allTasksDone: boolean;
-    missionsLeft: number;
-    onKeepGoing:  () => void;
-    onStop:       () => void;
-    onGrowPotato: () => void;
-}
-
-const AlarmOverlay: React.FC<AlarmOverlayProps> = ({
-    visible, allTasksDone, missionsLeft, onKeepGoing, onStop, onGrowPotato,
-}) => {
-    const pulseAnim = useRef(new RNAnimated.Value(1)).current;
-
-    // Pulsing alarm for "not done" flow
-    useEffect(() => {
-        if (!visible || allTasksDone) { pulseAnim.setValue(1); return; }
-        const loop = RNAnimated.loop(
-            RNAnimated.sequence([
-                RNAnimated.timing(pulseAnim, { toValue: 1.08, duration: 300, useNativeDriver: true }),
-                RNAnimated.timing(pulseAnim, { toValue: 1,    duration: 300, useNativeDriver: true }),
-            ])
-        );
-        loop.start();
-        return () => loop.stop();
-    }, [visible, allTasksDone, pulseAnim]);
-
-    return (
-        <Modal visible={visible} transparent animationType="fade" onRequestClose={onStop}>
-            <View style={alarmStyles.backdrop}>
-                {allTasksDone && <ConfettiRain active={visible && allTasksDone} />}
-                <View style={alarmStyles.card}>
-                    {allTasksDone ? (
-                        <>
-                            <Text style={alarmStyles.bigEmoji}>🎉</Text>
-                            <Text style={alarmStyles.doneTitle}>All Done!</Text>
-                            <Text style={alarmStyles.doneSub}>You crushed all today's missions!</Text>
-                            <TouchableOpacity style={alarmStyles.growBtn} onPress={onGrowPotato} activeOpacity={0.8}>
-                                <Text style={alarmStyles.growBtnText}>Grow Your Potato 🥔</Text>
-                            </TouchableOpacity>
-                            <TouchableOpacity onPress={onStop} activeOpacity={0.6}>
-                                <Text style={alarmStyles.doneForNow}>Done for Now</Text>
-                            </TouchableOpacity>
-                        </>
-                    ) : (
-                        <>
-                            <RNAnimated.Text style={[alarmStyles.alarmEmoji, { transform: [{ scale: pulseAnim }] }]}>
-                                ⏰
-                            </RNAnimated.Text>
-                            <Text style={alarmStyles.timesUpTitle}>Time's Up!</Text>
-                            <Text style={alarmStyles.missionsLeftText}>
-                                {missionsLeft} mission{missionsLeft !== 1 ? 's' : ''} left
-                            </Text>
-                            <TouchableOpacity style={alarmStyles.keepGoingBtn} onPress={onKeepGoing} activeOpacity={0.8}>
-                                <Text style={alarmStyles.keepGoingText}>Keep Going</Text>
-                            </TouchableOpacity>
-                            <TouchableOpacity style={alarmStyles.stopBtn} onPress={onStop} activeOpacity={0.6}>
-                                <Text style={alarmStyles.stopText}>Stop</Text>
-                            </TouchableOpacity>
-                        </>
-                    )}
-                </View>
-            </View>
-        </Modal>
-    );
-};
-
-const alarmStyles = StyleSheet.create({
-    backdrop: {
-        flex:            1,
-        backgroundColor: 'rgba(0,0,0,0.95)',
-        justifyContent:  'center',
-        alignItems:      'center',
-    },
-    card: {
-        backgroundColor:  WHITE,
-        borderWidth:      2.5,
-        borderColor:      BLACK,
-        borderRadius:     28,
-        padding:          32,
-        marginHorizontal: 24,
-        alignItems:       'center',
-        width:            SCREEN_W - 48,
-    },
-    // Congrats flow
-    bigEmoji: {
-        fontSize: 56,
-        marginBottom: 8,
-    },
-    doneTitle: {
-        fontFamily: 'Inter-Bold',
-        fontSize:   32,
-        color:      BLACK,
-        marginBottom: 4,
-    },
-    doneSub: {
-        fontFamily:    'Inter-Medium',
-        fontSize:      16,
-        color:         '#666',
-        textAlign:     'center',
-        marginVertical: 12,
-    },
-    growBtn: {
-        backgroundColor: YELLOW,
-        borderWidth:     2,
-        borderColor:     BLACK,
-        borderRadius:    20,
-        paddingVertical:   16,
-        paddingHorizontal: 32,
-        marginTop:       8,
-    },
-    growBtnText: {
-        fontFamily: 'Inter-Bold',
-        fontSize:   16,
-        color:      BLACK,
-    },
-    doneForNow: {
-        fontFamily:   'Inter-Medium',
-        fontSize:     15,
-        color:        '#999',
-        paddingVertical: 16,
-    },
-    // Alarm / not done flow
-    alarmEmoji: {
-        fontSize: 56,
-        marginBottom: 4,
-    },
-    timesUpTitle: {
-        fontFamily: 'Inter-Bold',
-        fontSize:   36,
-        color:      BLACK,
-        marginTop:  16,
-        marginBottom: 4,
-    },
-    missionsLeftText: {
-        fontFamily: 'Inter-Medium',
-        fontSize:   16,
-        color:      '#666',
-    },
-    keepGoingBtn: {
-        backgroundColor: YELLOW,
-        borderWidth:     2,
-        borderColor:     BLACK,
-        borderRadius:    50,
-        paddingVertical: 18,
-        width:           200,
-        alignItems:      'center',
-        marginTop:       24,
-    },
-    keepGoingText: {
-        fontFamily: 'Inter-Bold',
-        fontSize:   20,
-        color:      BLACK,
-    },
-    stopBtn: {
-        backgroundColor: 'transparent',
-        borderWidth:     2,
-        borderColor:     '#CCCCCC',
-        borderRadius:    50,
-        paddingVertical: 14,
-        width:           160,
-        alignItems:      'center',
-        marginTop:       12,
-    },
-    stopText: {
-        fontFamily: 'Inter-Medium',
-        fontSize:   16,
-        color:      '#999',
-    },
-});
 
 // ═══════════════════════════════════════════════
 // Journal Screen — Daily Reflection & Gratitude
@@ -366,8 +124,6 @@ const alarmStyles = StyleSheet.create({
 export const HuntScreen: React.FC = () => {
     const headerHeight = useHeaderHeight();
     const insets = useSafeAreaInsets();
-    const setTimerDisplay = useSetTimerDisplay();
-    const setJournalSteps = useSetJournalSteps();
     const { quote: todayQuote } = useDailyQuote();
     const { mood } = useMascotState();
 
@@ -389,28 +145,6 @@ export const HuntScreen: React.FC = () => {
     const [huntInputs, setHuntInputs] = useState(['', '', '']);
     const [promptResponse, setPromptResponse] = useState('');
     const [isPromptSaved, setIsPromptSaved] = useState(false);
-
-    // ── Coach messages ──
-    const [coachMsgIndex, setCoachMsgIndex] = useState(0);
-
-    // ── Timer done modal ──
-    const [showTimerDone, setShowTimerDone] = useState(false);
-    const [potatoGrown, setPotatoGrown] = useState(false);
-
-    // ── Focus Timer ──
-    // timerSecs comes from shared context — updates instantly when settings change
-    const savedTimerSecs = useTimerSecs();
-    const [timerMinutes, setTimerMinutes] = useState(savedTimerSecs / 60);
-    const [isTimerRunning, setIsTimerRunning] = useState(false);
-    const [timerTotalSeconds, setTimerTotalSeconds] = useState(savedTimerSecs);
-    const timerRef = useRef<NodeJS.Timeout | null>(null);
-
-    // Sync timer preset whenever the saved duration changes (only when not running)
-    useEffect(() => {
-        if (isTimerRunning) return;
-        setTimerMinutes(savedTimerSecs / 60);
-        setTimerTotalSeconds(savedTimerSecs);
-    }, [savedTimerSecs]);
 
     // ── Emotion step ──
     const [selectedEmotion, setSelectedEmotion] = useState<Emotion | null>(null);
@@ -463,59 +197,9 @@ export const HuntScreen: React.FC = () => {
         newLevelTitle?: string;
     } | null>(null);
 
-    // ── Timer logic ──
-    const startTimer = useCallback(() => {
-        if (timerTotalSeconds <= 0) return;
-        setIsTimerRunning(true);
-        Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-    }, [timerTotalSeconds]);
-
-    const pauseTimer = useCallback(() => {
-        setIsTimerRunning(false);
-        Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-    }, []);
-
-    const setTimerPreset = useCallback((minutes: number) => {
-        setTimerMinutes(minutes);
-        setTimerTotalSeconds(minutes * 60);
-        setIsTimerRunning(false);
-        Haptics.selectionAsync();
-    }, []);
-
-    useEffect(() => {
-        if (isTimerRunning && timerTotalSeconds > 0) {
-            timerRef.current = setInterval(() => {
-                setTimerTotalSeconds(prev => {
-                    if (prev <= 1) {
-                        setIsTimerRunning(false);
-                        setShowTimerDone(true);
-                        Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-                        setTimeout(() => Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success), 350);
-                        setTimeout(() => Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success), 700);
-                        return 0;
-                    }
-                    return prev - 1;
-                });
-            }, 1000);
-        } else {
-            if (timerRef.current) clearInterval(timerRef.current);
-        }
-        return () => { if (timerRef.current) clearInterval(timerRef.current); };
-    }, [isTimerRunning]);
-
-    // Derive display from timerTotalSeconds
-    const displayMinutes = Math.floor(timerTotalSeconds / 60);
-    const displaySeconds = timerTotalSeconds % 60;
-    const timerProgress = timerMinutes > 0 ? 1 - (timerTotalSeconds / (timerMinutes * 60)) : 0;
-
-    // ── Derived (declared early so useFocusEffect can reference isHuntDone) ──
+    // ── Derived ──
     const huntCount = hunt?.entries?.length || 0;
     const isHuntDone = hunt?.completed || false;
-
-    // Clean up journal steps on unmount
-    useEffect(() => {
-        return () => setJournalSteps(null);
-    }, [setJournalSteps]);
 
     // Auto-focus relevant input when arriving on this tab
     useFocusEffect(
@@ -530,17 +214,6 @@ export const HuntScreen: React.FC = () => {
             }
         }, [activeStep, isHuntDone])
     );
-
-    // Sync timer into AppHeader context (used by other tabs if navigated away)
-    useEffect(() => {
-        setTimerDisplay({
-            text: `${String(displayMinutes).padStart(2, '0')}:${String(displaySeconds).padStart(2, '0')}`,
-            progress: timerProgress,
-            isRunning: isTimerRunning,
-            onPress: isTimerRunning ? pauseTimer : startTimer,
-        });
-        return () => setTimerDisplay(null);
-    }, [displayMinutes, displaySeconds, timerProgress, isTimerRunning, startTimer, pauseTimer, setTimerDisplay]);
 
     // ── Load ──
     const loadData = useCallback(async () => {
@@ -575,7 +248,6 @@ export const HuntScreen: React.FC = () => {
     }, [mood]);
 
     useEffect(() => { loadData(); }, [loadData]);
-
 
     // ── Handlers ──
 
@@ -749,7 +421,7 @@ export const HuntScreen: React.FC = () => {
         setSpiritVisible(true);
         setSpiritLoading(true);
         setSpiritData(null);
-        const name = await AsyncStorage.getItem('@ulbo_user_name') || 'Friend';
+        const name = await AsyncStorage.getItem(STORAGE_KEYS.USER_NAME) || 'Friend';
         analyzeJournalEntry(text, name)
             .then(async (analysis) => {
                 const result = analysis ?? SPIRIT_FALLBACK(name);
@@ -792,7 +464,7 @@ export const HuntScreen: React.FC = () => {
         setSpiritVisible(true);
         setSpiritLoading(true);
         setSpiritData(null);
-        const name = await AsyncStorage.getItem('@ulbo_user_name') || 'Friend';
+        const name = await AsyncStorage.getItem(STORAGE_KEYS.USER_NAME) || 'Friend';
         analyzeJournalEntry(text, name)
             .then(async (analysis) => {
                 const result = analysis ?? SPIRIT_FALLBACK(name);
@@ -845,8 +517,11 @@ export const HuntScreen: React.FC = () => {
 
     // ── Animated square card when typing (RNAnimated = JS thread → flex recalculates) ──
     const CARD_W = SCREEN_W - 32;
-    const TAB_BAR_H = 66; // tab bar height (~50px outer) + marginBottom (16px)
-    const reflectCardHeight = SCREEN_H - (headerHeight || 80) - (62 + insets.bottom) - 8 - TAB_BAR_H;
+    // Account for the in-screen tab bar (Emotion/3things/Reflect) above the card
+    // and the bottom navigation tab bar so the card sits with a clear gap to the footer.
+    const TAB_BAR_H = 66;
+    const FOOTER_GAP = 24; // gap between card bottom and the navigation tab bar
+    const reflectCardHeight = SCREEN_H - (headerHeight || 80) - (62 + insets.bottom) - TAB_BAR_H - FOOTER_GAP;
     const cardH = useRef(new RNAnimated.Value(reflectCardHeight)).current;
     const cardHStyle = { height: cardH };
     const kbOpen = useRef(false);
@@ -890,25 +565,6 @@ export const HuntScreen: React.FC = () => {
         return () => { show.remove(); hide.remove(); };
     }, []);
 
-    // ── Grow Potato handler ──
-    const handleGrowPotato = useCallback(async () => {
-        if (!progress) return;
-        const result = await awardXP('completeHunt', progress);
-        setProgress(result.progress);
-        if (result.xpGained > 0) {
-            setXpToast({
-                amount: result.xpGained,
-                label: 'Potato grown!',
-                leveledUp: result.leveledUp,
-                newLevelTitle: result.leveledUp
-                    ? LEVEL_TIERS.find(t => t.level === result.progress.level)?.title
-                    : undefined,
-            });
-        }
-        setShowTimerDone(false);
-        setPotatoGrown(true);
-    }, [progress]);
-
     // ═══════════ LOADING ═══════════
 
     if (isLoading) {
@@ -925,17 +581,6 @@ export const HuntScreen: React.FC = () => {
 
     return (
         <View style={styles.container}>
-
-            {/* ─── Alarm Overlay ─── */}
-            <AlarmOverlay
-                visible={showTimerDone}
-                allTasksDone={isHuntDone}
-                missionsLeft={isHuntDone ? 0 : 1}
-                onKeepGoing={() => { setShowTimerDone(false); setTimerPreset(timerMinutes); }}
-                onStop={() => setShowTimerDone(false)}
-                onGrowPotato={handleGrowPotato}
-            />
-
             <KeyboardAvoidingView
                 style={{ flex: 1 }}
                 behavior={Platform.OS === 'ios' ? 'padding' : undefined}
@@ -945,7 +590,7 @@ export const HuntScreen: React.FC = () => {
                     ref={outerScrollRef}
                     contentContainerStyle={[
                         styles.scroll,
-                        { paddingTop: headerHeight || 12 },
+                        { paddingTop: (headerHeight || 0) + 16, paddingBottom: 62 + insets.bottom + 16 },
                     ]}
                     scrollEnabled={false}
                     keyboardShouldPersistTaps="handled"
@@ -1145,7 +790,6 @@ export const HuntScreen: React.FC = () => {
                         </RNAnimated.View>
                     )}
 
-
                     {/* ─── Step 2: Reflect ─── */}
                     {activeStep === 2 && (
                         <RNAnimated.View style={cardHStyle}>
@@ -1260,8 +904,6 @@ const styles = StyleSheet.create({
     },
     scroll: {
         paddingHorizontal: 16,
-        paddingTop: 12,
-        paddingBottom: 120,
     },
     // ── Tab Bar ──
     tabBar: {
@@ -1318,11 +960,6 @@ const styles = StyleSheet.create({
         width: 50,
         height: 50,
     },
-    emotionDivider: {
-        height: 2,
-        backgroundColor: BLACK,
-        marginBottom: 16,
-    },
     emotionInput: {
         fontFamily: 'Inter-Medium',
         fontSize: 16,
@@ -1373,12 +1010,6 @@ const styles = StyleSheet.create({
         padding: 20,
         minHeight: 260,
     },
-    contentTitle: {
-        fontFamily: 'Inter-SemiBold',
-        fontSize: 25,
-        color: BLACK,
-        marginBottom: 20,
-    },
     loadingWrap: {
         flex: 1,
         justifyContent: 'center',
@@ -1386,103 +1017,9 @@ const styles = StyleSheet.create({
     },
 
     // ── Timer + Step Card ──
-    topBar: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        marginHorizontal: 16,
-        marginTop: 16,
-        marginBottom: 16,
-        paddingHorizontal: 8,
-        paddingVertical: 4,
-        gap: 16,
-    },
-    stepTrack: {
-        flex: 1,
-        flexDirection: 'row',
-        alignItems: 'center',
-        justifyContent: 'space-around',
-    },
-    stepDotWrap: {
-        alignItems: 'center',
-        gap: 5,
-        paddingVertical: 4,
-        paddingHorizontal: 6,
-    },
-    stepDot: {
-        width: 12,
-        height: 12,
-        borderRadius: 6,
-        backgroundColor: '#DDDDDD',
-    },
-    stepDotActive: {
-        backgroundColor: YELLOW,
-        width: 14,
-        height: 14,
-        borderRadius: 7,
-    },
-    stepDotDone: {
-        backgroundColor: BLACK,
-    },
-    stepDotLabel: {
-        fontFamily: 'Inter-Medium',
-        fontSize: 10,
-        color: '#666666',
-    },
-    stepDotLabelActive: {
-        color: WHITE,
-    },
-    heroImage: {
-        width: width * 0.35,
-        height: width * 0.35,
-    },
     // ── Bottom Mascot ──
-    bottomMascot: {
-        alignItems: 'center',
-        paddingTop: 32,
-        paddingBottom: 8,
-    },
-    bottomMascotInner: {
-        alignItems: 'center',
-    },
-    heroBubble: {
-        paddingHorizontal: 14,
-        paddingVertical: 10,
-        borderRadius: 16,
-        maxWidth: width * 0.42,
-        backgroundColor: '#F0F0F0',
-    },
-    bubbleTailWrap: {
-        alignItems: 'center',
-        marginTop: -2,
-        marginBottom: -1,
-    },
-    bubbleTail: {
-        width: 12,
-        height: 12,
-        transform: [{ rotate: '45deg' }],
-        borderRadius: 2,
-        marginBottom: -6,
-        backgroundColor: '#F0F0F0',
-    },
-    heroBubbleText: {
-        fontFamily: 'Inter-SemiBold',
-        fontSize: 16,
-        lineHeight: 22,
-        textAlign: 'center',
-        color: '#000000',
-    },
 
     // ── Section ──
-    sectionLabel: {
-        paddingHorizontal: 24,
-        paddingTop: 20,
-        paddingBottom: 14,
-    },
-    sectionTitle: {
-        fontFamily: 'Inter-Bold',
-        fontSize: 32,
-        color: '#000000',
-    },
 
     // ── Reflection Card ──
     // ── Reflect step (step 2) ──
@@ -1550,34 +1087,8 @@ const styles = StyleSheet.create({
         fontSize: 16,
         color: '#4B5563',
     },
-    reflectionFooter: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        justifyContent: 'space-between',
-        paddingHorizontal: 18,
-        paddingBottom: 8,
-    },
-    reflectionWordCount: {
-        fontFamily: 'Inter-SemiBold',
-        fontSize: 12,
-        color: '#4B5563',
-    },
-    reflectionSaveBtn: {
-        backgroundColor: '#FFE600',
-        paddingHorizontal: 22,
-        paddingVertical: 0,
-        borderRadius: 20,
-    },
-    reflectionSaveBtnText: {
-        fontFamily: 'Inter-Bold',
-        fontSize: 16,
-        color: '#000000',
-    },
 
     // ── Card Body (shared) ──
-    cardBody: {
-        gap: 12,
-    },
 
     // ── Gratitude (Step 1) ──
     gratitudeHeader: {
@@ -1661,115 +1172,10 @@ const styles = StyleSheet.create({
     },
 
     // ── Prompt ──
-    promptHeaderRow: {
-        flexDirection: 'row',
-        alignItems: 'flex-start',
-        gap: 12,
-        marginBottom: 8,
-    },
-    shuffleBtn: {
-        width: 32,
-        height: 32,
-        borderRadius: 16,
-        alignItems: 'center',
-        justifyContent: 'center',
-        marginTop: 2,
-        backgroundColor: '#F0F0F0',
-    },
-    promptText: {
-        fontFamily: 'Inter-SemiBold',
-        fontSize: 16,
-        lineHeight: 24,
-        color: '#000000',
-    },
-    textArea: {
-        fontFamily: 'Inter-Medium',
-        fontSize: 16,
-        lineHeight: 24,
-        minHeight: 100,
-        padding: 14,
-        borderRadius: 14,
-        backgroundColor: '#F0F4F8',
-        color: '#000000',
-    },
-    primaryBtn: {
-        paddingVertical: 14,
-        borderRadius: 26,
-        alignItems: 'center',
-        backgroundColor: '#FFE600',
-    },
-    primaryBtnText: {
-        color: '#000000',
-        fontFamily: 'Inter-Bold',
-        fontSize: 18,
-    },
-
-    // ── Quote ──
-    quoteBox: {
-        paddingHorizontal: 18,
-        paddingVertical: 16,
-        borderRadius: 14,
-        backgroundColor: '#F8F8F8',
-    },
-    quoteText: {
-        fontFamily: 'Inter-SemiBold',
-        fontSize: 19,
-        lineHeight: 28,
-        color: '#000000',
-    },
-    quoteAuthor: {
-        fontFamily: 'Inter-SemiBold',
-        fontSize: 13,
-        marginTop: 8,
-        textAlign: 'right',
-        color: '#666666',
-    },
 
     // ── Today Prompts ──
-    todayPromptItem: {
-        flexDirection: 'row',
-        alignItems: 'flex-start',
-        gap: 10,
-        paddingVertical: 4,
-    },
-    todayPromptBullet: {
-        width: 24,
-        height: 24,
-        borderRadius: 12,
-        backgroundColor: '#FFE600',
-        alignItems: 'center',
-        justifyContent: 'center',
-    },
-    todayPromptBulletText: {
-        fontFamily: 'Inter-SemiBold',
-        fontSize: 12,
-        color: '#000000',
-    },
-    todayPromptText: {
-        flex: 1,
-        fontFamily: 'Inter-SemiBold',
-        fontSize: 18,
-        lineHeight: 24,
-        color: '#000000',
-    },
 
     // ── Saved State ──
-    savedState: {
-        alignItems: 'center',
-        paddingVertical: 16,
-        gap: 4,
-    },
-    savedTitle: {
-        fontFamily: 'Inter-Bold',
-        fontSize: 26,
-        marginTop: 4,
-        color: '#000000',
-    },
-    savedSub: {
-        fontFamily: 'Inter-SemiBold',
-        fontSize: 14,
-        color: '#666666',
-    },
     writeAgainBtn: {
         marginTop: 10,
         paddingVertical: 6,
@@ -1779,61 +1185,6 @@ const styles = StyleSheet.create({
         fontFamily: 'Inter-SemiBold',
         fontSize: 14,
         color: '#000000',
-    },
-
-    // ── Timer Done Modal ──
-    modalBackdrop: {
-        flex: 1,
-        backgroundColor: '#00000055',
-        justifyContent: 'center',
-        alignItems: 'center',
-        paddingHorizontal: 32,
-    },
-    modalCard: {
-        backgroundColor: '#FFFFFF',
-        borderRadius: 28,
-        paddingVertical: 36,
-        paddingHorizontal: 28,
-        alignItems: 'center',
-        width: '100%',
-        gap: 8,
-    },
-    modalEmoji: {
-        fontFamily: 'Inter-Bold',
-        fontSize: 36,
-        color: '#FFE600',
-        marginBottom: 4,
-    },
-    modalTitle: {
-        fontFamily: 'Inter-Bold',
-        fontSize: 36,
-        color: '#000000',
-    },
-    modalSub: {
-        fontFamily: 'Inter-SemiBold',
-        fontSize: 16,
-        color: '#666666',
-        textAlign: 'center',
-        marginBottom: 8,
-    },
-    modalBtn: {
-        backgroundColor: '#FFE600',
-        borderRadius: 26,
-        paddingVertical: 14,
-        paddingHorizontal: 40,
-        marginTop: 8,
-        width: '100%',
-        alignItems: 'center',
-    },
-    modalBtnText: {
-        fontFamily: 'Inter-Bold',
-        fontSize: 20,
-        color: '#000000',
-    },
-    modalDismiss: {
-        fontFamily: 'Inter-SemiBold',
-        fontSize: 14,
-        color: '#999999',
     },
 });
 

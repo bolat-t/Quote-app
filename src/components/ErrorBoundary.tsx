@@ -1,9 +1,6 @@
 import React, { Component, ReactNode } from 'react';
 import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
-
-const YELLOW = '#FFE600';
-const BLACK = '#000000';
-const WHITE = '#FFFFFF';
+import { BLACK, WHITE, YELLOW } from '../constants/colors';
 
 interface Props { children: ReactNode; }
 interface State { hasError: boolean; }

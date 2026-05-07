@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
+import { BLACK, WHITE, YELLOW } from '../constants/colors';
 import {
     View,
     Text,
@@ -14,9 +15,6 @@ import * as FileSystem from 'expo-file-system/legacy';
 import { supabase } from '../lib/supabase';
 import Svg, { Path } from 'react-native-svg';
 
-const YELLOW = '#FFE600';
-const BLACK = '#000000';
-const WHITE = '#FFFFFF';
 const { width } = Dimensions.get('window');
 
 // ─── Mic SVG ───
@@ -390,7 +388,7 @@ const triggerStyles = StyleSheet.create({
         justifyContent: 'center',
     },
     label: {
-        fontFamily: 'MontserratAlternates-ExtraBoldItalic',
+        fontFamily: 'Inter-Bold',
         fontSize: 13,
         color: BLACK,
     },
@@ -425,7 +423,7 @@ const styles = StyleSheet.create({
         marginBottom: 2,
     },
     status: {
-        fontFamily: 'MontserratAlternates-ExtraBoldItalic',
+        fontFamily: 'Inter-Bold',
         fontSize: 12,
         letterSpacing: 2.5,
         color: '#BBBBBB',
@@ -439,13 +437,13 @@ const styles = StyleSheet.create({
         marginTop: -8,
     },
     timerElapsed: {
-        fontFamily: 'MontserratAlternates-ExtraBoldItalic',
+        fontFamily: 'Inter-Bold',
         fontSize: 32,
         color: BLACK,
         letterSpacing: 1,
     },
     timerRemaining: {
-        fontFamily: 'MontserratAlternates-ExtraBoldItalic',
+        fontFamily: 'Inter-Bold',
         fontSize: 16,
         color: '#AAAAAA',
     },
@@ -501,7 +499,7 @@ const styles = StyleSheet.create({
         borderRadius: 2,
     },
     hint: {
-        fontFamily: 'MontserratAlternates-ExtraBoldItalic',
+        fontFamily: 'Inter-Bold',
         fontSize: 13,
         color: '#999999',
         textAlign: 'center',
@@ -513,7 +511,7 @@ const styles = StyleSheet.create({
         marginTop: 4,
     },
     cancelText: {
-        fontFamily: 'MontserratAlternates-ExtraBoldItalic',
+        fontFamily: 'Inter-Bold',
         fontSize: 14,
         color: '#AAAAAA',
     },

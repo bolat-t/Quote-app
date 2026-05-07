@@ -44,7 +44,8 @@ export type AnalyticsEvent =
     | 'journal_entry_viewed'
     | 'onboarding_completed'
     | 'sign_in'
-    | 'sign_up';
+    | 'sign_up'
+    | 'client_error';
 
 /**
  * Track a typed analytics event.

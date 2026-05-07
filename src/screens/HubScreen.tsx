@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
+import { BLACK, WHITE, YELLOW } from '../constants/colors';
 import {
     View,
     Text,
@@ -32,10 +33,8 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { UserProgress, TabScreenNavigationProp } from '../types';
 import { loadProgress, awardXP, loadDailyHunt } from '../utils/progressionStorage';
 import { useIsFocused } from '@react-navigation/native';
-import { useCommitmentMins } from '../context/CommitmentContext';
 import { useHeaderHeight } from '../context/HeaderHeightContext';
-import { calculateStreak } from '../utils/journalStorage';
-import { getUserName } from '../utils/storage';
+import { calculateStreak, getJournalEntriesByDate, getTodayDateString } from '../utils/journalStorage';
 import { getXPProgress, LEVEL_TIERS, XP_REWARDS } from '../data/progressionConfig';
 import { XPToast } from '../components/XPToast';
 import { LevelModal } from '../components/LevelModal';
@@ -44,15 +43,10 @@ import { OnboardingModal } from '../components/OnboardingModal';
 import { isOnboardingCompleted, completeOnboarding } from '../utils/storage';
 import { trackEvent, setUserProperties } from '../lib/analytics';
 import { useDailyQuote } from '../hooks/useDailyQuote';
-
-const YELLOW = '#FFE600';
-const BLACK  = '#000000';
-const WHITE  = '#FFFFFF';
-const GRAY   = '#F2F2F2';
+import { STORAGE_KEYS } from '../constants/storageKeys';
 
 const { width: SCREEN_W } = Dimensions.get('window');
 const BASE_JUMP_H = 80;
-
 
 // ─────────────────────────────────────────────
 // SVG Icons
@@ -69,6 +63,30 @@ const CheckIcon = () => (
         <SvgPath d="M5 12l5 5L20 7" stroke={BLACK} strokeWidth={2.8} strokeLinecap="round" strokeLinejoin="round" />
     </Svg>
 );
+
+// ─────────────────────────────────────────────
+// Mood-aware all-quests-complete speech
+// ─────────────────────────────────────────────
+
+const getCongratsSpeech = (moodScore?: number): string => {
+    if (!moodScore) {
+        return "ALL DONE FOR TODAY!\nI'M SO PROUD OF YOU.\n\nYOU SHOWED UP — THAT'S\nWHAT MATTERS MOST.";
+    }
+    // 1–3: rough/sad — gentle & encouraging
+    if (moodScore <= 3) {
+        return "TODAY WAS HEAVY, AND\nYOU STILL SHOWED UP.\n\nTHAT TAKES REAL STRENGTH.\nREST EASY — I'M HERE.";
+    }
+    // 4–5: meh/upset — calming
+    if (moodScore <= 5) {
+        return "BREATHE. YOU GOT THROUGH\nTODAY ONE STEP AT A TIME.\n\nLET TONIGHT BE QUIET.\nTOMORROW IS A NEW PAGE.";
+    }
+    // 6–7: okay — proud
+    if (moodScore <= 7) {
+        return "NICE WORK TODAY!\nALL QUESTS COMPLETE.\n\nYOU'RE BUILDING\nSOMETHING REAL.";
+    }
+    // 8–10: good/great — celebratory
+    return "AMAZING DAY!\nYOU CRUSHED EVERY QUEST.\n\nKEEP RIDING THIS WAVE —\nI'M CHEERING FOR YOU!";
+};
 
 // ─────────────────────────────────────────────
 // Week Strip
@@ -156,20 +174,21 @@ interface MainCardProps {
     onPressLevel: () => void;
     getJumpHeight?: () => number;
     onPeak?: () => void;
-    actions: (typeof ALL_ACTIONS)[number][];
+    actions: readonly (typeof DAILY_QUESTS)[number][];
     dailyActions: DailyActions;
     brokenTasks: Set<TaskKey>;
     breakAnims: Record<TaskKey, BreakAnim>;
     cardLayouts: React.MutableRefObject<Partial<Record<TaskKey, { y: number; height: number }>>>;
     onNavigate: (nav: string) => void;
     completedCount: number;
+    todayMoodScore?: number;
 }
 
 const MainCard: React.FC<MainCardProps> = ({
     level, currentTitle, xpInCurrentLevel, xpNeededForNext,
     onPressLevel, getJumpHeight, onPeak,
     actions, dailyActions, brokenTasks, breakAnims,
-    cardLayouts, onNavigate, completedCount,
+    cardLayouts, onNavigate, completedCount, todayMoodScore,
 }) => {
 
     const xpPct = xpNeededForNext > 0 ? Math.min(1, xpInCurrentLevel / xpNeededForNext) : 0;
@@ -208,11 +227,11 @@ const MainCard: React.FC<MainCardProps> = ({
                 </View>
             )}
 
-            {/* ── All done: potato speech ── */}
+            {/* ── All done: potato speech (mood-aware) ── */}
             {completedCount === actions.length && (
                 <View style={mainCardStyles.speechBox}>
                     <Text style={mainCardStyles.speechText}>
-                        {"HOW WAS YOUR DAY?\nI'M SO PROUD OF YOU!\n\nCOMPLETE TODAY'S MISSION!\nI'M SPEAKING POTATO.\nI'M STILL LEARNING AND GROWING"}
+                        {getCongratsSpeech(todayMoodScore)}
                     </Text>
                 </View>
             )}
@@ -488,42 +507,26 @@ const PotatoMascot: React.FC<PotatoMascotProps> = ({ level, getJumpHeight, onPea
     );
 };
 
-
 // ─────────────────────────────────────────────
 // Todo action definitions
 // ─────────────────────────────────────────────
 
-const ALL_ACTIONS = [
-    { key: 'openedApp',       label: 'Open the app',             xp: XP_REWARDS.openApp,         nav: undefined  },
-    { key: 'readQuote',       label: 'Read a new quote',         xp: XP_REWARDS.readQuote,       nav: 'Canvas'   },
-    { key: 'wroteReflection', label: 'Write a reflection',       xp: XP_REWARDS.writeReflection, nav: 'Canvas'   },
-    { key: 'savedCanvas',     label: 'Save your canvas',         xp: XP_REWARDS.saveCanvas,      nav: 'Canvas'   },
-    { key: 'completedHunt',   label: 'Complete Positivity Hunt', xp: XP_REWARDS.completeHunt,    nav: 'Journal'  },
+// Daily quests shown on the Home tab. The order here is the order on screen.
+const DAILY_QUESTS = [
+    { key: 'openedApp',       label: 'Open the app',              xp: XP_REWARDS.openApp,         nav: undefined  },
+    { key: 'readQuote',       label: "Reflect on today's quote",  xp: XP_REWARDS.readQuote,       nav: 'Canvas'   },
+    { key: 'wroteReflection', label: 'Write in your journal',     xp: XP_REWARDS.writeReflection, nav: 'Journal'  },
+    { key: 'completedHunt',   label: 'Complete Positivity Hunt',  xp: XP_REWARDS.completeHunt,    nav: 'Journal'  },
 ] as const;
 
-// Keys active per commitment level (driven by @ulbo_commitment_minutes)
-const COMMITMENT_KEYS: Record<number, readonly string[]> = {
-    5:  ['readQuote', 'wroteReflection'],
-    10: ['readQuote', 'wroteReflection', 'completedHunt'],
-    20: ['openedApp', 'readQuote', 'wroteReflection', 'savedCanvas', 'completedHunt'],
-};
-
-const getActionsForCommitment = (mins: number) => {
-    const keys = COMMITMENT_KEYS[mins] ?? COMMITMENT_KEYS[20];
-    return ALL_ACTIONS.filter(a => keys.includes(a.key));
-};
-
-// Keep TODO_ACTIONS as alias so breakAnims & types stay valid
-const TODO_ACTIONS = ALL_ACTIONS;
-type TaskKey = (typeof ALL_ACTIONS)[number]['key'];
-type DailyActions = { openedApp: boolean; readQuote: boolean; wroteReflection: boolean; savedCanvas: boolean; completedHunt: boolean };
+type TaskKey = (typeof DAILY_QUESTS)[number]['key'];
+type DailyActions = { openedApp: boolean; readQuote: boolean; wroteReflection: boolean; completedHunt: boolean };
 
 interface BreakAnim {
     translateX: Animated.Value;
     opacity:    Animated.Value;
     scale:      Animated.Value;
 }
-
 
 // ─────────────────────────────────────────────
 // Main Screen
@@ -534,17 +537,16 @@ export const HubScreen: React.FC = () => {
     const isFocused     = useIsFocused();
     const insets        = useSafeAreaInsets();
     const headerHeight  = useHeaderHeight();
-    const commitmentMins = useCommitmentMins();
     useDailyQuote();
 
-    const [progress,     setProgress]     = useState<UserProgress | null>(null);
-    const [streak,       setStreak]       = useState(0);
+    const [progress,        setProgress]        = useState<UserProgress | null>(null);
+    const [streak,          setStreak]          = useState(0);
+    const [todayMoodScore,  setTodayMoodScore]  = useState<number | undefined>(undefined);
     const [dailyActions, setDailyActions] = useState<DailyActions>({
         openedApp: false, readQuote: false, wroteReflection: false,
-        savedCanvas: false, completedHunt: false,
+        completedHunt: false,
     });
 
-    const [todoActions, setTodoActions] = useState(() => getActionsForCommitment(20));
     const [isLevelModalVisible,  setIsLevelModalVisible]  = useState(false);
     const [isStreakModalVisible,  setIsStreakModalVisible] = useState(false);
     const [xpToast, setXpToast] = useState<{
@@ -556,7 +558,7 @@ export const HubScreen: React.FC = () => {
 
     const breakAnims = useRef<Record<TaskKey, BreakAnim>>(
         Object.fromEntries(
-            TODO_ACTIONS.map(a => [a.key, {
+            DAILY_QUESTS.map(a => [a.key, {
                 translateX: new Animated.Value(0),
                 opacity:    new Animated.Value(1),
                 scale:      new Animated.Value(1),
@@ -603,7 +605,7 @@ export const HubScreen: React.FC = () => {
     // ── Jump height ───────────────────────────────────────────────────────
 
     const getJumpHeight = useCallback((): number => {
-        const target = [...TODO_ACTIONS].reverse().find(a =>
+        const target = [...DAILY_QUESTS].reverse().find(a =>
             dailyActionsRef.current[a.key as keyof DailyActions] &&
             !brokenTasksRef.current.has(a.key as TaskKey) &&
             !breakingInFlight.current.has(a.key as TaskKey)
@@ -636,12 +638,18 @@ export const HubScreen: React.FC = () => {
     // ── Data loading ──────────────────────────────────────────────────────
 
     const loadData = useCallback(async () => {
-        const [p, s, hunt, commitVal] = await Promise.all([
+        const [p, s, hunt, todayEntries] = await Promise.all([
             loadProgress(),
             calculateStreak(),
             loadDailyHunt(),
-            AsyncStorage.getItem('@ulbo_commitment_minutes'),
+            getJournalEntriesByDate(getTodayDateString()),
         ]);
+
+        // Most recent mood-bearing entry today drives the congrats speech.
+        const todayMood = [...todayEntries]
+            .reverse()
+            .find(e => typeof e.moodScore === 'number')?.moodScore;
+        setTodayMoodScore(todayMood);
 
         setProgress(p);
         setStreak(s);
@@ -649,13 +657,8 @@ export const HubScreen: React.FC = () => {
             openedApp:       p.dailyActions.openApp         || false,
             readQuote:       p.dailyActions.readQuote       || false,
             wroteReflection: p.dailyActions.wroteReflection || false,
-            savedCanvas:     p.dailyActions.savedCanvas     || false,
             completedHunt:   hunt?.xpAwarded                || false,
         });
-
-        const mins  = commitVal ? parseInt(commitVal, 10) : 20;
-        const valid = [5, 10, 20].includes(mins) ? mins : 20;
-        setTodoActions(getActionsForCommitment(valid));
 
         const result = await awardXP('openApp', p);
         if (result.xpGained > 0) {
@@ -697,22 +700,15 @@ export const HubScreen: React.FC = () => {
         if (isFocused) loadData();
     }, [isFocused]); // eslint-disable-line react-hooks/exhaustive-deps
 
-    // commitmentMins from context updates immediately when AppHeader's inline pill is pressed,
-    // without any navigation (isFocused stays true), so handle it separately here.
-    useEffect(() => {
-        const valid = [5, 10, 20].includes(commitmentMins) ? commitmentMins : 20;
-        setTodoActions(getActionsForCommitment(valid));
-    }, [commitmentMins]);
-
     useEffect(() => {
         const checkFeedbackPrompt = async () => {
             if (!progress || progress.level < 3) return;
             try {
-                const lastPrompt = await AsyncStorage.getItem('@ulbo_last_feedback_prompt');
+                const lastPrompt = await AsyncStorage.getItem(STORAGE_KEYS.LAST_FEEDBACK_PROMPT);
                 const now = Date.now();
                 const sevenDays = 7 * 24 * 60 * 60 * 1000;
                 if (!lastPrompt || (now - parseInt(lastPrompt, 10)) > sevenDays) {
-                    await AsyncStorage.setItem('@ulbo_last_feedback_prompt', now.toString());
+                    await AsyncStorage.setItem(STORAGE_KEYS.LAST_FEEDBACK_PROMPT, now.toString());
                 }
             } catch (e) {
                 console.error('Error checking feedback prompt', e);
@@ -723,7 +719,7 @@ export const HubScreen: React.FC = () => {
 
     const xpProgress  = progress ? getXPProgress(progress.totalXP) : null;
     const currentTier = progress ? LEVEL_TIERS.find(t => t.level === progress.level) : null;
-    const completedCount = todoActions.filter(a => dailyActions[a.key as keyof DailyActions]).length;
+    const completedCount = DAILY_QUESTS.filter(a => dailyActions[a.key as keyof DailyActions]).length;
 
     if (!progress) return null;
 
@@ -732,7 +728,7 @@ export const HubScreen: React.FC = () => {
             <View style={[
                 styles.scrollContent,
                 {
-                    paddingTop: headerHeight || 12,
+                    paddingTop: (headerHeight || 0) + 16,
                     paddingBottom: 62 + insets.bottom + 16,
                 },
             ]}>
@@ -746,13 +742,14 @@ export const HubScreen: React.FC = () => {
                         onPressLevel={() => setIsLevelModalVisible(true)}
                         getJumpHeight={getJumpHeight}
                         onPeak={handlePotatoPeak}
-                        actions={todoActions}
+                        actions={DAILY_QUESTS}
                         dailyActions={dailyActions}
                         brokenTasks={brokenTasks}
                         breakAnims={breakAnims}
                         cardLayouts={cardLayouts}
                         onNavigate={nav => navigation.navigate(nav as any)}
                         completedCount={completedCount}
+                        todayMoodScore={todayMoodScore}
                     />
                 )}
             </View>
@@ -791,128 +788,8 @@ export const HubScreen: React.FC = () => {
 // ─────────────────────────────────────────────
 
 const styles = StyleSheet.create({
-    container: {
-        flex: 1,
-        backgroundColor: BLACK,
-    },
-    scrollContent: {
-        flex: 1,
-        paddingHorizontal: 16,
-    },
-    headerCard: {
-        backgroundColor: WHITE,
-        borderWidth: 2,
-        borderColor: BLACK,
-        borderRadius: 20,
-        paddingHorizontal: 16,
-        paddingTop: 14,
-        paddingBottom: 14,
-        marginBottom: 12,
-    },
-    headerTop: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        justifyContent: 'space-between',
-    },
-    greetingLine1: {
-        fontFamily: 'Inter-Bold',
-        fontSize: 24,
-        color: BLACK,
-        lineHeight: 28,
-    },
-    greetingLine2: {
-        fontFamily: 'Inter-Bold',
-        fontSize: 24,
-        color: BLACK,
-        lineHeight: 30,
-    },
-    hamburgerBtn: {
-        width: 44,
-        height: 44,
-        alignItems: 'center',
-        justifyContent: 'center',
-    },
-    settingsPanel: {
-        marginTop: 4,
-    },
-    settingsDivider: {
-        height: 1.5,
-        backgroundColor: '#E0E0E0',
-        marginVertical: 10,
-    },
-    settingsRow: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        justifyContent: 'space-between',
-        paddingVertical: 10,
-    },
-    settingsRowLabel: {
-        fontFamily: 'Inter-Medium',
-        fontSize: 15,
-        color: BLACK,
-    },
-    settingsRowDivider: {
-        height: 1,
-        backgroundColor: '#EEEEEE',
-    },
-    settingsToggle: {
-        paddingHorizontal: 10,
-        paddingVertical: 4,
-        borderRadius: 20,
-        borderWidth: 1.5,
-        borderColor: '#CCCCCC',
-    },
-    settingsToggleOn: {
-        backgroundColor: YELLOW,
-        borderColor: BLACK,
-    },
-    settingsToggleText: {
-        fontFamily: 'Inter-Bold',
-        fontSize: 11,
-        color: '#AAAAAA',
-        letterSpacing: 0.5,
-    },
-    settingsToggleTextOn: {
-        color: BLACK,
-    },
-    settingsRowSub: {
-        fontFamily: 'Inter-Medium',
-        fontSize: 12,
-        color: '#4B5563',
-        marginTop: 1,
-    },
-    settingsBadge: {
-        fontFamily: 'Inter-Bold',
-        fontSize: 12,
-        color: BLACK,
-        backgroundColor: GRAY,
-        paddingHorizontal: 10,
-        paddingVertical: 4,
-        borderRadius: 8,
-    },
-    reflectionCard: {
-        backgroundColor: YELLOW,
-        borderWidth: 2,
-        borderColor: BLACK,
-        borderRadius: 20,
-        paddingHorizontal: 20,
-        paddingVertical: 28,
-        alignItems: 'flex-start',
-    },
-    reflectionLabel: {
-        fontFamily: 'Inter-Bold',
-        fontSize: 16,
-        color: BLACK,
-        letterSpacing: 0.8,
-        marginBottom: 4,
-        textAlign: 'left',
-    },
-    reflectionSub: {
-        fontFamily: 'Inter-Medium',
-        fontSize: 14,
-        color: BLACK,
-        opacity: 0.7,
-    },
+    container:     { flex: 1, backgroundColor: BLACK },
+    scrollContent: { flex: 1, paddingHorizontal: 16 },
 });
 
 export default HubScreen;

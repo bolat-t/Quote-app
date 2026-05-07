@@ -13,17 +13,6 @@ export const XP_REWARDS: Record<XPAction, number> = {
     streak30Day: 200,
 };
 
-export const PAPER_TYPES = {
-    plain:     { id: 'plain',     name: 'Plain White',    levelRequired: 1, color: '#FFFFFF' },
-    cream:     { id: 'cream',     name: 'Warm Cream',     levelRequired: 2, color: '#F5E6D3' },
-    grid:      { id: 'grid',      name: 'Math Grid',      levelRequired: 3, type: 'pattern', pattern: 'grid' },
-    dots:      { id: 'dots',      name: 'Bullet Dots',    levelRequired: 3, type: 'pattern', pattern: 'dots' },
-    lined:     { id: 'lined',     name: 'Lined Paper',    levelRequired: 4, type: 'pattern', pattern: 'lines' },
-    dark:      { id: 'dark',      name: 'Midnight',       levelRequired: 4, color: '#1A1D23', textColor: '#FFFFFF' },
-    starry:    { id: 'starry',    name: 'Starry Night',   levelRequired: 5, type: 'pattern', pattern: 'stars', color: '#0F172A', textColor: '#E2E8F0' },
-    parchment: { id: 'parchment', name: 'Ancient Scroll', levelRequired: 5, color: '#F0E6D2', textColor: '#5C4033' },
-};
-
 // Level tiers — 9 levels
 export const LEVEL_TIERS: LevelTier[] = [
     { level: 1, title: 'Raw Spud',        xpRequired: 0    },

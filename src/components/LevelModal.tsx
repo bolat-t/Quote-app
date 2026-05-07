@@ -1,4 +1,5 @@
 import React from 'react';
+import { BLACK, WHITE, YELLOW } from '../constants/colors';
 import {
     View,
     Text,
@@ -50,10 +51,6 @@ const LockIcon = ({ color }: { color: string }) => (
 // ─────────────────────────────────────────────
 // Constants
 // ─────────────────────────────────────────────
-
-const YELLOW = '#FFE600';
-const BLACK = '#000000';
-const WHITE = '#FFFFFF';
 
 // ─────────────────────────────────────────────
 // Potato Icon
@@ -375,13 +372,6 @@ const styles = StyleSheet.create({
         borderRadius: 4,
         backgroundColor: YELLOW,
     },
-    unlockHint: {
-        fontFamily: 'Inter-Bold',
-        fontSize: 12,
-        marginTop: 8,
-        color: '#555',
-    },
-
     // ── Actions ──
     actionRow: {
         flexDirection: 'row',
@@ -479,14 +469,6 @@ const styles = StyleSheet.create({
         flexDirection: 'row',
         alignItems: 'center',
         gap: 4,
-    },
-    tierUnlock: {
-        fontFamily: 'Inter-Bold',
-        fontSize: 12,
-        color: '#555',
-    },
-    tierUnlockLocked: {
-        color: '#BBBBBB',
     },
     tierXP: {
         fontFamily: 'Inter-Bold',
