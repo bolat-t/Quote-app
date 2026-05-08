@@ -2181,13 +2181,14 @@ export const VisionBoardScreen: React.FC = () => {
     };
 
     const handleSaveBoard = async () => {
-        setShowBoardActions(false);
+        // Capture while board is still fully rendered, then dismiss overlay
         const uri = await captureBoard();
+        setShowBoardActions(false);
         if (!uri) { Alert.alert('Save Failed', 'Could not capture your vision board.'); return; }
         try {
             const { status } = await MediaLibrary.requestPermissionsAsync();
             if (status !== 'granted') {
-                Alert.alert('Permission Required', 'Allow photo library access to save your board.');
+                Alert.alert('Permission Required', 'Please allow photo library access in Settings to save your board.');
                 return;
             }
             await MediaLibrary.saveToLibraryAsync(uri);
@@ -2199,8 +2200,9 @@ export const VisionBoardScreen: React.FC = () => {
     };
 
     const handleShareBoard = async () => {
-        setShowBoardActions(false);
+        // Capture while board is still fully rendered, then dismiss overlay
         const uri = await captureBoard();
+        setShowBoardActions(false);
         if (!uri) { Alert.alert('Share Failed', 'Could not capture your vision board.'); return; }
         try {
             Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
@@ -2481,7 +2483,7 @@ export const VisionBoardScreen: React.FC = () => {
                                 activeOpacity={1}
                             />
                             <Animated.View
-                                entering={FadeInDown.duration(220).springify().damping(18)}
+                                entering={FadeIn.duration(180)}
                                 style={styles.boardActionsCard}
                             >
                                 <TouchableOpacity
