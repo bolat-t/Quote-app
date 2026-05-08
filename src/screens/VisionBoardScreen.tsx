@@ -45,6 +45,8 @@ import {
     InspirationCategory,
     InspirationImage,
 } from '../utils/inspirationStorage';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import { STORAGE_KEYS } from '../constants/storageKeys';
 
 const AnimatedPath = Animated.createAnimatedComponent(SvgPath);
 
@@ -454,6 +456,7 @@ const DraggableItem = ({
     }, [layoutVersion]);
     const isDragging = useSharedValue(false);
     const context = useSharedValue({ x: 0, y: 0 });
+    const [isHeld, setIsHeld] = React.useState(false);
 
     const pan = Gesture.Pan()
         .onStart(() => {
@@ -497,7 +500,6 @@ const DraggableItem = ({
         shadowOpacity: withTiming(isDragging.value ? 0.14 : 0.06, { duration: 180 }),
     }));
 
-    const [isHeld, setIsHeld] = React.useState(false);
     const [imgError, setImgError] = React.useState(false);
     const [signedUrl, setSignedUrl] = React.useState<string | null>(null);
 
@@ -1235,13 +1237,22 @@ export const StockImageSheet = ({
         isLoadingRef.current = false;
     }, []);
 
-    // ── Reset on open ──
+    // ── Restore or reset on open ──
     useEffect(() => {
         if (!visible) return;
-        setView('categories');
-        setSearchText('');
-        setPhotos([]);
-        setActiveSubLabel('');
+        AsyncStorage.getItem(STORAGE_KEYS.VISION_LAST_SEARCH).then(saved => {
+            if (saved && saved.trim()) {
+                setSearchText(saved);
+                setView('search');
+                setCurrentQuery(saved.trim());
+                loadPhotos(saved.trim(), 1, true);
+            } else {
+                setView('categories');
+                setSearchText('');
+                setPhotos([]);
+                setActiveSubLabel('');
+            }
+        });
     }, [visible]);
 
     // ── Theme keyword tapped → load photos directly (no subcategory step) ──
@@ -1283,14 +1294,17 @@ export const StockImageSheet = ({
         setSearchText(text);
         clearTimeout(searchTimer.current);
         if (!text.trim()) {
+            AsyncStorage.removeItem(STORAGE_KEYS.VISION_LAST_SEARCH);
             setView('categories');
             setPhotos([]);
             return;
         }
         setView('search');
         searchTimer.current = setTimeout(() => {
-            setCurrentQuery(text.trim());
-            loadPhotos(text.trim(), 1, true);
+            const q = text.trim();
+            setCurrentQuery(q);
+            loadPhotos(q, 1, true);
+            AsyncStorage.setItem(STORAGE_KEYS.VISION_LAST_SEARCH, q);
         }, 400);
     };
 
@@ -1318,13 +1332,13 @@ export const StockImageSheet = ({
 
     const handleBack = () => {
         if (view === 'photos') {
-            // In theme mode photos go straight back to categories (no subcategory step)
             setView(themeCategory ? 'categories' : 'subcategories');
             setPhotos([]);
         } else {
             setView('categories');
             setSearchText('');
             setPhotos([]);
+            AsyncStorage.removeItem(STORAGE_KEYS.VISION_LAST_SEARCH);
         }
     };
 
@@ -1542,12 +1556,14 @@ export const StockImageSheet = ({
 // ═══════════════════════════════════════════════════════════
 
 type InspirationCardProps = {
-    category?:    InspirationCategory;   // undefined → "add new" placeholder
-    onPress:      () => void;
-    onLongPress?: () => void;
+    category?:  InspirationCategory;   // undefined → "add new" placeholder
+    onPress:    () => void;
+    onDelete?:  () => void;
 };
 
-const InspirationCard: React.FC<InspirationCardProps> = ({ category, onPress, onLongPress }) => {
+const InspirationCard: React.FC<InspirationCardProps> = ({ category, onPress, onDelete }) => {
+    const [isHeld, setIsHeld] = useState(false);
+
     if (!category) {
         return (
             <TouchableOpacity
@@ -1564,28 +1580,51 @@ const InspirationCard: React.FC<InspirationCardProps> = ({ category, onPress, on
         );
     }
 
-    const thumb   = category.thumbnailUri ?? category.images[0]?.uri;
-    const title   = category.title || 'UNTITLED';
+    const thumb = category.thumbnailUri ?? category.images[0]?.uri;
+    const title = category.title || 'UNTITLED';
 
     return (
-        <TouchableOpacity
-            style={inspStyles.card}
-            onPress={onPress}
-            onLongPress={onLongPress}
-            delayLongPress={450}
-            activeOpacity={0.8}
-        >
-            <View style={inspStyles.cardImageWrap}>
-                {thumb ? (
-                    <Image
-                        source={{ uri: thumb }}
-                        style={inspStyles.cardImage}
-                        resizeMode="cover"
-                    />
-                ) : null}
-            </View>
-            <Text style={inspStyles.cardTitle} numberOfLines={1}>{title}</Text>
-        </TouchableOpacity>
+        <View style={{ width: '48%', marginBottom: 12 }}>
+            <TouchableOpacity
+                style={[inspStyles.card, { width: '100%', marginBottom: 0 }]}
+                onPress={() => {
+                    if (isHeld) { setIsHeld(false); return; }
+                    onPress();
+                }}
+                onLongPress={() => {
+                    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+                    setIsHeld(true);
+                }}
+                delayLongPress={450}
+                activeOpacity={0.8}
+            >
+                <View style={inspStyles.cardImageWrap}>
+                    {thumb ? (
+                        <Image
+                            source={{ uri: thumb }}
+                            style={inspStyles.cardImage}
+                            resizeMode="cover"
+                        />
+                    ) : null}
+                </View>
+                <Text style={inspStyles.cardTitle} numberOfLines={1}>{title}</Text>
+            </TouchableOpacity>
+            {isHeld && onDelete && (
+                <TouchableOpacity
+                    style={inspStyles.cardDeleteX}
+                    onPress={() => {
+                        setIsHeld(false);
+                        onDelete();
+                    }}
+                    hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+                    activeOpacity={0.7}
+                >
+                    <Svg width={10} height={10} viewBox="0 0 10 10" fill="none" stroke="#FFF" strokeWidth={2} strokeLinecap="round">
+                        <SvgPath d="M1 1l8 8M9 1L1 9" />
+                    </Svg>
+                </TouchableOpacity>
+            )}
+        </View>
     );
 };
 
@@ -1852,24 +1891,11 @@ const InspirationView: React.FC = () => {
         });
     };
 
-    const handleDeleteCategory = (cat: InspirationCategory) => {
-        Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
-        Alert.alert(
-            'Delete category?',
-            cat.title ? `"${cat.title}" will be removed.` : 'This category will be removed.',
-            [
-                { text: 'Cancel', style: 'cancel' },
-                {
-                    text: 'Delete',
-                    style: 'destructive',
-                    onPress: async () => {
-                        await deleteInspirationCategory(cat.id);
-                        setCats(prev => prev.filter(c => c.id !== cat.id));
-                        if (activeId === cat.id) setActiveId(null);
-                    },
-                },
-            ]
-        );
+    const handleDeleteCategory = async (cat: InspirationCategory) => {
+        Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+        setCats(prev => prev.filter(c => c.id !== cat.id));
+        if (activeId === cat.id) setActiveId(null);
+        await deleteInspirationCategory(cat.id);
     };
 
     // Detail view takes over when a category is open
@@ -1896,7 +1922,7 @@ const InspirationView: React.FC = () => {
                         key={cat.id}
                         category={cat}
                         onPress={() => setActiveId(cat.id)}
-                        onLongPress={() => handleDeleteCategory(cat)}
+                        onDelete={() => handleDeleteCategory(cat)}
                     />
                 ))}
                 {/* "+" tile always at the end */}
@@ -1926,6 +1952,7 @@ const inspStyles = StyleSheet.create({
         marginBottom: 12,
         padding:      10,
         justifyContent: 'space-between',
+        overflow:     'visible',
     },
     cardImageWrap: {
         flex: 1,
@@ -1964,6 +1991,23 @@ const inspStyles = StyleSheet.create({
         fontSize:   28,
         color:      BLACK,
         marginTop:  -2,
+    },
+    cardDeleteX: {
+        position:        'absolute',
+        top:             6,
+        right:           6,
+        width:           24,
+        height:          24,
+        borderRadius:    12,
+        backgroundColor: '#FF3B30',
+        alignItems:      'center',
+        justifyContent:  'center',
+        zIndex:          50,
+        shadowColor:     '#000',
+        shadowOffset:    { width: 0, height: 2 },
+        shadowOpacity:   0.25,
+        shadowRadius:    4,
+        elevation:       8,
     },
 
     // ── Detail (mirrors Monthly board) ──

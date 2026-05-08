@@ -17,6 +17,12 @@ export const STORAGE_KEYS = {
     // ── User identity ──
     USER_NAME:                  '@ulbo_user_name',
     ONBOARDING_DONE:            '@ulbo_onboarding_completed',
+    ONBOARDING_COMPLETED_AT:    '@ulbo_onboarding_completed_at',  // ISO timestamp — drives the first-promise gift window
+    ONBOARDING_INTENTS:         '@ulbo_onboarding_intents',       // JSON string[] from the intent multi-select
+    ONBOARDING_MOOD_NOW:        '@ulbo_onboarding_mood_now',      // 'happy' | 'sad' | 'upset' | 'bored'
+    ONBOARDING_FREQUENCY:       '@ulbo_onboarding_frequency',     // single-select id
+    ONBOARDING_AREA:            '@ulbo_onboarding_area',          // single-select id
+    ONBOARDING_STAKES:          '@ulbo_onboarding_stakes',        // single-select id
     THEME:                      '@ulbo_theme',
 
     // ── Daily content ──
@@ -40,6 +46,9 @@ export const STORAGE_KEYS = {
 
     // ── Memory / Ulbo personality ──
     MASCOT_NAMES:               'ulbo_mascot_names',              // legacy: no '@' prefix
+
+    // ── Vision board ──
+    VISION_LAST_SEARCH:         '@ulbo_vision_last_search',
 } as const;
 
 export type StorageKey = typeof STORAGE_KEYS[keyof typeof STORAGE_KEYS];
