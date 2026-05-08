@@ -19,13 +19,14 @@ import * as ImagePicker from 'expo-image-picker';
 import { Gesture, GestureDetector, GestureHandlerRootView } from 'react-native-gesture-handler';
 import Animated, {
     useSharedValue, useAnimatedStyle, useAnimatedProps, runOnJS,
-    FadeIn, FadeInDown, SlideInDown, SlideOutDown,
+    FadeIn, FadeInDown, FadeOut, SlideInDown, SlideOutDown,
     withTiming, withSpring, Easing,
 } from 'react-native-reanimated';
 import type { SharedValue } from 'react-native-reanimated';
 import { LinearGradient } from 'expo-linear-gradient';
 import * as Haptics from 'expo-haptics';
 import * as Sharing from 'expo-sharing';
+import * as MediaLibrary from 'expo-media-library';
 import { captureRef } from 'react-native-view-shot';
 import Svg, { Path as SvgPath, Circle as SvgCircle, Rect as SvgRect } from 'react-native-svg';
 import {
@@ -2144,6 +2145,7 @@ export const VisionBoardScreen: React.FC = () => {
     const [editingTextItem, setEditingTextItem] = useState<LocalVisionItem | null>(null);
     const [boardBgId, setBoardBgId] = useState('default');
     const [layoutVersion, setLayoutVersion] = useState(0);
+    const [showBoardActions, setShowBoardActions] = useState(false);
 
     const activeBgPreset = BOARD_BG_PRESETS.find(b => b.id === boardBgId) ?? BOARD_BG_PRESETS[0];
 
@@ -2168,21 +2170,44 @@ export const VisionBoardScreen: React.FC = () => {
         useCallback(() => { loadItems(); }, [boardMode])
     );
 
+    const captureBoard = async (): Promise<string | null> => {
+        if (!boardRef.current) return null;
+        try {
+            return await captureRef(boardRef, { format: 'png', quality: 0.95 });
+        } catch (e) {
+            console.error('Capture failed:', e);
+            return null;
+        }
+    };
+
+    const handleSaveBoard = async () => {
+        setShowBoardActions(false);
+        const uri = await captureBoard();
+        if (!uri) { Alert.alert('Save Failed', 'Could not capture your vision board.'); return; }
+        try {
+            const { status } = await MediaLibrary.requestPermissionsAsync();
+            if (status !== 'granted') {
+                Alert.alert('Permission Required', 'Allow photo library access to save your board.');
+                return;
+            }
+            await MediaLibrary.saveToLibraryAsync(uri);
+            Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+        } catch (e) {
+            console.error('Save failed:', e);
+            Alert.alert('Save Failed', 'Could not save to your photo library.');
+        }
+    };
+
     const handleShareBoard = async () => {
-        if (!boardRef.current || items.length === 0) return;
+        setShowBoardActions(false);
+        const uri = await captureBoard();
+        if (!uri) { Alert.alert('Share Failed', 'Could not capture your vision board.'); return; }
         try {
             Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-            const uri = await captureRef(boardRef, {
-                format: 'png',
-                quality: 0.9,
-            });
-            await Sharing.shareAsync(uri, {
-                mimeType: 'image/png',
-                dialogTitle: 'Share your Vision Board',
-            });
+            await Sharing.shareAsync(uri, { mimeType: 'image/png', dialogTitle: 'Share your Vision Board' });
         } catch (e) {
             console.error('Share failed:', e);
-            Alert.alert('Share Failed', 'Could not capture your vision board.');
+            Alert.alert('Share Failed', 'Could not share your vision board.');
         }
     };
 
@@ -2376,7 +2401,16 @@ export const VisionBoardScreen: React.FC = () => {
 
                 {/* ── Monthly Board Card ── */}
                 {boardMode === 'monthly' && (
-                <View style={[styles.boardCardWrapper, { marginBottom: 62 + insets.bottom + 12 }]}>
+                <TouchableOpacity
+                    style={[styles.boardCardWrapper, { marginBottom: 62 + insets.bottom + 12 }]}
+                    onLongPress={() => {
+                        if (items.length === 0) return;
+                        Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+                        setShowBoardActions(true);
+                    }}
+                    delayLongPress={600}
+                    activeOpacity={1}
+                >
                     <View
                         style={styles.board}
                         ref={boardRef}
@@ -2434,19 +2468,67 @@ export const VisionBoardScreen: React.FC = () => {
 
                     </View>
 
+                    {/* ── Save / Share overlay (appears on long-press of the board) ── */}
+                    {showBoardActions && (
+                        <Animated.View
+                            entering={FadeIn.duration(180)}
+                            exiting={FadeOut.duration(150)}
+                            style={styles.boardActionsOverlay}
+                        >
+                            <TouchableOpacity
+                                style={StyleSheet.absoluteFillObject}
+                                onPress={() => setShowBoardActions(false)}
+                                activeOpacity={1}
+                            />
+                            <Animated.View
+                                entering={FadeInDown.duration(220).springify().damping(18)}
+                                style={styles.boardActionsCard}
+                            >
+                                <TouchableOpacity
+                                    style={styles.boardActionBtn}
+                                    onPress={handleSaveBoard}
+                                    activeOpacity={0.75}
+                                >
+                                    <Svg width={20} height={20} viewBox="0 0 24 24" fill="none" stroke={BLACK} strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round">
+                                        <SvgPath d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4" />
+                                        <SvgPath d="M7 10l5 5 5-5" />
+                                        <SvgPath d="M12 15V3" />
+                                    </Svg>
+                                    <Text style={styles.boardActionLabel}>Save to Photos</Text>
+                                </TouchableOpacity>
+                                <View style={styles.boardActionDivider} />
+                                <TouchableOpacity
+                                    style={styles.boardActionBtn}
+                                    onPress={handleShareBoard}
+                                    activeOpacity={0.75}
+                                >
+                                    <Svg width={20} height={20} viewBox="0 0 24 24" fill="none" stroke={BLACK} strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round">
+                                        <SvgCircle cx="18" cy="5" r="3" />
+                                        <SvgCircle cx="6" cy="12" r="3" />
+                                        <SvgCircle cx="18" cy="19" r="3" />
+                                        <SvgPath d="M8.59 13.51l6.83 3.98M15.41 6.51l-6.82 3.98" />
+                                    </Svg>
+                                    <Text style={styles.boardActionLabel}>Share</Text>
+                                </TouchableOpacity>
+                            </Animated.View>
+                        </Animated.View>
+                    )}
+
                     {/* ── FAB: + Add button ── */}
-                    <TouchableOpacity
-                        style={styles.fab}
-                        onPress={() => {
-                            Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-                            setStockThemeCategory(undefined);
-                            setIsStockVisible(true);
-                        }}
-                        activeOpacity={0.75}
-                    >
-                        <Text style={styles.fabText}>+</Text>
-                    </TouchableOpacity>
-                </View>
+                    {!showBoardActions && (
+                        <TouchableOpacity
+                            style={styles.fab}
+                            onPress={() => {
+                                Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                                setStockThemeCategory(undefined);
+                                setIsStockVisible(true);
+                            }}
+                            activeOpacity={0.75}
+                        >
+                            <Text style={styles.fabText}>+</Text>
+                        </TouchableOpacity>
+                    )}
+                </TouchableOpacity>
                 )}
 
                 {/* ── Sheets ── */}
@@ -2786,6 +2868,44 @@ const styles = StyleSheet.create({
         fontFamily: 'Inter-Bold',
         fontSize: 14,
         fontWeight: '600',
+    },
+
+    // ── Board long-press actions overlay ──
+    boardActionsOverlay: {
+        ...StyleSheet.absoluteFillObject,
+        backgroundColor: 'rgba(0,0,0,0.45)',
+        alignItems: 'center',
+        justifyContent: 'center',
+        zIndex: 200,
+        borderRadius: 20,
+    },
+    boardActionsCard: {
+        backgroundColor: WHITE,
+        borderRadius: 20,
+        paddingVertical: 6,
+        width: 220,
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 8 },
+        shadowOpacity: 0.18,
+        shadowRadius: 20,
+        elevation: 12,
+    },
+    boardActionBtn: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: 12,
+        paddingVertical: 16,
+        paddingHorizontal: 20,
+    },
+    boardActionLabel: {
+        fontFamily: 'Inter-Bold',
+        fontSize: 15,
+        color: BLACK,
+    },
+    boardActionDivider: {
+        height: 1,
+        backgroundColor: BLACK + '12',
+        marginHorizontal: 16,
     },
 
     // ── Layout Sheet ──
