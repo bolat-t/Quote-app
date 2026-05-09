@@ -48,6 +48,8 @@ import {
 } from '../utils/inspirationStorage';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { STORAGE_KEYS } from '../constants/storageKeys';
+import * as FileSystem from 'expo-file-system/legacy';
+import { logVisionSnapshot } from '../utils/visionBoardStorage';
 
 const AnimatedPath = Animated.createAnimatedComponent(SvgPath);
 
@@ -2170,6 +2172,33 @@ export const VisionBoardScreen: React.FC = () => {
         useCallback(() => { loadItems(); }, [boardMode])
     );
 
+    // Copy the temp capture URI to a permanent location and save to history +
+    // inspiration so the snapshot shows up in both in-app pages.
+    const saveSnapshotToApp = async (tempUri: string): Promise<void> => {
+        try {
+            // 1. Copy to app documents so the file survives cache clears.
+            const fileName = `vision-snapshot-${Date.now()}.png`;
+            const destUri = (FileSystem.documentDirectory ?? '') + fileName;
+            await FileSystem.copyAsync({ from: tempUri, to: destUri });
+
+            // 2. Log to history feed (fire-and-forget).
+            logVisionSnapshot(destUri).catch(() => {});
+
+            // 3. Create a new inspiration category named after the current month.
+            const monthTitle = new Date()
+                .toLocaleDateString('en-US', { month: 'long', year: 'numeric' })
+                .toUpperCase();
+            const created = await createInspirationCategory();
+            await updateInspirationCategory(created.id, {
+                title:        monthTitle,
+                images:       [makeInspirationImage(destUri, 0, 0)],
+                thumbnailUri: destUri,
+            });
+        } catch (e) {
+            console.error('saveSnapshotToApp failed:', e);
+        }
+    };
+
     const captureBoard = async (): Promise<string | null> => {
         if (!boardRef.current) return null;
         try {
@@ -2181,10 +2210,11 @@ export const VisionBoardScreen: React.FC = () => {
     };
 
     const handleSaveBoard = async () => {
-        // Capture while board is still fully rendered, then dismiss overlay
         const uri = await captureBoard();
         setShowBoardActions(false);
         if (!uri) { Alert.alert('Save Failed', 'Could not capture your vision board.'); return; }
+        // Save to app (history + inspiration) — runs in parallel with photo library save
+        saveSnapshotToApp(uri);
         try {
             const { status } = await MediaLibrary.requestPermissionsAsync();
             if (status !== 'granted') {
@@ -2200,10 +2230,11 @@ export const VisionBoardScreen: React.FC = () => {
     };
 
     const handleShareBoard = async () => {
-        // Capture while board is still fully rendered, then dismiss overlay
         const uri = await captureBoard();
         setShowBoardActions(false);
         if (!uri) { Alert.alert('Share Failed', 'Could not capture your vision board.'); return; }
+        // Save to app (history + inspiration) regardless of share outcome
+        saveSnapshotToApp(uri);
         try {
             Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
             await Sharing.shareAsync(uri, { mimeType: 'image/png', dialogTitle: 'Share your Vision Board' });
