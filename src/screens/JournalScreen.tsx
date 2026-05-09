@@ -570,6 +570,37 @@ const reflectStyles = StyleSheet.create({
     },
 });
 
+// ─── VisionBoardCard ─────────────────────────────────────────────────────────
+
+const VisionBoardCard: React.FC<{ date: string; snapshots: VisionActivity[] }> = ({ date, snapshots }) => (
+    <CardFrame date={date} section="Vision Board">
+        <View style={visionCardStyles.grid}>
+            {snapshots.map((s, i) => (
+                <Image
+                    key={i}
+                    source={{ uri: s.content }}
+                    style={visionCardStyles.thumb}
+                    resizeMode="cover"
+                />
+            ))}
+        </View>
+    </CardFrame>
+);
+
+const visionCardStyles = StyleSheet.create({
+    grid: {
+        flexDirection: 'row',
+        flexWrap: 'wrap',
+        gap: 8,
+    },
+    thumb: {
+        width: '100%',
+        aspectRatio: 3 / 4,
+        borderRadius: 12,
+        backgroundColor: '#F3F4F6',
+    },
+});
+
 // ─── Main screen ──────────────────────────────────────────────────────────────
 
 // ─── DaySection ──────────────────────────────────────────────────────────────
@@ -578,11 +609,12 @@ const reflectStyles = StyleSheet.create({
 // to a specific date when the user taps it in the calendar.
 
 const DaySection: React.FC<{
-    date:    string;       // YYYY-MM-DD
-    entries: JournalEntry[];
-    hunt:    DailyHunt | null;
+    date:       string;       // YYYY-MM-DD
+    entries:    JournalEntry[];
+    hunt:       DailyHunt | null;
+    vision?:    VisionActivity[];
     onLayoutY?: (date: string, y: number) => void;
-}> = React.memo(({ date, entries, hunt, onLayoutY }) => {
+}> = React.memo(({ date, entries, hunt, vision, onLayoutY }) => {
     const d = new Date(date + 'T00:00:00');
     const dividerLabel = d.toLocaleDateString('en-US', {
         weekday: 'long', month: 'long', day: 'numeric',
@@ -591,10 +623,12 @@ const DaySection: React.FC<{
         day: 'numeric', month: 'long', year: 'numeric',
     });
 
-    const emotionEntry = entries.find(e => e.moodScore) ?? null;
-    const reflectEntry = entries.find(e => e.quoteText && e.response) ?? null;
-    const hasHunt      = hunt && hunt.entries.length > 0;
-    const empty        = !emotionEntry && !hasHunt && !reflectEntry;
+    const emotionEntry  = entries.find(e => e.moodScore) ?? null;
+    const reflectEntry  = entries.find(e => e.quoteText && e.response) ?? null;
+    const hasHunt       = hunt && hunt.entries.length > 0;
+    const snapshots     = (vision ?? []).filter(v => v.type === 'snapshot');
+    const hasSnapshots  = snapshots.length > 0;
+    const empty         = !emotionEntry && !hasHunt && !reflectEntry && !hasSnapshots;
 
     return (
         <View
@@ -625,6 +659,10 @@ const DaySection: React.FC<{
                     answer={reflectEntry.response || ''}
                     ulboReply={reflectEntry.spiritReply}
                 />
+            )}
+
+            {hasSnapshots && (
+                <VisionBoardCard date={dateLabel} snapshots={snapshots} />
             )}
 
             {empty && (
@@ -816,6 +854,7 @@ export const JournalScreen: React.FC = () => {
                                 date={date}
                                 entries={entriesByDate[date] ?? []}
                                 hunt={allHunts[date] ?? null}
+                                vision={allVision[date]}
                                 onLayoutY={recordDayY}
                             />
                         ))}

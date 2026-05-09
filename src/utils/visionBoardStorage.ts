@@ -137,8 +137,8 @@ export const updateVisionItemStyle = async (
 // ---------- Vision Activity Log (for journal feed) ----------
 
 export interface VisionActivity {
-    type: 'image' | 'text';
-    content: string;
+    type: 'image' | 'text' | 'snapshot';
+    content: string;   // URI for image/snapshot, text for text
     addedAt: string;
 }
 
@@ -160,6 +160,19 @@ const logVisionActivity = async (type: 'image' | 'text', content: string): Promi
         await AsyncStorage.setItem(key, JSON.stringify(log));
     } catch (e) {
         console.error('Error logging vision activity:', e);
+    }
+};
+
+// Exported — called by VisionBoardScreen when the user saves/shares the board.
+export const logVisionSnapshot = async (localUri: string): Promise<void> => {
+    try {
+        const key = VISION_LOG_PREFIX + getTodayStr();
+        const raw = await AsyncStorage.getItem(key);
+        const log: VisionActivity[] = raw ? JSON.parse(raw) : [];
+        log.push({ type: 'snapshot', content: localUri, addedAt: new Date().toISOString() });
+        await AsyncStorage.setItem(key, JSON.stringify(log));
+    } catch (e) {
+        console.error('Error logging vision snapshot:', e);
     }
 };
 
