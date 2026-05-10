@@ -7,8 +7,6 @@ import {
     TouchableOpacity,
     Switch,
     Alert,
-    Share,
-    ActivityIndicator,
 } from 'react-native';
 import Svg, { Path } from 'react-native-svg';
 import AsyncStorage from '@react-native-async-storage/async-storage';
@@ -20,11 +18,9 @@ import type { RootStackParamList } from '../types';
 import { useAuth } from '../context/AuthContext';
 import { usePurchase } from '../context/PurchaseContext';
 import { useHistoryCalendar } from '../context/HistoryCalendarContext';
-import { exportJournalData } from '../utils/journalStorage';
-import { completeOnboarding } from '../utils/storage';
+import { useOnboarding } from '../context/OnboardingContext';
 import { AuthModal } from './AuthModal';
 import { FeedbackModal } from './FeedbackModal';
-import { OnboardingModal } from './OnboardingModal';
 
 const SUBTEXT = '#4B5563';
 
@@ -101,13 +97,12 @@ export const AppHeader: React.FC<AppHeaderProps> = ({ title, subtitle, currentRo
     const { user, signOut } = useAuth();
     const { isPremium } = usePurchase();
     const { expanded: calExpanded, toggle: toggleCal } = useHistoryCalendar();
+    const { isActive: isOnboarding, progress: onboardingProgress } = useOnboarding();
     const isHistory = currentRoute === 'History';
 
     const [isExpanded, setIsExpanded]                   = useState(false);
     const [isAuthVisible, setIsAuthVisible]             = useState(false);
     const [isFeedbackVisible, setIsFeedbackVisible]     = useState(false);
-    const [isOnboardingVisible, setIsOnboardingVisible] = useState(false);
-    const [isExporting, setIsExporting]                 = useState(false);
     const [localPremium, setLocalPremium]               = useState(isPremium);
 
     return (
@@ -116,7 +111,15 @@ export const AppHeader: React.FC<AppHeaderProps> = ({ title, subtitle, currentRo
             <View style={styles.headerTop}>
                 <View style={styles.titleArea}>
                     <Text style={styles.titleLine}>{title}</Text>
-                    {subtitle ? <Text style={styles.titleLine}>{subtitle}</Text> : null}
+                    {/* During onboarding, the second title line is replaced by a
+                        progress pill so the header doubles as the progress UI. */}
+                    {isOnboarding ? (
+                        <View style={styles.progressOuter}>
+                            <View style={[styles.progressInner, { width: `${onboardingProgress * 100}%` }]} />
+                        </View>
+                    ) : (
+                        subtitle ? <Text style={styles.titleLine}>{subtitle}</Text> : null
+                    )}
                 </View>
                 <View style={styles.headerTopRight}>
                     {isHistory ? (
@@ -180,44 +183,7 @@ export const AppHeader: React.FC<AppHeaderProps> = ({ title, subtitle, currentRo
 
                     <View style={styles.divider} />
 
-                    {/* 3. Mood Analytics */}
-                    <SettingsRow
-                        label="Mood Analytics"
-                        subtext="See your trends, streaks and emotional themes."
-                        onPress={() => {
-                            setIsExpanded(false);
-                            navigation.navigate('Analytics');
-                        }}
-                    />
-
-                    <View style={styles.divider} />
-
-                    {/* 4. Export Journal */}
-                    <SettingsRow
-                        label="Export Journal Data"
-                        disabled={isExporting}
-                        right={isExporting ? <ActivityIndicator size="small" color={BLACK} /> : undefined}
-                        onPress={async () => {
-                            setIsExpanded(false);
-                            setIsExporting(true);
-                            try {
-                                const result = await exportJournalData();
-                                if (result.success && result.data) {
-                                    await Share.share({ message: result.data, title: result.filename });
-                                } else {
-                                    Alert.alert('Export Failed', 'Could not generate export data.');
-                                }
-                            } catch {
-                                Alert.alert('Error', 'An error occurred during export.');
-                            } finally {
-                                setIsExporting(false);
-                            }
-                        }}
-                    />
-
-                    <View style={styles.divider} />
-
-                    {/* 5. Give Feedback */}
+                    {/* 3. Give Feedback */}
                     <SettingsRow
                         label="Give Feedback"
                         onPress={() => { setIsExpanded(false); setTimeout(() => setIsFeedbackVisible(true), 300); }}
@@ -245,14 +211,17 @@ export const AppHeader: React.FC<AppHeaderProps> = ({ title, subtitle, currentRo
 
                     <View style={styles.divider} />
 
-                    {/* 8. Onboarding — re-runs the welcome flow on demand */}
+                    {/* 8. Onboarding — re-runs the welcome flow on demand.
+                         Clears the completion flag and routes to Home; HubScreen
+                         re-checks the flag on focus and renders the inline overlay. */}
                     <SettingsRow
                         label="Show Onboarding Again"
                         subtext="Replays the welcome flow."
-                        onPress={() => {
+                        onPress={async () => {
                             setIsExpanded(false);
-                            // Brief delay so the settings panel can collapse before the modal appears.
-                            setTimeout(() => setIsOnboardingVisible(true), 250);
+                            await AsyncStorage.setItem(STORAGE_KEYS.ONBOARDING_DONE, 'false');
+                            // @ts-expect-error — Tabs route accepts no params; navigation is typed loosely here.
+                            navigation.navigate('Tabs', { screen: 'Home' });
                         }}
                     />
 
@@ -269,13 +238,6 @@ export const AppHeader: React.FC<AppHeaderProps> = ({ title, subtitle, currentRo
             {/* ── Modals ── */}
             <AuthModal visible={isAuthVisible} onClose={() => setIsAuthVisible(false)} />
             <FeedbackModal visible={isFeedbackVisible} onClose={() => setIsFeedbackVisible(false)} />
-            <OnboardingModal
-                visible={isOnboardingVisible}
-                onComplete={async (name: string) => {
-                    await completeOnboarding(name);
-                    setIsOnboardingVisible(false);
-                }}
-            />
         </View>
     );
 };
@@ -313,6 +275,24 @@ const styles = StyleSheet.create({
         fontSize: 24,
         color: BLACK,
         lineHeight: 30,
+    },
+    // Progress pill that replaces the subtitle line during onboarding.
+    // Light grey track + yellow fill — the white headerCard would swallow a
+    // pure-white track, so we use #EEEEEE here instead.
+    progressOuter: {
+        height:          14,
+        borderRadius:    50,
+        backgroundColor: '#EEEEEE',
+        padding:         2,
+        overflow:        'hidden',
+        marginTop:       8,
+        width:           '85%',
+    },
+    progressInner: {
+        height:          '100%',
+        backgroundColor: YELLOW,
+        borderRadius:    50,
+        minWidth:        12,
     },
     headerTopRight: {
         flexDirection: 'row',

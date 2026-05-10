@@ -17,12 +17,12 @@ import { HuntScreen } from './src/screens/HuntScreen';
 import { JournalScreen } from './src/screens/JournalScreen';
 import { VisionBoardScreen } from './src/screens/VisionBoardScreen';
 import { PaywallScreen } from './src/screens/PaywallScreen';
-import { AnalyticsScreen } from './src/screens/AnalyticsScreen';
 import { ReminderSettingsScreen } from './src/screens/ReminderSettingsScreen';
 import { AppHeader } from './src/components/AppHeader';
 import { getUserName } from './src/utils/storage';
 import { HeaderHeightProvider, useSetHeaderHeight } from './src/context/HeaderHeightContext';
 import { HistoryCalendarProvider } from './src/context/HistoryCalendarContext';
+import { OnboardingProvider, useOnboarding } from './src/context/OnboardingContext';
 import { useFonts } from 'expo-font';
 
 const Tab = createBottomTabNavigator<RootTabParamList>();
@@ -43,6 +43,7 @@ const BottomTabsInner = () => {
     const insets = useSafeAreaInsets();
     const [userName, setUserName] = useState<string | null>(null);
     const setHeaderHeight = useSetHeaderHeight();
+    const { isActive: isOnboarding } = useOnboarding();
 
     const tabIndex = useNavigationState(state => {
         const tabsRoute = state?.routes?.find((r: any) => r.name === 'Tabs');
@@ -77,20 +78,24 @@ const BottomTabsInner = () => {
                 headerShown: false,
                 tabBarHideOnKeyboard: true,
                 animation: 'none',
-                tabBarStyle: {
-                    position: 'absolute',
-                    backgroundColor: 'transparent',
-                    borderTopWidth: 0,
-                    left: 0,
-                    right: 0,
-                    bottom: 0,
-                    height: 62 + insets.bottom,
-                    paddingHorizontal: 16,
-                    paddingBottom: insets.bottom,
-                    paddingTop: 14,
-                    elevation: 0,
-                    shadowOpacity: 0,
-                },
+                // Hide the bottom TabBar completely while onboarding is active
+                // (no escape hatches, no visual clutter under the slide card).
+                tabBarStyle: isOnboarding
+                    ? { display: 'none' }
+                    : {
+                        position: 'absolute',
+                        backgroundColor: 'transparent',
+                        borderTopWidth: 0,
+                        left: 0,
+                        right: 0,
+                        bottom: 0,
+                        height: 62 + insets.bottom,
+                        paddingHorizontal: 16,
+                        paddingBottom: insets.bottom,
+                        paddingTop: 14,
+                        elevation: 0,
+                        shadowOpacity: 0,
+                    },
                 tabBarBackground: () => (
                     <View style={{
                         position: 'absolute',
@@ -167,17 +172,13 @@ export default function App() {
                 <AuthProvider>
                     <AnalyticsProvider>
                         <PurchaseProvider>
+                            <OnboardingProvider>
                             <NavigationContainer>
                                 <Stack.Navigator screenOptions={{ headerShown: false }}>
                                     <Stack.Screen name="Tabs" component={BottomTabs} />
                                     <Stack.Screen
                                         name="Paywall"
                                         component={PaywallScreen}
-                                        options={{ presentation: 'modal' }}
-                                    />
-                                    <Stack.Screen
-                                        name="Analytics"
-                                        component={AnalyticsScreen}
                                         options={{ presentation: 'modal' }}
                                     />
                                     <Stack.Screen
@@ -192,6 +193,7 @@ export default function App() {
                                     />
                                 </Stack.Navigator>
                             </NavigationContainer>
+                            </OnboardingProvider>
                         </PurchaseProvider>
                     </AnalyticsProvider>
                     <StatusBar style="light" />
