@@ -34,6 +34,7 @@ import { UserProgress, TabScreenNavigationProp } from '../types';
 import { loadProgress, awardXP, loadDailyHunt } from '../utils/progressionStorage';
 import { useIsFocused } from '@react-navigation/native';
 import { useHeaderHeight } from '../context/HeaderHeightContext';
+import { useOnboarding } from '../context/OnboardingContext';
 import { calculateStreak, getJournalEntriesByDate, getTodayDateString } from '../utils/journalStorage';
 import { getXPProgress, LEVEL_TIERS, XP_REWARDS } from '../data/progressionConfig';
 import { XPToast } from '../components/XPToast';
@@ -552,7 +553,9 @@ export const HubScreen: React.FC = () => {
     const [xpToast, setXpToast] = useState<{
         amount: number; label?: string; leveledUp?: boolean; newLevelTitle?: string;
     } | null>(null);
-    const [isOnboardingVisible, setIsOnboardingVisible] = useState(false);
+    // Onboarding visibility lives in OnboardingContext so AppHeader can render
+    // the progress pill and Tab.Navigator can hide the bottom bar.
+    const { isActive: isOnboardingVisible, setActive: setIsOnboardingVisible } = useOnboarding();
 
     // ── Task-break state ──────────────────────────────────────────────────
 
@@ -684,10 +687,13 @@ export const HubScreen: React.FC = () => {
     };
 
     const handleOnboardingComplete = async (name: string) => {
+        // OnboardingModal already fired its own 'onboarding_completed' event
+        // with the answer payload. Here we only persist + navigate.
         await completeOnboarding(name);
         setIsOnboardingVisible(false);
-        trackEvent('onboarding_completed');
-        setTimeout(() => navigation.navigate('Paywall'), 500);
+        // Hand off to the paywall in first-promise-gift mode. The 24h discount
+        // window is anchored to the timestamp written by completeOnboarding().
+        navigation.navigate('Paywall', { offer: 'first_promise_gift' });
     };
 
     useEffect(() => {
@@ -695,9 +701,14 @@ export const HubScreen: React.FC = () => {
         checkOnboarding();
     }, [loadData]);
 
-    // isFocused → true fires on BOTH tab switches AND returning from any stack screen
+    // isFocused → true fires on BOTH tab switches AND returning from any stack screen.
+    // Also re-runs `checkOnboarding` so the AppHeader's "Show Onboarding Again" can
+    // re-trigger the flow by clearing the storage flag and navigating Home.
     useEffect(() => {
-        if (isFocused) loadData();
+        if (isFocused) {
+            loadData();
+            checkOnboarding();
+        }
     }, [isFocused]); // eslint-disable-line react-hooks/exhaustive-deps
 
     useEffect(() => {
@@ -729,28 +740,42 @@ export const HubScreen: React.FC = () => {
                 styles.scrollContent,
                 {
                     paddingTop: (headerHeight || 0) + 16,
-                    paddingBottom: 62 + insets.bottom + 16,
+                    // TabBar is hidden during onboarding (see App.tsx), so the
+                    // bottom space collapses to just the safe-area inset.
+                    paddingBottom: isOnboardingVisible
+                        ? insets.bottom + 16
+                        : 62 + insets.bottom + 16,
                 },
             ]}>
-                {/* ── Main Card (mascot + actions combined) ── */}
-                {xpProgress && currentTier && (
-                    <MainCard
-                        level={progress.level}
-                        currentTitle={currentTier.title}
-                        xpInCurrentLevel={xpProgress.xpInCurrentLevel}
-                        xpNeededForNext={xpProgress.xpNeededForNext}
-                        onPressLevel={() => setIsLevelModalVisible(true)}
-                        getJumpHeight={getJumpHeight}
-                        onPeak={handlePotatoPeak}
-                        actions={DAILY_QUESTS}
-                        dailyActions={dailyActions}
-                        brokenTasks={brokenTasks}
-                        breakAnims={breakAnims}
-                        cardLayouts={cardLayouts}
-                        onNavigate={nav => navigation.navigate(nav as any)}
-                        completedCount={completedCount}
-                        todayMoodScore={todayMoodScore}
+                {/* During first-run, the onboarding overlay takes over the
+                    Hub's content area. AppHeader (above) and TabBar (below)
+                    stay visible because the overlay only fills the space
+                    between them. */}
+                {isOnboardingVisible ? (
+                    <OnboardingModal
+                        visible={isOnboardingVisible}
+                        onComplete={handleOnboardingComplete}
                     />
+                ) : (
+                    xpProgress && currentTier && (
+                        <MainCard
+                            level={progress.level}
+                            currentTitle={currentTier.title}
+                            xpInCurrentLevel={xpProgress.xpInCurrentLevel}
+                            xpNeededForNext={xpProgress.xpNeededForNext}
+                            onPressLevel={() => setIsLevelModalVisible(true)}
+                            getJumpHeight={getJumpHeight}
+                            onPeak={handlePotatoPeak}
+                            actions={DAILY_QUESTS}
+                            dailyActions={dailyActions}
+                            brokenTasks={brokenTasks}
+                            breakAnims={breakAnims}
+                            cardLayouts={cardLayouts}
+                            onNavigate={nav => navigation.navigate(nav as any)}
+                            completedCount={completedCount}
+                            todayMoodScore={todayMoodScore}
+                        />
+                    )
                 )}
             </View>
 
@@ -777,8 +802,6 @@ export const HubScreen: React.FC = () => {
                 visible={!!xpToast}
                 onDismiss={() => setXpToast(null)}
             />
-
-            <OnboardingModal visible={isOnboardingVisible} onComplete={handleOnboardingComplete} />
         </View>
     );
 };

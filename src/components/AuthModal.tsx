@@ -45,16 +45,16 @@ export const AuthModal: React.FC<AuthModalProps> = ({ visible, onClose }) => {
     return (
         <Modal
             animationType="fade"
-            transparent={true}
+            transparent={false}
             visible={visible}
             onRequestClose={onClose}
+            statusBarTranslucent
         >
-            <View style={styles.centeredView}>
-                <TouchableOpacity style={styles.backdrop} activeOpacity={1} onPress={onClose} />
-
+            {/* Full-screen black background — matches HubScreen / onboarding pattern. */}
+            <View style={styles.outerBlack}>
                 <KeyboardAvoidingView
                     behavior={Platform.OS === "ios" ? "padding" : "height"}
-                    style={styles.modalView}
+                    style={styles.cardWrap}
                 >
                     <View style={styles.header}>
                         <Text style={styles.modalTitle}>
@@ -133,18 +133,18 @@ export const AuthModal: React.FC<AuthModalProps> = ({ visible, onClose }) => {
 };
 
 const styles = StyleSheet.create({
-    centeredView: {
-        flex: 1,
-        justifyContent: 'center',
-        alignItems: 'center',
-        backgroundColor: 'rgba(0,0,0,0.5)',
+    // Black outer screen — matches HubScreen's container.
+    outerBlack: {
+        flex:            1,
+        backgroundColor: BLACK,
+        justifyContent:  'center',
+        alignItems:      'center',
+        paddingHorizontal: 16,
     },
-    backdrop: {
-        ...StyleSheet.absoluteFillObject,
-    },
-    modalView: {
-        width:           '85%',
-        maxWidth:        400,
+    // White card — matches the Hub MainCard treatment (2px border, 20 radius).
+    cardWrap: {
+        width:           '100%',
+        maxWidth:        420,
         borderRadius:    20,
         padding:         24,
         backgroundColor: WHITE,
