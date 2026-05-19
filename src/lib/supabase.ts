@@ -2,11 +2,10 @@
 import 'react-native-url-polyfill/auto';
 import * as SecureStore from 'expo-secure-store';
 import { createClient } from '@supabase/supabase-js';
+import Constants from 'expo-constants';
 
-// Project: Ulbo
-// URL: https://gzbeqjxpbkongijxtrhi.supabase.co
-const supabaseUrl = 'https://gzbeqjxpbkongijxtrhi.supabase.co';
-const supabaseAnonKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imd6YmVxanhwYmtvbmdpanh0cmhpIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzA0MjMwMDQsImV4cCI6MjA4NTk5OTAwNH0.xnpNdWNc_jq1hzA0ugxAeLBYe7Ib0oyE2xxaadebqJA';
+const supabaseUrl     = Constants.expoConfig?.extra?.supabaseUrl     as string;
+const supabaseAnonKey = Constants.expoConfig?.extra?.supabaseAnonKey as string;
 
 // SecureStore has a 2048-byte limit per key — Supabase session tokens are larger,
 // so we chunk them transparently.

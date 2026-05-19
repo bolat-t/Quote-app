@@ -33,7 +33,6 @@ import { XPToast } from '../components/XPToast';
 import { useDailyQuote } from '../hooks/useDailyQuote';
 import { chatWithUlbo } from '../utils/journalStorage';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { buildMemoryContext } from '../memory/MemorySystem';
 import { useHeaderHeight } from '../context/HeaderHeightContext';
 import { VoiceSheet } from '../components/VoiceSheet';
 import { useTranslation } from 'react-i18next';
@@ -235,20 +234,11 @@ export const CanvasScreen: React.FC = () => {
         setUlboThinking(true);
         const name = await AsyncStorage.getItem(STORAGE_KEYS.USER_NAME) || 'Friend';
         try {
-            const memory = await buildMemoryContext();
-            const memoryPayload = {
-                mood_trend:           memory.mood.trend,
-                dominant_mood:        memory.mood.dominantMood,
-                streak:               memory.mood.currentStreak,
-                dominant_themes:      memory.journal.dominantThemes,
-                sentiment:            memory.journal.averageSentiment,
-                days_since_last_entry: memory.journal.daysSinceLastEntry,
-            };
             const res = await chatWithUlbo(
                 updated.map(m => ({ role: m.role, text: m.text })),
                 name,
                 { text: todayQuoteText, author: todayQuote.author },
-                memoryPayload,
+                undefined,
                 i18n.language
             );
             const reply = res?.reply || ULBO_FALLBACKS[Math.floor(Math.random() * ULBO_FALLBACKS.length)];

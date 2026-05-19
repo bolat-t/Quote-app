@@ -1637,6 +1637,7 @@ type DraggableInspirationImageProps = {
     image:           InspirationImage;
     onUpdate:        (id: string, x: number, y: number, s: number, r: number) => void;
     onInstantRemove: (id: string) => void;
+    onBringToFront:  () => void;
     isThumbnail?:    boolean;
     onSetThumbnail?: (id: string) => void;
 };
@@ -1647,6 +1648,7 @@ const DraggableInspirationImage: React.FC<DraggableInspirationImageProps> = ({
     image,
     onUpdate,
     onInstantRemove,
+    onBringToFront,
     isThumbnail = false,
     onSetThumbnail,
 }) => {
@@ -1663,6 +1665,7 @@ const DraggableInspirationImage: React.FC<DraggableInspirationImageProps> = ({
             dragging.value = true;
             ctx.value = { x: x.value, y: y.value };
             runOnJS(setIsHeld)(false);
+            runOnJS(onBringToFront)();
         })
         .onUpdate((e) => {
             x.value = ctx.value.x + e.translationX;
@@ -1711,11 +1714,16 @@ const DraggableInspirationImage: React.FC<DraggableInspirationImageProps> = ({
                     delayLongPress={500}
                     activeOpacity={1}
                 >
-                    <Image
-                        source={{ uri: image.uri }}
-                        style={inspStyles.draggableImg}
-                        resizeMode="cover"
-                    />
+                    {/* Clip container — overflow:hidden so Image can render at 2× size
+                        without changing what's visible at scale=1, giving extra pixel
+                        budget so pinch-scale doesn't blur early */}
+                    <View style={inspStyles.draggableImgClip}>
+                        <Image
+                            source={{ uri: image.uri }}
+                            style={inspStyles.draggableImg}
+                            resizeMode="cover"
+                        />
+                    </View>
                 </TouchableOpacity>
                 {/* Cover / thumbnail selector badge */}
                 {onSetThumbnail && !isHeld && (
@@ -1769,6 +1777,19 @@ const InspirationDetail: React.FC<InspirationDetailProps> = ({
 }) => {
     const [title, setTitle] = useState(category.title);
 
+    // ── Render-order for z-layering (last touched = top) ──
+    const [renderOrder, setRenderOrder] = useState<string[]>(() =>
+        category.images.map(i => i.id)
+    );
+    // Keep order in sync as images are added / removed
+    React.useEffect(() => {
+        setRenderOrder(prev => {
+            const currentIds = new Set(category.images.map(i => i.id));
+            const newIds = category.images.map(i => i.id).filter(id => !prev.includes(id));
+            return [...prev.filter(id => currentIds.has(id)), ...newIds];
+        });
+    }, [category.images]);
+
     const commitTitle = () => {
         const trimmed = title.trim();
         if (trimmed !== category.title) {
@@ -1817,6 +1838,17 @@ const InspirationDetail: React.FC<InspirationDetailProps> = ({
         onChange({ thumbnailUri: newThumb });
     };
 
+    const handleBringToFront = (id: string) => {
+        setRenderOrder(prev =>
+            prev[prev.length - 1] === id ? prev : [...prev.filter(i => i !== id), id]
+        );
+    };
+
+    // Sort by renderOrder so the last-touched image renders on top
+    const orderedImages = [...category.images].sort(
+        (a, b) => renderOrder.indexOf(a.id) - renderOrder.indexOf(b.id)
+    );
+
     return (
         <View style={inspStyles.boardCard}>
             {/* Subtle back chevron, top-left, no background */}
@@ -1844,13 +1876,14 @@ const InspirationDetail: React.FC<InspirationDetailProps> = ({
                 />
             </View>
 
-            {/* Draggable images */}
-            {category.images.map(img => (
+            {/* Draggable images — rendered in renderOrder so last-touched is on top */}
+            {orderedImages.map(img => (
                 <DraggableInspirationImage
                     key={img.id}
                     image={img}
                     onUpdate={handleImageUpdate}
                     onInstantRemove={handleImageInstantRemove}
+                    onBringToFront={() => handleBringToFront(img.id)}
                     isThumbnail={
                         category.thumbnailUri
                             ? img.uri === category.thumbnailUri
@@ -2073,16 +2106,30 @@ const inspStyles = StyleSheet.create({
     draggableImgWrap: {
         width:  INSP_IMG_SIZE,
         height: INSP_IMG_SIZE,
+        // Shadow must live here (not on overflow:hidden container) so it's visible on iOS
         shadowColor:  BLACK,
         shadowOffset: { width: 0, height: 2 },
         shadowRadius: 6,
+        shadowOpacity: 0.12,
         elevation: 3,
     },
-    draggableImg: {
-        width:  '100%',
-        height: '100%',
+    // Clips the oversized image so it fills exactly INSP_IMG_SIZE at scale=1,
+    // but has 2× the pixel buffer for quality when pinch-scaled.
+    draggableImgClip: {
+        width:        INSP_IMG_SIZE,
+        height:       INSP_IMG_SIZE,
         borderRadius: 10,
+        overflow:     'hidden',
         backgroundColor: '#F3F4F6',
+    },
+    draggableImg: {
+        // 2× the container: gives a full-quality pixel budget for up to 2× scale,
+        // and noticeably better quality beyond that too.
+        width:    INSP_IMG_SIZE * 2,
+        height:   INSP_IMG_SIZE * 2,
+        position: 'absolute',
+        top:      -(INSP_IMG_SIZE / 2),
+        left:     -(INSP_IMG_SIZE / 2),
     },
     // Cover / thumbnail selector
     coverBtn: {

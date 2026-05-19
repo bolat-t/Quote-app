@@ -1,7 +1,7 @@
 import PostHog from 'posthog-react-native';
+import Constants from 'expo-constants';
 
-// PostHog Cloud — free tier (1M events/mo)
-const POSTHOG_API_KEY = 'phc_FNZu0fAm6A1ohvq9uTtFKeOUXTD2gDBBGP0Uipwsw5O';
+const POSTHOG_API_KEY = Constants.expoConfig?.extra?.posthogKey as string;
 const POSTHOG_HOST = 'https://us.i.posthog.com';
 
 let posthogClient: PostHog | null = null;

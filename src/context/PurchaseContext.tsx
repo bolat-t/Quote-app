@@ -10,8 +10,8 @@ import { PLANS } from '../config/pricing';
 const isExpoGo = Constants.executionEnvironment === ExecutionEnvironment.StoreClient;
 
 const API_KEYS = {
-    apple: 'appl_placeholder_key',
-    google: 'test_uysejRBEurGovbblNlVjjXXdvtD', // User provided key
+    apple:  Constants.expoConfig?.extra?.revenueCatIos     as string,
+    google: Constants.expoConfig?.extra?.revenueCatAndroid as string,
 };
 
 // Mock types matching RevenueCat structure partially

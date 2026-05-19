@@ -1,12 +1,6 @@
-/**
- * Unsplash API utility
- *
- * Setup (2 minutes):
- *  1. Go to https://unsplash.com/developers
- *  2. Click "New Application" and accept the API guidelines
- *  3. Copy your "Access Key" and replace the placeholder below
- */
-const UNSPLASH_ACCESS_KEY = 'eVDDt_7Dl-JsVUs7u6TS0r8cFI7qa7lb7uTzS-pLtDY';
+import Constants from 'expo-constants';
+
+const UNSPLASH_ACCESS_KEY = Constants.expoConfig?.extra?.unsplashKey as string;
 
 const BASE = 'https://api.unsplash.com';
 
