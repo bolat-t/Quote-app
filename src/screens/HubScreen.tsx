@@ -38,13 +38,13 @@ import { useOnboarding } from '../context/OnboardingContext';
 import { calculateStreak, getJournalEntriesByDate, getTodayDateString } from '../utils/journalStorage';
 import { getXPProgress, LEVEL_TIERS, XP_REWARDS } from '../data/progressionConfig';
 import { XPToast } from '../components/XPToast';
-import { LevelModal } from '../components/LevelModal';
 import { StreakModal } from '../components/StreakModal';
 import { OnboardingModal } from '../components/OnboardingModal';
 import { isOnboardingCompleted, completeOnboarding } from '../utils/storage';
 import { trackEvent, setUserProperties } from '../lib/analytics';
 import { useDailyQuote } from '../hooks/useDailyQuote';
 import { STORAGE_KEYS } from '../constants/storageKeys';
+import { useTranslation } from 'react-i18next';
 
 const { width: SCREEN_W } = Dimensions.get('window');
 const BASE_JUMP_H = 80;
@@ -65,29 +65,6 @@ const CheckIcon = () => (
     </Svg>
 );
 
-// ─────────────────────────────────────────────
-// Mood-aware all-quests-complete speech
-// ─────────────────────────────────────────────
-
-const getCongratsSpeech = (moodScore?: number): string => {
-    if (!moodScore) {
-        return "ALL DONE FOR TODAY!\nI'M SO PROUD OF YOU.\n\nYOU SHOWED UP — THAT'S\nWHAT MATTERS MOST.";
-    }
-    // 1–3: rough/sad — gentle & encouraging
-    if (moodScore <= 3) {
-        return "TODAY WAS HEAVY, AND\nYOU STILL SHOWED UP.\n\nTHAT TAKES REAL STRENGTH.\nREST EASY — I'M HERE.";
-    }
-    // 4–5: meh/upset — calming
-    if (moodScore <= 5) {
-        return "BREATHE. YOU GOT THROUGH\nTODAY ONE STEP AT A TIME.\n\nLET TONIGHT BE QUIET.\nTOMORROW IS A NEW PAGE.";
-    }
-    // 6–7: okay — proud
-    if (moodScore <= 7) {
-        return "NICE WORK TODAY!\nALL QUESTS COMPLETE.\n\nYOU'RE BUILDING\nSOMETHING REAL.";
-    }
-    // 8–10: good/great — celebratory
-    return "AMAZING DAY!\nYOU CRUSHED EVERY QUEST.\n\nKEEP RIDING THIS WAVE —\nI'M CHEERING FOR YOU!";
-};
 
 // ─────────────────────────────────────────────
 // Week Strip
@@ -172,10 +149,9 @@ interface MainCardProps {
     currentTitle: string;
     xpInCurrentLevel: number;
     xpNeededForNext: number;
-    onPressLevel: () => void;
     getJumpHeight?: () => number;
     onPeak?: () => void;
-    actions: readonly (typeof DAILY_QUESTS)[number][];
+    actions: DailyQuest[];
     dailyActions: DailyActions;
     brokenTasks: Set<TaskKey>;
     breakAnims: Record<TaskKey, BreakAnim>;
@@ -187,18 +163,27 @@ interface MainCardProps {
 
 const MainCard: React.FC<MainCardProps> = ({
     level, currentTitle, xpInCurrentLevel, xpNeededForNext,
-    onPressLevel, getJumpHeight, onPeak,
+    getJumpHeight, onPeak,
     actions, dailyActions, brokenTasks, breakAnims,
     cardLayouts, onNavigate, completedCount, todayMoodScore,
 }) => {
+    const { t } = useTranslation();
+
+    const getCongratsSpeech = (moodScore?: number): string => {
+        if (!moodScore) return t('hub.all_done_default');
+        if (moodScore <= 3) return t('hub.all_done_sad');
+        if (moodScore <= 5) return t('hub.all_done_meh');
+        if (moodScore <= 7) return t('hub.all_done_okay');
+        return t('hub.all_done_great');
+    };
 
     const xpPct = xpNeededForNext > 0 ? Math.min(1, xpInCurrentLevel / xpNeededForNext) : 0;
 
     return (
         <View style={mainCardStyles.card}>
             {/* ── Level info row ── */}
-            <TouchableOpacity onPress={onPressLevel} activeOpacity={0.7} style={mainCardStyles.levelRow}>
-                <Text style={mainCardStyles.levelTitle}>POTATO</Text>
+            <View style={mainCardStyles.levelRow}>
+                <Text style={mainCardStyles.levelTitle}>{t('hub.mascot_name')}</Text>
                 <View style={{ alignItems: 'flex-end' }}>
                     <Text style={mainCardStyles.levelSubtitle}>{currentTitle.toUpperCase().replace(/ /g, '\n')}</Text>
                     <Text style={mainCardStyles.xpLabel}>
@@ -206,7 +191,7 @@ const MainCard: React.FC<MainCardProps> = ({
                         <Text style={mainCardStyles.xpMax}>/{xpNeededForNext}</Text>
                     </Text>
                 </View>
-            </TouchableOpacity>
+            </View>
 
             {/* ── Mascot ── */}
             <View style={mainCardStyles.mascotArea}>
@@ -220,7 +205,7 @@ const MainCard: React.FC<MainCardProps> = ({
             {/* ── TODAY'S ACTIONS header (hidden when all done) ── */}
             {completedCount < actions.length && (
                 <View style={mainCardStyles.actionsHeader}>
-                    <Text style={mainCardStyles.actionsHeaderLabel}>TODAY'S  ACTIONS</Text>
+                    <Text style={mainCardStyles.actionsHeaderLabel}>{t('hub.todays_actions')}</Text>
                     <Text style={mainCardStyles.actionsHeaderCount}>
                         <Text style={mainCardStyles.actionsHeaderCountBold}>{completedCount}</Text>
                         <Text style={mainCardStyles.actionsHeaderCountMax}>/{actions.length}</Text>
@@ -512,16 +497,17 @@ const PotatoMascot: React.FC<PotatoMascotProps> = ({ level, getJumpHeight, onPea
 // Todo action definitions
 // ─────────────────────────────────────────────
 
-// Daily quests shown on the Home tab. The order here is the order on screen.
-const DAILY_QUESTS = [
-    { key: 'openedApp',       label: 'Open the app',              xp: XP_REWARDS.openApp,         nav: undefined  },
-    { key: 'readQuote',       label: "Reflect on today's quote",  xp: XP_REWARDS.readQuote,       nav: 'Canvas'   },
-    { key: 'wroteReflection', label: 'Write in your journal',     xp: XP_REWARDS.writeReflection, nav: 'Journal'  },
-    { key: 'completedHunt',   label: 'Complete Positivity Hunt',  xp: XP_REWARDS.completeHunt,    nav: 'Journal'  },
-] as const;
-
-type TaskKey = (typeof DAILY_QUESTS)[number]['key'];
+type TaskKey = 'openedApp' | 'readQuote' | 'wroteReflection' | 'completedHunt';
 type DailyActions = { openedApp: boolean; readQuote: boolean; wroteReflection: boolean; completedHunt: boolean };
+
+const QUEST_KEYS: readonly TaskKey[] = ['openedApp', 'readQuote', 'wroteReflection', 'completedHunt'];
+
+interface DailyQuest {
+    readonly key: TaskKey;
+    readonly label: string;
+    readonly xp: number;
+    readonly nav: string | undefined;
+}
 
 interface BreakAnim {
     translateX: Animated.Value;
@@ -538,7 +524,15 @@ export const HubScreen: React.FC = () => {
     const isFocused     = useIsFocused();
     const insets        = useSafeAreaInsets();
     const headerHeight  = useHeaderHeight();
+    const { t }         = useTranslation();
     useDailyQuote();
+
+    const dailyQuests: DailyQuest[] = [
+        { key: 'openedApp',       label: t('hub.quest_open_app'),          xp: XP_REWARDS.openApp,         nav: undefined  },
+        { key: 'readQuote',       label: t('hub.quest_read_quote'),        xp: XP_REWARDS.readQuote,       nav: 'Canvas'   },
+        { key: 'wroteReflection', label: t('hub.quest_write_journal'),     xp: XP_REWARDS.writeReflection, nav: 'Journal'  },
+        { key: 'completedHunt',   label: t('hub.quest_positivity_hunt'),   xp: XP_REWARDS.completeHunt,    nav: 'Journal'  },
+    ];
 
     const [progress,        setProgress]        = useState<UserProgress | null>(null);
     const [streak,          setStreak]          = useState(0);
@@ -548,7 +542,6 @@ export const HubScreen: React.FC = () => {
         completedHunt: false,
     });
 
-    const [isLevelModalVisible,  setIsLevelModalVisible]  = useState(false);
     const [isStreakModalVisible,  setIsStreakModalVisible] = useState(false);
     const [xpToast, setXpToast] = useState<{
         amount: number; label?: string; leveledUp?: boolean; newLevelTitle?: string;
@@ -561,7 +554,7 @@ export const HubScreen: React.FC = () => {
 
     const breakAnims = useRef<Record<TaskKey, BreakAnim>>(
         Object.fromEntries(
-            DAILY_QUESTS.map(a => [a.key, {
+            QUEST_KEYS.map(key => [key, {
                 translateX: new Animated.Value(0),
                 opacity:    new Animated.Value(1),
                 scale:      new Animated.Value(1),
@@ -608,17 +601,16 @@ export const HubScreen: React.FC = () => {
     // ── Jump height ───────────────────────────────────────────────────────
 
     const getJumpHeight = useCallback((): number => {
-        const target = [...DAILY_QUESTS].reverse().find(a =>
-            dailyActionsRef.current[a.key as keyof DailyActions] &&
-            !brokenTasksRef.current.has(a.key as TaskKey) &&
-            !breakingInFlight.current.has(a.key as TaskKey)
+        const target = [...QUEST_KEYS].reverse().find(key =>
+            dailyActionsRef.current[key as keyof DailyActions] &&
+            !brokenTasksRef.current.has(key) &&
+            !breakingInFlight.current.has(key)
         );
-
-        currentJumpTarget.current = target ? (target.key as TaskKey) : null;
+        currentJumpTarget.current = target ?? null;
 
         if (!target) return maxJumpHeight.current;
 
-        const cardLayout = cardLayouts.current[target.key as TaskKey];
+        const cardLayout = cardLayouts.current[target];
         if (!cardLayout) return maxJumpHeight.current;
 
         const h = Math.max(80, BASE_JUMP_H);
@@ -668,10 +660,10 @@ export const HubScreen: React.FC = () => {
             setProgress(result.progress);
             setXpToast({
                 amount: result.xpGained,
-                label: 'Daily login',
+                label: t('hub.quest_daily_login'),
                 leveledUp: result.leveledUp,
                 newLevelTitle: result.leveledUp
-                    ? LEVEL_TIERS.find(t => t.level === result.progress.level)?.title
+                    ? t(`level.tier_${result.progress.level}_title`)
                     : undefined,
             });
             if (result.leveledUp) {
@@ -730,7 +722,7 @@ export const HubScreen: React.FC = () => {
 
     const xpProgress  = progress ? getXPProgress(progress.totalXP) : null;
     const currentTier = progress ? LEVEL_TIERS.find(t => t.level === progress.level) : null;
-    const completedCount = DAILY_QUESTS.filter(a => dailyActions[a.key as keyof DailyActions]).length;
+    const completedCount = dailyQuests.filter(a => dailyActions[a.key]).length;
 
     if (!progress) return null;
 
@@ -760,13 +752,12 @@ export const HubScreen: React.FC = () => {
                     xpProgress && currentTier && (
                         <MainCard
                             level={progress.level}
-                            currentTitle={currentTier.title}
+                            currentTitle={t(`level.tier_${progress.level}_title`)}
                             xpInCurrentLevel={xpProgress.xpInCurrentLevel}
                             xpNeededForNext={xpProgress.xpNeededForNext}
-                            onPressLevel={() => setIsLevelModalVisible(true)}
                             getJumpHeight={getJumpHeight}
                             onPeak={handlePotatoPeak}
-                            actions={DAILY_QUESTS}
+                            actions={dailyQuests}
                             dailyActions={dailyActions}
                             brokenTasks={brokenTasks}
                             breakAnims={breakAnims}
@@ -785,14 +776,6 @@ export const HubScreen: React.FC = () => {
                 onClose={() => setIsStreakModalVisible(false)}
                 streak={streak}
             />
-
-            {progress && (
-                <LevelModal
-                    visible={isLevelModalVisible}
-                    onClose={() => setIsLevelModalVisible(false)}
-                    progress={progress}
-                />
-            )}
 
             <XPToast
                 xpAmount={xpToast?.amount ?? 0}

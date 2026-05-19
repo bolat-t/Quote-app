@@ -59,7 +59,7 @@ serve(async (req) => {
         }
 
         // 3. Parse and sanitize inputs
-        const { journal_text, user_name } = await req.json()
+        const { journal_text, user_name, language } = await req.json()
 
         if (!journal_text) {
             return new Response(
@@ -70,6 +70,7 @@ serve(async (req) => {
 
         const safeName = sanitize(user_name || 'Friend', 50)
         const safeText = sanitize(journal_text, 2000)
+        const isKorean = language === 'ko'
 
         // 4. Increment usage counter before API call
         await supabaseClient.from('api_usage').upsert({
@@ -104,6 +105,7 @@ serve(async (req) => {
         const prompt = `
 You are Ulbo — a cheerful little potato who genuinely cares about ${safeName} and reads every word they write.
 You're warm, honest, and a little playful. You sound like a real friend texting them back, not a poet or life coach.
+${isKorean ? '\nIMPORTANT: Respond entirely in Korean (한국어). All fields in the JSON (reply, tags, followUp) must be in Korean.\n' : ''}
 
 STRICT RULES — breaking any of these is a failure:
 - NO emojis anywhere in your response

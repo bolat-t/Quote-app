@@ -10,6 +10,7 @@ import {
 } from 'react-native';
 import { Svg, Path } from 'react-native-svg';
 import { getAnalysisUsageToday } from '../utils/journalStorage';
+import { useTranslation } from 'react-i18next';
 
 const BLACK = '#000000';
 const WHITE = '#FFFFFF';
@@ -26,12 +27,6 @@ const POTATO_IMAGES: Record<number, any> = {
     9: require('../../assets/mascot/potato_levels/level_9_potato.png'),
 };
 
-const LOADING_MESSAGES = [
-    'ulbo is reading your words..',
-    'thinking it over...',
-    'almost got it...',
-    'putting thoughts together...',
-];
 
 const LoadingDots: React.FC = () => {
     const dots = [useRef(new Animated.Value(0)).current, useRef(new Animated.Value(0)).current, useRef(new Animated.Value(0)).current];
@@ -82,9 +77,17 @@ interface SpiritResponseModalProps {
 }
 
 export const SpiritResponseModal: React.FC<SpiritResponseModalProps> = ({ visible, onClose, loading, data, level = 1 }) => {
+    const { t } = useTranslation();
     const potatoImg = POTATO_IMAGES[Math.min(Math.max(level, 1), 9)];
     const [msgIndex, setMsgIndex] = useState(0);
     const [usageCount, setUsageCount] = useState(0);
+
+    const LOADING_MESSAGES = [
+        t('spirit.loading_msg_1'),
+        t('spirit.loading_msg_2'),
+        t('spirit.loading_msg_3'),
+        t('spirit.loading_msg_4'),
+    ];
 
     useEffect(() => {
         if (visible && !loading && data) {
@@ -121,25 +124,25 @@ export const SpiritResponseModal: React.FC<SpiritResponseModalProps> = ({ visibl
                     {loading ? (
                         /* ── Loading state ── */
                         <>
-                            <Text style={styles.loadingTitle}>ULBO IS READING...</Text>
+                            <Text style={styles.loadingTitle}>{t('spirit.loading_title')}</Text>
                             <Text style={styles.loadingMsg}>{LOADING_MESSAGES[msgIndex]}</Text>
                             <LoadingDots />
                         </>
                     ) : data ? (
                         /* ── Reply state ── */
                         <>
-                            <Text style={styles.replyTitle}>Ulbo Replies</Text>
+                            <Text style={styles.replyTitle}>{t('spirit.reply_title')}</Text>
                             <Text style={styles.replyText}>{data.reply}</Text>
                             {usageCount >= 15 && (
                                 <Text style={styles.usageWarning}>
                                     {usageCount >= 20
-                                        ? "Daily limit reached (20/20). Resets tomorrow."
-                                        : `${usageCount}/20 AI analyses used today`}
+                                        ? t('spirit.limit_reached')
+                                        : t('spirit.limit_warning', { count: usageCount })}
                                 </Text>
                             )}
                         </>
                     ) : (
-                        <Text style={styles.replyText}>Something went wrong. Try again later.</Text>
+                        <Text style={styles.replyText}>{t('spirit.error')}</Text>
                     )}
 
                 </View>

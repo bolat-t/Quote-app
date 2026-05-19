@@ -28,7 +28,7 @@ import * as Haptics from 'expo-haptics';
 import * as Sharing from 'expo-sharing';
 import * as MediaLibrary from 'expo-media-library';
 import { captureRef } from 'react-native-view-shot';
-import Svg, { Path as SvgPath, Circle as SvgCircle, Rect as SvgRect } from 'react-native-svg';
+import Svg, { Path as SvgPath, Circle as SvgCircle, Rect as SvgRect, Polygon as SvgPolygon } from 'react-native-svg';
 import {
     Text,
     Portal,
@@ -48,8 +48,10 @@ import {
 } from '../utils/inspirationStorage';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { STORAGE_KEYS } from '../constants/storageKeys';
+import { useFeatureAccess } from '../hooks/useFeatureAccess';
 import * as FileSystem from 'expo-file-system/legacy';
 import { logVisionSnapshot } from '../utils/visionBoardStorage';
+import i18n from '../lib/i18n';
 
 const AnimatedPath = Animated.createAnimatedComponent(SvgPath);
 
@@ -1723,9 +1725,15 @@ const DraggableInspirationImage: React.FC<DraggableInspirationImageProps> = ({
                         hitSlop={{ top: 6, bottom: 6, left: 6, right: 6 }}
                         activeOpacity={0.7}
                     >
-                        <Text style={[inspStyles.coverBtnText, isThumbnail && inspStyles.coverBtnTextActive]}>
-                            {isThumbnail ? '★' : '☆'}
-                        </Text>
+                        <Svg width={13} height={13} viewBox="0 0 24 24">
+                            <SvgPath
+                                d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"
+                                fill={isThumbnail ? BLACK : 'none'}
+                                stroke={isThumbnail ? BLACK : WHITE}
+                                strokeWidth={isThumbnail ? 0 : 1.8}
+                                strokeLinejoin="round"
+                            />
+                        </Svg>
                     </TouchableOpacity>
                 )}
                 {isHeld && (
@@ -1868,6 +1876,9 @@ const InspirationView: React.FC = () => {
     const [cats, setCats] = useState<InspirationCategory[]>([]);
     const [activeId, setActiveId] = useState<string | null>(null);
 
+    // Free-tier cap on number of inspiration boards.
+    const boardsAccess = useFeatureAccess('inspiration_boards');
+
     const refresh = useCallback(async () => {
         const data = await getInspirationCategories();
         setCats(data);
@@ -1878,6 +1889,14 @@ const InspirationView: React.FC = () => {
     const active = cats.find(c => c.id === activeId) ?? null;
 
     const handleCreate = async () => {
+        if (!boardsAccess.allowed) {
+            const limit = boardsAccess.limit ?? 3;
+            if (cats.length >= limit) {
+                // Straight to paywall — trigger copy explains the cap.
+                boardsAccess.openUpgrade();
+                return;
+            }
+        }
         const cat = await createInspirationCategory();
         setCats(prev => [...prev, cat]);
         setActiveId(cat.id);
@@ -2081,14 +2100,6 @@ const inspStyles = StyleSheet.create({
     coverBtnActive: {
         backgroundColor: YELLOW,
     },
-    coverBtnText: {
-        fontSize: 13,
-        color:    WHITE,
-        lineHeight: 16,
-    },
-    coverBtnTextActive: {
-        color: BLACK,
-    },
     boardFab: {
         position: 'absolute',
         right:    16,
@@ -2097,8 +2108,6 @@ const inspStyles = StyleSheet.create({
         height:   56,
         borderRadius: 28,
         backgroundColor: YELLOW,
-        borderWidth: 2,
-        borderColor: BLACK,
         alignItems:     'center',
         justifyContent: 'center',
         zIndex: 5,
@@ -2120,6 +2129,10 @@ export const VisionBoardScreen: React.FC = () => {
     const headerHeight = useHeaderHeight();
     const insets       = useSafeAreaInsets();
     const [boardMode, setBoardMode] = useState<'monthly' | 'inspiration'>('monthly');
+
+    // Free-tier cap on images on the monthly vision board. Gate fires from
+    // handleAddImage + handleAddStockImage below.
+    const visionImagesAccess = useFeatureAccess('vision_board_images');
 
     // Sliding indicator for the Monthly / Inspiration toggle
     const [pillWidth, setPillWidth] = useState(0);
@@ -2185,8 +2198,9 @@ export const VisionBoardScreen: React.FC = () => {
             logVisionSnapshot(destUri).catch(() => {});
 
             // 3. Create a new inspiration category named after the current month.
+            const locale = i18n.language.startsWith('ko') ? 'ko-KR' : 'en-US';
             const monthTitle = new Date()
-                .toLocaleDateString('en-US', { month: 'long', year: 'numeric' })
+                .toLocaleDateString(locale, { month: 'long', year: 'numeric' })
                 .toUpperCase();
             const created = await createInspirationCategory();
             await updateInspirationCategory(created.id, {
@@ -2244,7 +2258,19 @@ export const VisionBoardScreen: React.FC = () => {
         }
     };
 
+    /** Returns true if a free user has filled the image cap. If so, opens
+     *  the paywall directly — the trigger-aware copy explains the context. */
+    const checkVisionImageCap = (): boolean => {
+        if (visionImagesAccess.allowed) return false;
+        const imageCount = items.filter(i => i.type === 'image').length;
+        const limit = visionImagesAccess.limit ?? 4;
+        if (imageCount < limit) return false;
+        visionImagesAccess.openUpgrade();
+        return true;
+    };
+
     const handleAddImage = async () => {
+        if (checkVisionImageCap()) return;
         const result = await ImagePicker.launchImageLibraryAsync({
             mediaTypes: ['images'],
             allowsEditing: false,
@@ -2337,6 +2363,7 @@ export const VisionBoardScreen: React.FC = () => {
 
     const handleAddStockImage = async (url: string) => {
         setIsStockVisible(false);
+        if (checkVisionImageCap()) return;
         const tempId = `stock-${Date.now()}`;
         // Scatter each stock image slightly so they don't all stack
         const pos_x = Math.random() * Math.max(10, width - ITEM_SIZE - 20) + 10;
@@ -2427,7 +2454,7 @@ export const VisionBoardScreen: React.FC = () => {
 
                 {/* ── Inspiration mode short-circuits the board ── */}
                 {boardMode === 'inspiration' && (
-                    <View style={{ flex: 1, marginBottom: 62 + insets.bottom + 12 }}>
+                    <View style={{ flex: 1, marginBottom: 62 + insets.bottom + 16 }}>
                         <InspirationView />
                     </View>
                 )}
@@ -2435,7 +2462,7 @@ export const VisionBoardScreen: React.FC = () => {
                 {/* ── Monthly Board Card ── */}
                 {boardMode === 'monthly' && (
                 <TouchableOpacity
-                    style={[styles.boardCardWrapper, { marginBottom: 62 + insets.bottom + 12 }]}
+                    style={[styles.boardCardWrapper, { marginBottom: 62 + insets.bottom + 16 }]}
                     onLongPress={() => {
                         if (items.length === 0) return;
                         Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
@@ -2464,7 +2491,7 @@ export const VisionBoardScreen: React.FC = () => {
                         {/* Month header at top of card */}
                         <View style={styles.monthHeader} pointerEvents="none">
                             <Text style={styles.monthHeaderName}>
-                                {new Date().toLocaleDateString('en-US', { month: 'long' }).toUpperCase()}
+                                {new Date().toLocaleDateString(i18n.language.startsWith('ko') ? 'ko-KR' : 'en-US', { month: 'long' }).toUpperCase()}
                             </Text>
                             <Text style={styles.monthHeaderYear}>
                                 {new Date().getFullYear()}
@@ -2695,7 +2722,7 @@ const styles = StyleSheet.create({
     // ── Board Card Wrapper ──
     boardCardWrapper: {
         flex: 1,
-        marginHorizontal: 12,
+        marginHorizontal: 16,
         marginBottom: 12,
         backgroundColor: WHITE,
         borderRadius: 20,

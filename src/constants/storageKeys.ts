@@ -38,6 +38,7 @@ export const STORAGE_KEYS = {
     // ── Settings & preferences ──
     REMINDER_SETTINGS:          '@ulbo_reminder_settings',
     IS_PREMIUM:                 '@ulbo_is_premium',
+    LANGUAGE:                   '@ulbo_language',
     LAST_FEEDBACK_PROMPT:       '@ulbo_last_feedback_prompt',
 
     // ── Prompt rotation ──

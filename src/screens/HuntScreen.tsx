@@ -29,7 +29,6 @@ import Svg, { Path } from 'react-native-svg';
 
 import { UserProgress, DailyHunt } from '../types';
 import { loadProgress, awardXP, loadDailyHunt, addHuntEntry, saveDailyHunt } from '../utils/progressionStorage';
-import { LEVEL_TIERS } from '../data/progressionConfig';
 import { XPToast } from '../components/XPToast';
 import { SparkleIcon } from '../components/QuestCard';
 import { trackEvent } from '../lib/analytics';
@@ -39,12 +38,13 @@ import { selectDailyPrompt, getMascotIntro, recordPromptUsage } from '../utils/p
 import { GratitudePrompt } from '../data/gratitudePrompts';
 import { getTodayDateString, saveJournalEntry, generateJournalId, analyzeJournalEntry, updateEntryWithAI } from '../utils/journalStorage';
 import { SpiritResponseModal } from '../components/SpiritResponseModal';
-import { HUNT_PLACEHOLDERS } from '../data/gratitudePrompts';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { STORAGE_KEYS } from '../constants/storageKeys';
 import { useHeaderHeight } from '../context/HeaderHeightContext';
 import { useFocusEffect } from '@react-navigation/native';
 import { VoiceSheet } from '../components/VoiceSheet';
+import { useTranslation } from 'react-i18next';
+import i18n from '../lib/i18n';
 
 // Assets
 const chatPotatoIcon     = require('../../assets/chat_potato.png');
@@ -88,15 +88,6 @@ type Emotion = keyof typeof EMOTION_IMAGES;
 const EMOTIONS: Emotion[] = ['happy', 'sad', 'upset', 'bored'];
 
 
-const STEP_LABELS = ['Mood', 'Highlights', 'Reflect'];
-
-// Fallback Ulbo response when AI call fails or returns null
-const SPIRIT_FALLBACK = (name: string) => ({
-    reply: `You showed up and wrote it down, ${name}. That already counts for a lot.`,
-    mood: 7,
-    tags: ['showing up', 'reflective'],
-    followUp: "What's one thing from today you want to remember tomorrow?",
-});
 
 const ArrowRightIcon = ({ color, size = 18 }: { color: string; size?: number }) => (
     <Svg width={size} height={size} viewBox="0 0 24 24" fill="none">
@@ -124,8 +115,18 @@ const TAB_SLIDER_W = (SCREEN_W - 40) / 3;
 export const HuntScreen: React.FC = () => {
     const headerHeight = useHeaderHeight();
     const insets = useSafeAreaInsets();
-    const { quote: todayQuote } = useDailyQuote();
+    const { quote: todayQuote, quoteText: todayQuoteText } = useDailyQuote();
     const { mood } = useMascotState();
+    const { t } = useTranslation();
+
+    const stepLabels = [t('hunt.tab_mood'), t('hunt.tab_highlights'), t('hunt.tab_reflect')];
+
+    const spiritFallback = useCallback((name: string) => ({
+        reply: t('hunt.spirit_fallback', { name }),
+        mood: 7,
+        tags: ['showing up', 'reflective'],
+        followUp: t('hunt.spirit_follow_up'),
+    }), [t]);
 
     // Refs for auto-focusing inputs
     const emotionInputRef = useRef<any>(null);
@@ -236,9 +237,10 @@ export const HuntScreen: React.FC = () => {
             setDailyPrompt(prompt);
             setMascotIntro(getMascotIntro(prompt.category));
 
-            // Pick 3 random placeholders
-            const shuffled = [...HUNT_PLACEHOLDERS].sort(() => 0.5 - Math.random());
-            setHuntPlaceholders(shuffled.slice(0, 3));
+            // Pick 3 random translated placeholders
+            const indices = Array.from({ length: 20 }, (_, i) => i);
+            const shuffledIdx = indices.sort(() => 0.5 - Math.random()).slice(0, 3);
+            setHuntPlaceholders(shuffledIdx.map(i => t(`prompts.hunt_placeholder_${i}`)));
 
         } catch (e) {
             console.error('[JournalScreen] Error:', e);
@@ -388,9 +390,9 @@ export const HuntScreen: React.FC = () => {
                 Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
                 setXpToast({
                     amount: result.xpGained,
-                    label: 'Hunt complete',
+                    label: t('hub.quest_positivity_hunt'),
                     leveledUp: result.leveledUp,
-                    newLevelTitle: result.leveledUp ? LEVEL_TIERS.find(t => t.level === result.progress.level)?.title : undefined,
+                    newLevelTitle: result.leveledUp ? t(`level.tier_${result.progress.level}_title`) : undefined,
                 });
             }
             setTimeout(() => setActiveStep(prev => Math.max(prev, 2)), 700);
@@ -422,23 +424,23 @@ export const HuntScreen: React.FC = () => {
         setSpiritLoading(true);
         setSpiritData(null);
         const name = await AsyncStorage.getItem(STORAGE_KEYS.USER_NAME) || 'Friend';
-        analyzeJournalEntry(text, name)
+        analyzeJournalEntry(text, name, i18n.language)
             .then(async (analysis) => {
-                const result = analysis ?? SPIRIT_FALLBACK(name);
+                const result = analysis ?? spiritFallback(name);
                 setSpiritData(result);
                 if (analysis) await updateEntryWithAI(entryId, analysis);
             })
-            .catch(() => setSpiritData(SPIRIT_FALLBACK(name)))
+            .catch(() => setSpiritData(spiritFallback(name)))
             .finally(() => setSpiritLoading(false));
 
         if (progress) {
             const result = await awardXP('writeReflection', progress);
             setProgress(result.progress);
             if (result.xpGained > 0) {
-                setXpToast({ amount: result.xpGained, label: 'Journal saved', leveledUp: result.leveledUp, newLevelTitle: result.leveledUp ? LEVEL_TIERS.find(t => t.level === result.progress.level)?.title : undefined });
+                setXpToast({ amount: result.xpGained, label: t('level.action_wrote_reflection'), leveledUp: result.leveledUp, newLevelTitle: result.leveledUp ? t(`level.tier_${result.progress.level}_title`) : undefined });
             }
         }
-    }, [dailyPrompt, promptResponse, todayQuote, progress]);
+    }, [dailyPrompt, promptResponse, todayQuote, progress, spiritFallback, t]);
 
     // ── Save today's reflection ──
     const handleSaveReflection = useCallback(async () => {
@@ -450,7 +452,7 @@ export const HuntScreen: React.FC = () => {
         await saveJournalEntry({
             id: entryId,
             quoteId: todayQuote.id,
-            quoteText: todayQuote.text,
+            quoteText: todayQuoteText,
             response: text,
             createdAt: Date.now(),
             date: getTodayDateString(),
@@ -465,24 +467,24 @@ export const HuntScreen: React.FC = () => {
         setSpiritLoading(true);
         setSpiritData(null);
         const name = await AsyncStorage.getItem(STORAGE_KEYS.USER_NAME) || 'Friend';
-        analyzeJournalEntry(text, name)
+        analyzeJournalEntry(text, name, i18n.language)
             .then(async (analysis) => {
-                const result = analysis ?? SPIRIT_FALLBACK(name);
+                const result = analysis ?? spiritFallback(name);
                 setSpiritData(result);
                 if (analysis) await updateEntryWithAI(entryId, analysis);
             })
-            .catch(() => setSpiritData(SPIRIT_FALLBACK(name)))
+            .catch(() => setSpiritData(spiritFallback(name)))
             .finally(() => setSpiritLoading(false));
 
         if (progress) {
             const result = await awardXP('writeReflection', progress);
             setProgress(result.progress);
             if (result.xpGained > 0) {
-                setXpToast({ amount: result.xpGained, label: 'Reflection saved', leveledUp: result.leveledUp, newLevelTitle: result.leveledUp ? LEVEL_TIERS.find(t => t.level === result.progress.level)?.title : undefined });
+                setXpToast({ amount: result.xpGained, label: t('level.action_wrote_reflection'), leveledUp: result.leveledUp, newLevelTitle: result.leveledUp ? t(`level.tier_${result.progress.level}_title`) : undefined });
             }
         }
         trackEvent('reflection_written', { source: 'journal_page', word_count: text.split(/\s+/).filter(Boolean).length });
-    }, [reflectionText, todayQuote, progress]);
+    }, [reflectionText, todayQuote, todayQuoteText, progress, spiritFallback]);
 
     // ── Voice transcription callback ──
     const handleVoiceTranscription = useCallback((text: string) => {
@@ -520,7 +522,7 @@ export const HuntScreen: React.FC = () => {
     // Account for the in-screen tab bar (Emotion/3things/Reflect) above the card
     // and the bottom navigation tab bar so the card sits with a clear gap to the footer.
     const TAB_BAR_H = 66;
-    const FOOTER_GAP = 24; // gap between card bottom and the navigation tab bar
+    const FOOTER_GAP = 32; // visual gap = FOOTER_GAP - 16 (paddingTop offset); 32 → 16px gap
     const reflectCardHeight = SCREEN_H - (headerHeight || 80) - (62 + insets.bottom) - TAB_BAR_H - FOOTER_GAP;
     const cardH = useRef(new RNAnimated.Value(reflectCardHeight)).current;
     const cardHStyle = { height: cardH };
@@ -605,7 +607,7 @@ export const HuntScreen: React.FC = () => {
                                 { width: TAB_SLIDER_W, transform: [{ translateX: slideAnim }] },
                             ]}
                         />
-                        {STEP_LABELS.map((label, i) => (
+                        {stepLabels.map((label, i) => (
                             <TouchableOpacity
                                 key={i}
                                 style={styles.tabPill}
@@ -625,7 +627,7 @@ export const HuntScreen: React.FC = () => {
                         <Animated.View entering={FadeInDown.duration(400)} style={[styles.reflectCard, { flex: 1 }]}>
                             {/* Top section */}
                             <View style={{ paddingHorizontal: 20, paddingTop: 16, paddingBottom: 4 }}>
-                                <Text style={styles.emotionTitle}>HOW DO YOU FEEL TODAY?</Text>
+                                <Text style={styles.emotionTitle}>{t('hunt.emotion_title')}</Text>
                                 <View style={styles.emotionRow}>
                                     {EMOTIONS.map(emotion => (
                                         <Pressable
@@ -668,7 +670,7 @@ export const HuntScreen: React.FC = () => {
                                 <RNTextInput
                                     ref={emotionInputRef}
                                     style={styles.emotionInput}
-                                    placeholder="What's on your mind?"
+                                    placeholder={t('hunt.emotion_placeholder')}
                                     placeholderTextColor="#AAAAAA"
                                     multiline
                                     scrollEnabled={false}
@@ -688,7 +690,7 @@ export const HuntScreen: React.FC = () => {
                                             ]}
                                             onPress={handleSaveEmotion}
                                         >
-                                            <Text style={styles.emotionSaveBtnText}>SAVE TO REFLECT</Text>
+                                            <Text style={styles.emotionSaveBtnText}>{t('hunt.save_to_reflect')}</Text>
                                         </Pressable>
                                         <TouchableOpacity
                                             style={styles.emotionVoiceBtn}
@@ -710,7 +712,7 @@ export const HuntScreen: React.FC = () => {
                         <Animated.View entering={FadeInDown.duration(400)} style={[styles.contentCard, { flex: 1, overflow: 'hidden' }]}>
                             {/* Header row: title + counter */}
                             <View style={styles.gratitudeHeader}>
-                                <Text style={styles.gratitudeTitle}>TODAY'S GRATITUDE</Text>
+                                <Text style={styles.gratitudeTitle}>{t('hunt.gratitude_title')}</Text>
                                 <Text style={styles.gratitudeCounter}>
                                     <Text style={styles.gratitudeCountNum}>{huntCount}</Text>
                                     <Text style={styles.gratitudeCountTotal}>/3</Text>
@@ -749,7 +751,7 @@ export const HuntScreen: React.FC = () => {
                                                 />
                                             ) : (
                                                 <Text style={styles.gratitudeLocked}>
-                                                    {locked ? 'Add one more thing...' : ''}
+                                                    {locked ? t('hunt.locked_placeholder') : ''}
                                                 </Text>
                                             )}
                                         </View>
@@ -761,7 +763,7 @@ export const HuntScreen: React.FC = () => {
                             {isHuntDone && (
                                 <Animated.View entering={FadeIn.delay(200)} style={styles.completionMsg}>
                                     <SparkleIcon color={BLACK} size={18} />
-                                    <Text style={styles.completionText}>You found the good things today</Text>
+                                    <Text style={styles.completionText}>{t('hunt.completion_text')}</Text>
                                 </Animated.View>
                             )}
                             {/* Potato mascot — bottom right, tappable */}
@@ -798,10 +800,10 @@ export const HuntScreen: React.FC = () => {
                                 /* ── Saved state ── */
                                 <Animated.View entering={FadeIn} style={styles.reflectSavedWrap}>
                                     <Image source={chatPotatoIcon} style={{ width: 64, height: 64 }} resizeMode="contain" />
-                                    <Text style={styles.reflectSavedTitle}>Beautiful reflection!</Text>
-                                    <Text style={styles.reflectSavedSub}>Saved to your history</Text>
+                                    <Text style={styles.reflectSavedTitle}>{t('hunt.saved_title')}</Text>
+                                    <Text style={styles.reflectSavedSub}>{t('hunt.saved_sub')}</Text>
                                     <TouchableOpacity onPress={() => setReflectionPermSaved(false)} style={styles.writeAgainBtn} activeOpacity={0.6}>
-                                        <Text style={styles.writeAgainText}>Write another</Text>
+                                        <Text style={styles.writeAgainText}>{t('hunt.write_another')}</Text>
                                     </TouchableOpacity>
                                 </Animated.View>
                             ) : (
@@ -809,7 +811,7 @@ export const HuntScreen: React.FC = () => {
                                     {/* ── Question header ── */}
                                     <View style={styles.reflectHeader}>
                                         <Text style={styles.reflectQuestion}>
-                                            {dailyPrompt?.text ?? "What's on your mind? What does this quote stir up for you?"}
+                                            {dailyPrompt ? t(`prompts.${dailyPrompt.id}`) : t('hunt.reflect_placeholder')}
                                         </Text>
                                     </View>
 
@@ -820,7 +822,7 @@ export const HuntScreen: React.FC = () => {
                                     <View style={styles.reflectInputWrap}>
                                         <RNTextInput
                                             style={styles.reflectInput}
-                                            placeholder="What's on your mind? What does this quote stir up for you?"
+                                            placeholder={t('hunt.reflect_placeholder')}
                                             placeholderTextColor="#AAAAAA"
                                             multiline
                                             scrollEnabled
@@ -842,7 +844,7 @@ export const HuntScreen: React.FC = () => {
                                             onPress={handleSaveReflection}
                                             disabled={!canSaveReflection}
                                         >
-                                            <Text style={styles.emotionSaveBtnText}>SAVE TO JOURNAL</Text>
+                                            <Text style={styles.emotionSaveBtnText}>{t('hunt.save_to_journal')}</Text>
                                         </Pressable>
                                         <TouchableOpacity
                                             style={styles.emotionVoiceBtn}

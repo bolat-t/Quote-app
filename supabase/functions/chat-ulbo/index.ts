@@ -73,7 +73,7 @@ serve(async (req) => {
         }
 
         // 3. Parse and sanitize inputs
-        const { messages, quote, user_name, memory_context } = await req.json()
+        const { messages, quote, user_name, memory_context, language } = await req.json()
 
         if (!messages || !Array.isArray(messages) || messages.length === 0) {
             return new Response(
@@ -83,6 +83,7 @@ serve(async (req) => {
         }
 
         const safeName = sanitize(user_name || 'Friend', 50)
+        const isKorean = language === 'ko'
         const safeQuote = quote ? sanitize(quote.text || '', 500) : ''
         const safeQuoteAuthor = quote ? sanitize(quote.author || '', 100) : ''
 
@@ -130,6 +131,7 @@ serve(async (req) => {
 
         // 6. Build system prompt — Ulbo as a genuine intellectual companion
         const systemPrompt = `You are Ulbo — a small, potato-shaped companion in a journaling app. Warm, curious, and genuinely sharp.
+${isKorean ? '\nIMPORTANT: Respond entirely in Korean (한국어). Your reply must be in Korean.\n' : ''}
 
 YOUR NATURE:
 You think alongside people, not at them. You're intellectually alive — when someone says something interesting, you pull the thread. You notice contradictions, half-formed ideas, and the real question hiding inside the stated one.

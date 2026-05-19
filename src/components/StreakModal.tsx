@@ -1,4 +1,5 @@
-import React, { useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { BLACK, WHITE, YELLOW } from '../constants/colors';
 import {
     View,
@@ -49,18 +50,6 @@ const CheckIcon = ({ color }: { color: string }) => (
 );
 
 // ─────────────────────────────────────────────
-// Streak motivational message
-// ─────────────────────────────────────────────
-
-const getStreakMessage = (streak: number) => {
-    if (streak === 0) return 'Start today — every great streak begins with one day.';
-    if (streak < 3) return 'A great start. Show up again tomorrow.';
-    if (streak < 7) return "You're building something real. Keep it going.";
-    if (streak < 30) return "Consistency is your superpower. Don't stop now.";
-    return "You're in rare territory. This is who you are now.";
-};
-
-// ─────────────────────────────────────────────
 // Modal
 // ─────────────────────────────────────────────
 
@@ -71,7 +60,16 @@ interface StreakModalProps {
 }
 
 export const StreakModal: React.FC<StreakModalProps> = ({ visible, onClose, streak }) => {
+    const { t } = useTranslation();
     const [history, setHistory] = useState<{ day: string; date: string; completed: boolean; isToday: boolean }[]>([]);
+
+    const getStreakMessage = useCallback((s: number) => {
+        if (s === 0) return t('streak.message_0');
+        if (s < 3)   return t('streak.message_1_2');
+        if (s < 7)   return t('streak.message_3_6');
+        if (s < 30)  return t('streak.message_7_29');
+        return t('streak.message_30_plus');
+    }, [t]);
 
     const scale = useSharedValue(1);
 
@@ -136,7 +134,7 @@ export const StreakModal: React.FC<StreakModalProps> = ({ visible, onClose, stre
                             {streak}
                         </Text>
                         <Text style={[styles.streakLabel, { color: BLACK + '80' }]}>
-                            {streak === 1 ? 'day streak' : 'day streak'}
+                            {t('streak.day_streak')}
                         </Text>
                     </View>
 
@@ -147,10 +145,10 @@ export const StreakModal: React.FC<StreakModalProps> = ({ visible, onClose, stre
                     <View style={styles.milestoneSection}>
                         <View style={styles.milestoneRow}>
                             <Text style={[styles.milestoneLabel, { color: BLACK + '70' }]}>
-                                Next milestone
+                                {t('streak.next_milestone')}
                             </Text>
                             <Text style={[styles.milestoneValue, { color: BLACK }]}>
-                                {nextGoal} days
+                                {nextGoal} {t('streak.days')}
                             </Text>
                         </View>
                         <View style={styles.progressTrack}>
@@ -211,7 +209,7 @@ export const StreakModal: React.FC<StreakModalProps> = ({ visible, onClose, stre
                         activeOpacity={0.8}
                     >
                         <Text style={styles.actionBtnText}>
-                            Keep it going
+                            {t('streak.keep_going')}
                         </Text>
                     </TouchableOpacity>
                 </Animated.View>

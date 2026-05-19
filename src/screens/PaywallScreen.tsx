@@ -19,6 +19,7 @@ import { usePurchase, PurchasesPackage } from '../context/PurchaseContext';
 import { Svg, Path } from 'react-native-svg';
 import { trackEvent } from '../lib/analytics';
 import { getGiftDeadline } from '../utils/storage';
+import { useTranslation } from 'react-i18next';
 import {
     PLANS,
     TIERS,
@@ -30,7 +31,6 @@ import {
     applyGiftDiscount,
     annualSavingsPct,
     weeklyEquivalent,
-    interpolatePaywall,
     type PlanId,
     type PricingPlan,
 } from '../config/pricing';
@@ -115,6 +115,7 @@ export const PaywallScreen = () => {
     const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList, 'Paywall'>>();
     const route      = useRoute<RouteProp<RootStackParamList, 'Paywall'>>();
     const { packages, purchasePackage, restorePurchases, isLoading } = usePurchase();
+    const { t } = useTranslation();
     const [purchasing, setPurchasing] = useState(false);
 
     // ── Resolve trigger (drives copy + analytics) ───────────────────────────
@@ -186,7 +187,7 @@ export const PaywallScreen = () => {
 
     const handlePurchase = async () => {
         if (!selectedDisplay?.pkg) {
-            Alert.alert('Unavailable', 'This plan is not currently available.');
+            Alert.alert(t('paywall.unavailable_title'), t('paywall.unavailable_message'));
             return;
         }
         setPurchasing(true);
@@ -201,7 +202,7 @@ export const PaywallScreen = () => {
             const success = await purchasePackage(selectedDisplay.pkg);
             if (success) navigation.goBack();
         } catch {
-            Alert.alert('Error', 'Purchase failed. Please try again.');
+            Alert.alert(t('paywall.error_title'), t('paywall.purchase_failed'));
         } finally {
             setPurchasing(false);
         }
@@ -223,39 +224,42 @@ export const PaywallScreen = () => {
 
     // ── Resolved copy ───────────────────────────────────────────────────────
     const title = giftActive
-        ? interpolatePaywall(PAYWALL_COPY.giftTitleTemplate, { pct: GIFT_OFFER.discountPct })
-        : (trigger?.title ?? PAYWALL_COPY.defaultTitle);
-    const subBody = !giftActive ? trigger?.body : undefined;
+        ? t('paywall.gift_title', { pct: GIFT_OFFER.discountPct })
+        : trigger?.id ? t(`paywall.trigger_${trigger.id}_title`, { defaultValue: PAYWALL_COPY.defaultTitle })
+        : t('paywall.default_title');
+    const subBody = !giftActive && trigger?.id && trigger.body
+        ? t(`paywall.trigger_${trigger.id}_body`, { defaultValue: trigger.body })
+        : undefined;
 
     const ctaText = (() => {
         const p = selectedDisplay.plan;
         if (p.trialDays > 0 && !selectedDisplay.giftAppliesHere) {
-            return interpolatePaywall(PAYWALL_COPY.cta.withTrial, { trialDays: p.trialDays });
+            return t('paywall.cta_with_trial', { trialDays: p.trialDays });
         }
-        return PAYWALL_COPY.cta.default;
+        return t('paywall.cta_default');
     })();
 
     const billingNote = (() => {
         const p = selectedDisplay.plan;
-        if (p.id === 'monthly') return PAYWALL_COPY.billingNote.monthly;
+        if (p.id === 'monthly') return t('paywall.billing_monthly');
         // Annual:
         if (p.trialDays > 0 && !selectedDisplay.giftAppliesHere) {
-            return interpolatePaywall(PAYWALL_COPY.billingNote.annualWithTrial, {
+            return t('paywall.billing_annual_trial', {
                 trialDays:   p.trialDays,
                 priceString: selectedDisplay.realPriceString,
             });
         }
-        return PAYWALL_COPY.billingNote.annual;
+        return t('paywall.billing_annual');
     })();
 
-    const proFeatures = TIERS.pro.features;
+    const proFeatureCount = TIERS.pro.features.length;
 
     return (
         <SafeAreaView style={styles.container}>
             <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
 
                 {/* Close */}
-                <TouchableOpacity onPress={dismissPaywall} style={styles.closeButton} accessibilityLabel="Close paywall" accessibilityRole="button">
+                <TouchableOpacity onPress={dismissPaywall} style={styles.closeButton} accessibilityLabel={t('paywall.close_label')} accessibilityRole="button">
                     <Svg width={24} height={24} viewBox="0 0 24 24" fill="none">
                         <Path d="M18 6L6 18M6 6l12 12" stroke={BLACK + '55'} strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" />
                     </Svg>
@@ -273,10 +277,10 @@ export const PaywallScreen = () => {
                 {/* Gift banner */}
                 {giftActive && (
                     <View style={styles.giftBanner}>
-                        <Text style={styles.giftEyebrow}>{GIFT_OFFER.copy.eyebrow}</Text>
-                        <Text style={styles.giftBody}>{GIFT_OFFER.copy.body}</Text>
+                        <Text style={styles.giftEyebrow}>{t('paywall.gift_eyebrow')}</Text>
+                        <Text style={styles.giftBody}>{t('paywall.gift_body')}</Text>
                         <View style={styles.giftCountdownRow}>
-                            <Text style={styles.giftCountdownLabel}>{GIFT_OFFER.copy.countdownPrefix}</Text>
+                            <Text style={styles.giftCountdownLabel}>{t('paywall.gift_countdown_prefix')}</Text>
                             <Text style={styles.giftCountdownValue}>{formatRemaining(giftRemaining)}</Text>
                         </View>
                     </View>
@@ -288,12 +292,12 @@ export const PaywallScreen = () => {
 
                 {/* Pro feature list */}
                 <View style={styles.featureList}>
-                    {proFeatures.map((f, i) => (
+                    {Array.from({ length: proFeatureCount }, (_, i) => (
                         <View key={i} style={styles.featureRow}>
                             <FeatureIcon />
                             <View style={styles.featureText}>
-                                <Text style={styles.featureTitle}>{f.title}</Text>
-                                {f.desc ? <Text style={styles.featureDesc}>{f.desc}</Text> : null}
+                                <Text style={styles.featureTitle}>{t(`paywall.feature_${i}_title`)}</Text>
+                                <Text style={styles.featureDesc}>{t(`paywall.feature_${i}_desc`)}</Text>
                             </View>
                         </View>
                     ))}
@@ -329,7 +333,7 @@ export const PaywallScreen = () => {
                     onPress={handlePurchase}
                     disabled={purchasing || !selectedDisplay.pkg}
                     activeOpacity={0.85}
-                    accessibilityLabel={`Continue with ${selectedDisplay.plan.displayName} plan`}
+                    accessibilityLabel={`${t('paywall.cta_default')} ${t(`paywall.plan_name_${selectedDisplay.plan.id}`)}`}
                     accessibilityRole="button"
                     accessibilityState={{ disabled: purchasing }}
                 >
@@ -341,16 +345,16 @@ export const PaywallScreen = () => {
 
                 {/* Footer */}
                 <View style={styles.footerLinks}>
-                    <TouchableOpacity onPress={handleRestore} disabled={purchasing} accessibilityLabel="Restore purchases" accessibilityRole="button">
-                        <Text style={styles.footerLink}>{PAYWALL_COPY.footerLinks.restore}</Text>
+                    <TouchableOpacity onPress={handleRestore} disabled={purchasing} accessibilityLabel={t('paywall.restore_label')} accessibilityRole="button">
+                        <Text style={styles.footerLink}>{t('paywall.footer_restore')}</Text>
                     </TouchableOpacity>
                     <Text style={styles.footerDot}>·</Text>
                     <TouchableOpacity>
-                        <Text style={styles.footerLink}>{PAYWALL_COPY.footerLinks.terms}</Text>
+                        <Text style={styles.footerLink}>{t('paywall.footer_terms')}</Text>
                     </TouchableOpacity>
                     <Text style={styles.footerDot}>·</Text>
                     <TouchableOpacity>
-                        <Text style={styles.footerLink}>{PAYWALL_COPY.footerLinks.privacy}</Text>
+                        <Text style={styles.footerLink}>{t('paywall.footer_privacy')}</Text>
                     </TouchableOpacity>
                 </View>
 
@@ -371,14 +375,15 @@ interface PlanCardProps {
 }
 
 const PlanCard: React.FC<PlanCardProps> = ({ display, selected, monthlyUSD, onSelect }) => {
+    const { t } = useTranslation();
     const { plan, realPriceString, realPriceUSD, effectiveString, effectiveUSD, giftAppliesHere } = display;
 
     // Headline badge (top-left of the card)
     const badge = (() => {
-        if (giftAppliesHere) return `SAVE ${GIFT_OFFER.discountPct}%`;
+        if (giftAppliesHere) return t('paywall.save_pct', { pct: GIFT_OFFER.discountPct });
         if (plan.id === 'annual' && monthlyUSD && monthlyUSD > 0) {
             const pct = annualSavingsPct(realPriceUSD, monthlyUSD);
-            if (pct > 0) return `SAVE ${pct}%`;
+            if (pct > 0) return t('paywall.save_pct', { pct });
         }
         return null;
     })();
@@ -394,9 +399,9 @@ const PlanCard: React.FC<PlanCardProps> = ({ display, selected, monthlyUSD, onSe
 
     // Sub-line under the price
     const subline = (() => {
-        if (giftAppliesHere) return GIFT_OFFER.copy.savingsLabel;
+        if (giftAppliesHere) return t('paywall.gift_savings_label');
         if (plan.id === 'annual' && monthlyUSD && monthlyUSD > 0) {
-            return `vs $${monthlyUSD.toFixed(2)}/mo billed monthly`;
+            return t('paywall.vs_monthly', { monthlyPrice: monthlyUSD.toFixed(2) });
         }
         return null;
     })();
@@ -406,7 +411,7 @@ const PlanCard: React.FC<PlanCardProps> = ({ display, selected, monthlyUSD, onSe
             style={[styles.planCard, selected && styles.planCardSelected]}
             onPress={onSelect}
             activeOpacity={0.8}
-            accessibilityLabel={`${plan.displayName} plan, ${effectiveString} ${plan.periodSuffix}`}
+            accessibilityLabel={`${t(`paywall.plan_name_${plan.id}`)} plan, ${effectiveString} ${t(`paywall.period_${plan.id}`)}`}
             accessibilityRole="radio"
             accessibilityState={{ checked: selected }}
         >
@@ -417,24 +422,24 @@ const PlanCard: React.FC<PlanCardProps> = ({ display, selected, monthlyUSD, onSe
             )}
             {showTrialPill && (
                 <View style={styles.trialPill}>
-                    <Text style={styles.trialPillText}>{plan.trialDays} DAYS FREE</Text>
+                    <Text style={styles.trialPillText}>{plan.trialDays} {t('paywall.days_free')}</Text>
                 </View>
             )}
 
             <CheckCircle selected={selected} />
 
             <View style={styles.planInfo}>
-                <Text style={styles.planName}>{plan.displayName}</Text>
+                <Text style={styles.planName}>{t(`paywall.plan_name_${plan.id}`)}</Text>
                 {giftAppliesHere ? (
                     <Text style={styles.planPriceMain}>
                         {effectiveString}
-                        <Text style={styles.planPeriod}>{plan.periodSuffix}</Text>
+                        <Text style={styles.planPeriod}>{t(`paywall.period_${plan.id}`)}</Text>
                         <Text style={styles.planPriceStrike}>  {realPriceString}</Text>
                     </Text>
                 ) : (
                     <Text style={styles.planPriceMain}>
                         {effectiveString}
-                        <Text style={styles.planPeriod}>{plan.periodSuffix}</Text>
+                        <Text style={styles.planPeriod}>{t(`paywall.period_${plan.id}`)}</Text>
                     </Text>
                 )}
                 {subline && <Text style={styles.planSavingsNote}>{subline}</Text>}

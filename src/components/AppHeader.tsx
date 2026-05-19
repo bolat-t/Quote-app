@@ -11,6 +11,7 @@ import {
 import Svg, { Path } from 'react-native-svg';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { STORAGE_KEYS } from '../constants/storageKeys';
+import i18n from '../lib/i18n';
 import { useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import type { RootStackParamList } from '../types';
@@ -21,6 +22,7 @@ import { useHistoryCalendar } from '../context/HistoryCalendarContext';
 import { useOnboarding } from '../context/OnboardingContext';
 import { AuthModal } from './AuthModal';
 import { FeedbackModal } from './FeedbackModal';
+import { useTranslation } from 'react-i18next';
 
 const SUBTEXT = '#4B5563';
 
@@ -98,12 +100,16 @@ export const AppHeader: React.FC<AppHeaderProps> = ({ title, subtitle, currentRo
     const { isPremium } = usePurchase();
     const { expanded: calExpanded, toggle: toggleCal } = useHistoryCalendar();
     const { isActive: isOnboarding, progress: onboardingProgress } = useOnboarding();
+    const { t } = useTranslation();
     const isHistory = currentRoute === 'History';
 
     const [isExpanded, setIsExpanded]                   = useState(false);
     const [isAuthVisible, setIsAuthVisible]             = useState(false);
     const [isFeedbackVisible, setIsFeedbackVisible]     = useState(false);
     const [localPremium, setLocalPremium]               = useState(isPremium);
+    const [localLang, setLocalLang]                     = useState<'en' | 'ko'>(
+        i18n.language.startsWith('ko') ? 'ko' : 'en'
+    );
 
     return (
         <View style={styles.headerCard}>
@@ -127,7 +133,7 @@ export const AppHeader: React.FC<AppHeaderProps> = ({ title, subtitle, currentRo
                             onPress={toggleCal}
                             hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
                             style={styles.hamburgerBtn}
-                            accessibilityLabel={calExpanded ? 'Hide calendar' : 'Show calendar'}
+                            accessibilityLabel={calExpanded ? t('header.hide_calendar') : t('header.show_calendar')}
                             accessibilityRole="button"
                             accessibilityState={{ expanded: calExpanded }}
                         >
@@ -138,7 +144,7 @@ export const AppHeader: React.FC<AppHeaderProps> = ({ title, subtitle, currentRo
                             onPress={() => setIsExpanded(v => !v)}
                             hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
                             style={styles.hamburgerBtn}
-                            accessibilityLabel={isExpanded ? 'Close settings' : 'Open settings'}
+                            accessibilityLabel={isExpanded ? t('header.close_settings') : t('header.open_settings')}
                             accessibilityRole="button"
                             accessibilityState={{ expanded: isExpanded }}
                         >
@@ -155,13 +161,13 @@ export const AppHeader: React.FC<AppHeaderProps> = ({ title, subtitle, currentRo
 
                     {/* 1. Cloud Sync */}
                     <SettingsRow
-                        label={user && !user.is_anonymous ? 'Sign Out' : 'Sign In'}
+                        label={user && !user.is_anonymous ? t('header.sign_out') : t('header.sign_in')}
                         subtext={user && !user.is_anonymous ? user.email : undefined}
                         onPress={() => {
                             if (user && !user.is_anonymous) {
-                                Alert.alert('Sign Out', 'Are you sure?', [
-                                    { text: 'Cancel', style: 'cancel' },
-                                    { text: 'Sign Out', style: 'destructive', onPress: () => { setIsExpanded(false); signOut(); } },
+                                Alert.alert(t('header.signout_confirm_title'), t('header.signout_confirm_message'), [
+                                    { text: t('header.signout_confirm_cancel'), style: 'cancel' },
+                                    { text: t('header.signout_confirm_action'), style: 'destructive', onPress: () => { setIsExpanded(false); signOut(); } },
                                 ]);
                             } else {
                                 setIsAuthVisible(true);
@@ -173,8 +179,8 @@ export const AppHeader: React.FC<AppHeaderProps> = ({ title, subtitle, currentRo
 
                     {/* 2. Daily Reminders — opens the picker so the user chooses time + days */}
                     <SettingsRow
-                        label="Daily Reminders"
-                        subtext="Pick the time you want to be reminded."
+                        label={t('header.reminders')}
+                        subtext={t('header.reminders_sub')}
                         onPress={() => {
                             setIsExpanded(false);
                             navigation.navigate('ReminderSettings');
@@ -185,7 +191,7 @@ export const AppHeader: React.FC<AppHeaderProps> = ({ title, subtitle, currentRo
 
                     {/* 3. Give Feedback */}
                     <SettingsRow
-                        label="Give Feedback"
+                        label={t('header.feedback')}
                         onPress={() => { setIsExpanded(false); setTimeout(() => setIsFeedbackVisible(true), 300); }}
                     />
 
@@ -194,7 +200,7 @@ export const AppHeader: React.FC<AppHeaderProps> = ({ title, subtitle, currentRo
 
                     {/* 7. Premium Mode */}
                     <SettingsRow
-                        label="Premium Mode"
+                        label={t('header.premium')}
                         right={
                             <Switch
                                 trackColor={{ false: '#D0D0D0', true: YELLOW }}
@@ -211,12 +217,34 @@ export const AppHeader: React.FC<AppHeaderProps> = ({ title, subtitle, currentRo
 
                     <View style={styles.divider} />
 
+                    {/* Language switcher — dev tool for testing translations */}
+                    <SettingsRow
+                        label="Language"
+                        subtext={localLang === 'ko' ? '한국어' : 'English'}
+                        right={
+                            <Switch
+                                trackColor={{ false: '#D0D0D0', true: YELLOW }}
+                                thumbColor={localLang === 'ko' ? BLACK : '#f4f3f4'}
+                                ios_backgroundColor="#D0D0D0"
+                                onValueChange={async (value) => {
+                                    const next = value ? 'ko' : 'en';
+                                    await AsyncStorage.setItem(STORAGE_KEYS.LANGUAGE, next);
+                                    i18n.changeLanguage(next);
+                                    setLocalLang(next);
+                                }}
+                                value={localLang === 'ko'}
+                            />
+                        }
+                    />
+
+                    <View style={styles.divider} />
+
                     {/* 8. Onboarding — re-runs the welcome flow on demand.
                          Clears the completion flag and routes to Home; HubScreen
                          re-checks the flag on focus and renders the inline overlay. */}
                     <SettingsRow
-                        label="Show Onboarding Again"
-                        subtext="Replays the welcome flow."
+                        label={t('header.onboarding')}
+                        subtext={t('header.onboarding_sub')}
                         onPress={async () => {
                             setIsExpanded(false);
                             await AsyncStorage.setItem(STORAGE_KEYS.ONBOARDING_DONE, 'false');
@@ -229,7 +257,7 @@ export const AppHeader: React.FC<AppHeaderProps> = ({ title, subtitle, currentRo
 
                     {/* 9. Paywall */}
                     <SettingsRow
-                        label="Paywall"
+                        label={t('header.paywall')}
                         onPress={() => { setIsExpanded(false); navigation.navigate('Paywall'); }}
                     />
                 </View>

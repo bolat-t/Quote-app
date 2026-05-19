@@ -15,6 +15,7 @@ import {
 import Svg, { Path } from 'react-native-svg';
 import { submitFeedback, FeedbackType } from '../utils/feedbackStorage';
 import * as Haptics from 'expo-haptics';
+import { useTranslation } from 'react-i18next';
 
 interface FeedbackModalProps {
     visible: boolean;
@@ -22,6 +23,7 @@ interface FeedbackModalProps {
 }
 
 export const FeedbackModal: React.FC<FeedbackModalProps> = ({ visible, onClose }) => {
+    const { t } = useTranslation();
     const [message, setMessage] = useState('');
     const [type, setType] = useState<FeedbackType>('general');
     const [rating, setRating] = useState<number | undefined>(undefined);
@@ -29,7 +31,7 @@ export const FeedbackModal: React.FC<FeedbackModalProps> = ({ visible, onClose }
 
     const handleSubmit = async () => {
         if (!message.trim()) {
-            Alert.alert('Please enter a message', 'We need to know what you think!');
+            Alert.alert(t('feedback.validation_title'), t('feedback.validation_message'));
             return;
         }
 
@@ -39,13 +41,13 @@ export const FeedbackModal: React.FC<FeedbackModalProps> = ({ visible, onClose }
 
         if (success) {
             Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-            Alert.alert('Thank you!', 'Your feedback helps us make Ulbo better.');
+            Alert.alert(t('feedback.success_title'), t('feedback.success_message'));
             setMessage('');
             setRating(undefined);
             setType('general');
             onClose();
         } else {
-            Alert.alert('Error', 'Something went wrong. Please try again later.');
+            Alert.alert(t('feedback.error_title'), t('feedback.error_message'));
         }
     };
 
@@ -91,7 +93,7 @@ export const FeedbackModal: React.FC<FeedbackModalProps> = ({ visible, onClose }
                 <View style={styles.modalContainer}>
                     {/* Header */}
                     <View style={styles.header}>
-                        <Text style={styles.title}>How's Ulbo?</Text>
+                        <Text style={styles.title}>{t('feedback.title')}</Text>
                         <TouchableOpacity onPress={onClose} style={styles.closeButton}>
                             <Svg width={24} height={24} viewBox="0 0 24 24" fill="none">
                                 <Path d="M18 6L6 18M6 6L18 18" stroke={BLACK} strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" />
@@ -101,38 +103,38 @@ export const FeedbackModal: React.FC<FeedbackModalProps> = ({ visible, onClose }
 
                     {/* Content */}
                     <View style={styles.content}>
-                        <Text style={styles.sectionTitle}>How would you rate your experience?</Text>
+                        <Text style={styles.sectionTitle}>{t('feedback.rate_label')}</Text>
                         {renderStars()}
 
-                        <Text style={[styles.sectionTitle, { marginTop: 16 }]}>What kind of feedback is this?</Text>
+                        <Text style={[styles.sectionTitle, { marginTop: 16 }]}>{t('feedback.type_label')}</Text>
                         <View style={styles.typeRow}>
-                            {(['general', 'feature', 'bug'] as FeedbackType[]).map((t) => (
+                            {(['general', 'feature', 'bug'] as FeedbackType[]).map((fbType) => (
                                 <TouchableOpacity
-                                    key={t}
+                                    key={fbType}
                                     style={[
                                         styles.typeButton,
-                                        type === t && styles.typeButtonSelected
+                                        type === fbType && styles.typeButtonSelected
                                     ]}
                                     onPress={() => {
                                         Haptics.selectionAsync();
-                                        setType(t);
+                                        setType(fbType);
                                     }}
                                 >
                                     <Text style={[
                                         styles.typeText,
-                                        type === t && styles.typeTextSelected
+                                        type === fbType && styles.typeTextSelected
                                     ]}>
-                                        {t.charAt(0).toUpperCase() + t.slice(1)}
+                                        {t(`feedback.type_${fbType}`)}
                                     </Text>
                                 </TouchableOpacity>
                             ))}
                         </View>
 
-                        <Text style={[styles.sectionTitle, { marginTop: 16 }]}>Tell us more...</Text>
+                        <Text style={[styles.sectionTitle, { marginTop: 16 }]}>{t('feedback.message_label')}</Text>
                         <TextInput
                             style={styles.textInput}
                             multiline
-                            placeholder={type === 'bug' ? "What happened? Steps to reproduce?" : "Share your thoughts..."}
+                            placeholder={type === 'bug' ? t('feedback.bug_placeholder') : t('feedback.general_placeholder')}
                             placeholderTextColor={BLACK + '60'}
                             value={message}
                             onChangeText={setMessage}
@@ -146,7 +148,7 @@ export const FeedbackModal: React.FC<FeedbackModalProps> = ({ visible, onClose }
                             {isSubmitting ? (
                                 <ActivityIndicator color={BLACK} />
                             ) : (
-                                <Text style={styles.submitButtonText}>Send Feedback</Text>
+                                <Text style={styles.submitButtonText}>{t('feedback.submit')}</Text>
                             )}
                         </TouchableOpacity>
                     </View>

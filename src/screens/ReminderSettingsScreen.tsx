@@ -12,6 +12,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { WheelPicker } from '../components/WheelPicker';
 import { requestNotificationPermissions, scheduleDailyReminder } from '../utils/notifications';
 import { STORAGE_KEYS } from '../constants/storageKeys';
+import { useTranslation } from 'react-i18next';
 
 const MUTED  = '#AAAAAA';
 
@@ -19,12 +20,6 @@ const HOURS   = ['1','2','3','4','5','6','7','8','9','10','11','12'];
 const MINUTES = ['00','05','10','15','20','25','30','35','40','45','50','55'];
 
 type FrequencyOption = 'daily' | 'weekdays' | 'specific';
-
-const FREQ_OPTIONS: { value: FrequencyOption; label: string; sub: string }[] = [
-    { value: 'daily',    label: 'Every day',    sub: 'Mon – Sun' },
-    { value: 'weekdays', label: 'Weekdays',      sub: 'Mon – Fri' },
-    { value: 'specific', label: 'Specific days', sub: 'You choose' },
-];
 
 const DAYS     = ['S','M','T','W','T','F','S'];
 const DAY_KEYS = ['sun','mon','tue','wed','thu','fri','sat'] as const;
@@ -100,6 +95,13 @@ interface Props { navigation: any }
 const STORAGE_KEY = STORAGE_KEYS.REMINDER_SETTINGS;
 
 export const ReminderSettingsScreen: React.FC<Props> = ({ navigation }) => {
+    const { t } = useTranslation();
+
+    const FREQ_OPTIONS: { value: FrequencyOption; label: string; sub: string }[] = [
+        { value: 'daily',    label: t('reminders.freq_daily_label'),    sub: t('reminders.freq_daily_sub') },
+        { value: 'weekdays', label: t('reminders.freq_weekdays_label'), sub: t('reminders.freq_weekdays_sub') },
+        { value: 'specific', label: t('reminders.freq_specific_label'), sub: t('reminders.freq_specific_sub') },
+    ];
 
     const [enabled,    setEnabled]    = useState(true);
     const [reminders,  setReminders]  = useState<string[]>(['7:00 AM']);
@@ -180,13 +182,18 @@ export const ReminderSettingsScreen: React.FC<Props> = ({ navigation }) => {
                     const hour = meridiem === 'PM' && h !== 12 ? h + 12 : (meridiem === 'AM' && h === 12 ? 0 : h);
                     await scheduleDailyReminder(hour, m);
                 } else {
-                    Alert.alert('Permission needed', 'Please enable notifications in Settings to receive reminders.');
+                    Alert.alert(t('reminders.permission_title'), t('reminders.permission_message'));
                 }
             }
-            Alert.alert('Saved', enabled ? `${reminders.length} reminder${reminders.length !== 1 ? 's' : ''} saved.` : 'Reminders turned off.');
+            Alert.alert(
+                t('reminders.saved_title'),
+                enabled
+                    ? t('reminders.saved_message', { count: reminders.length })
+                    : t('reminders.reminders_off')
+            );
             navigation.goBack();
         } catch {
-            Alert.alert('Error', 'Could not save your settings. Please try again.');
+            Alert.alert(t('reminders.error_title'), t('reminders.error_message'));
         } finally {
             setIsSaving(false);
         }
@@ -199,14 +206,14 @@ export const ReminderSettingsScreen: React.FC<Props> = ({ navigation }) => {
             <View style={st.header}>
                 <TouchableOpacity onPress={() => navigation.goBack()} style={st.backBtn}
                     hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
-                    accessibilityLabel="Go back"
+                    accessibilityLabel={t('reminders.go_back')}
                     accessibilityRole="button">
                     <Svg width={22} height={22} viewBox="0 0 24 24" fill="none">
                         <Path d="M15 18l-6-6 6-6" stroke={BLACK} strokeWidth={2.2}
                             strokeLinecap="round" strokeLinejoin="round" />
                     </Svg>
                 </TouchableOpacity>
-                <Text style={st.headerTitle}>Reminders</Text>
+                <Text style={st.headerTitle}>{t('reminders.title')}</Text>
                 <View style={{ width: 36 }} />
             </View>
 
@@ -215,7 +222,7 @@ export const ReminderSettingsScreen: React.FC<Props> = ({ navigation }) => {
                 {/* Master toggle */}
                 <View style={[st.toggleCard, enabled && st.toggleCardActive]}>
                     <View style={{ flex: 1 }}>
-                        <Text style={st.toggleTitle}>Reminders</Text>
+                        <Text style={st.toggleTitle}>{t('reminders.title')}</Text>
                         <Text style={st.toggleSub}>
                             {enabled
                                 ? `${reminders.length} reminder${reminders.length !== 1 ? 's' : ''} active`
@@ -230,12 +237,12 @@ export const ReminderSettingsScreen: React.FC<Props> = ({ navigation }) => {
                       pointerEvents={enabled ? 'auto' : 'none'}>
 
                     {/* Reminder times list */}
-                    <SectionLabel label="Times" />
+                    <SectionLabel label={t('reminders.section_times')} />
 
                     <View style={st.card}>
                         {reminders.length === 0 && (
                             <View style={st.emptyRow}>
-                                <Text style={st.emptyText}>No reminders. Tap + to add one.</Text>
+                                <Text style={st.emptyText}>{t('reminders.no_reminders')}</Text>
                             </View>
                         )}
                         {reminders.map((r, i) => (
@@ -261,12 +268,12 @@ export const ReminderSettingsScreen: React.FC<Props> = ({ navigation }) => {
                                 <Path d="M12 5v14M5 12h14" stroke={BLACK} strokeWidth={2.2}
                                     strokeLinecap="round" strokeLinejoin="round" />
                             </Svg>
-                            <Text style={st.addText}>Add reminder</Text>
+                            <Text style={st.addText}>{t('reminders.add_reminder')}</Text>
                         </TouchableOpacity>
                     </View>
 
                     {/* Frequency */}
-                    <SectionLabel label="Repeat" />
+                    <SectionLabel label={t('reminders.section_repeat')} />
 
                     <View style={st.card}>
                         {FREQ_OPTIONS.map((opt, i) => {
@@ -294,7 +301,7 @@ export const ReminderSettingsScreen: React.FC<Props> = ({ navigation }) => {
                     {/* Day picker — only when Specific selected */}
                     {freq === 'specific' && (
                         <View style={[st.card, { padding: 16, marginTop: 8 }]}>
-                            <Text style={st.daysHint}>Tap to toggle days</Text>
+                            <Text style={st.daysHint}>{t('reminders.days_hint')}</Text>
                             <View style={st.daysRow}>
                                 {DAYS.map((d, i) => (
                                     <DayBubble
@@ -321,7 +328,7 @@ export const ReminderSettingsScreen: React.FC<Props> = ({ navigation }) => {
                         accessibilityRole="button"
                     >
                         <Text style={[st.saveBtnText, (!enabled || isSaving) && st.saveBtnTextDisabled]}>
-                            {isSaving ? 'Saving…' : enabled ? 'Save' : 'Reminders off — save anyway'}
+                            {isSaving ? t('reminders.saving') : enabled ? t('reminders.save') : t('reminders.save_off')}
                         </Text>
                     </TouchableOpacity>
                 </Animated.View>
@@ -345,7 +352,7 @@ export const ReminderSettingsScreen: React.FC<Props> = ({ navigation }) => {
                     />
                     <View style={st.pickerSheet}>
                         <View style={st.sheetHandle} />
-                        <Text style={st.sheetTitle}>Pick a time</Text>
+                        <Text style={st.sheetTitle}>{t('reminders.picker_title')}</Text>
 
                         <View style={st.wheelRow}>
                             <WheelPicker
@@ -386,14 +393,14 @@ export const ReminderSettingsScreen: React.FC<Props> = ({ navigation }) => {
                                 onPress={() => setPickerVisible(false)}
                                 activeOpacity={0.7}
                             >
-                                <Text style={st.sheetCancelText}>Cancel</Text>
+                                <Text style={st.sheetCancelText}>{t('reminders.cancel')}</Text>
                             </TouchableOpacity>
                             <TouchableOpacity
                                 style={st.sheetConfirmBtn}
                                 onPress={confirmTime}
                                 activeOpacity={0.85}
                             >
-                                <Text style={st.sheetConfirmText}>Add</Text>
+                                <Text style={st.sheetConfirmText}>{t('reminders.add')}</Text>
                             </TouchableOpacity>
                         </View>
                     </View>

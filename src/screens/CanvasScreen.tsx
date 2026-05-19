@@ -28,7 +28,7 @@ import Svg, { Path } from 'react-native-svg';
 
 import { UserProgress } from '../types';
 import { loadProgress, awardXP } from '../utils/progressionStorage';
-import { LEVEL_TIERS } from '../data/progressionConfig';
+import { STORAGE_KEYS } from '../constants/storageKeys';
 import { XPToast } from '../components/XPToast';
 import { useDailyQuote } from '../hooks/useDailyQuote';
 import { chatWithUlbo } from '../utils/journalStorage';
@@ -36,6 +36,8 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { buildMemoryContext } from '../memory/MemorySystem';
 import { useHeaderHeight } from '../context/HeaderHeightContext';
 import { VoiceSheet } from '../components/VoiceSheet';
+import { useTranslation } from 'react-i18next';
+import i18n from '../lib/i18n';
 
 // ── Animated avatar — pops on tap ─────────────────────────────────────────
 const AnimatedAvatar: React.FC<{ source: any; size?: number }> = ({ source, size = 36 }) => {
@@ -123,19 +125,20 @@ const SendArrowIcon = ({ color = BLACK, size = 20 }: { color?: string; size?: nu
 
 type ChatMsg = { id: string; role: 'user' | 'ulbo'; text: string };
 
-const ULBO_FALLBACKS = [
-    "That's worth sitting with. Sometimes the heaviest thoughts are the ones closest to something real.",
-    "Hmm. What part of that feels like it's trying to teach you something?",
-    "There's something deeper underneath that thought... can you feel it? What lives beneath the surface?",
-    "You know, Nietzsche said the most spiritual people experience the most painful truths. The fact that you're thinking this deeply already says something about you.",
-    "Interesting. Most people run from that kind of honesty. But you're leaning in. That takes a quiet kind of strength.",
-    "Sometimes the discomfort IS the transformation happening. What would it mean to sit with this instead of solving it?",
-];
-
 export const CanvasScreen: React.FC = () => {
     const headerHeight = useHeaderHeight();
     const insets = useSafeAreaInsets();
-    const { quote: todayQuote } = useDailyQuote();
+    const { quote: todayQuote, quoteText: todayQuoteText } = useDailyQuote();
+    const { t } = useTranslation();
+
+    const ULBO_FALLBACKS = [
+        t('canvas.fallback_1'),
+        t('canvas.fallback_2'),
+        t('canvas.fallback_3'),
+        t('canvas.fallback_4'),
+        t('canvas.fallback_5'),
+        t('canvas.fallback_6'),
+    ];
 
     // ── Chat state ──
     const [chatMessages, setChatMessages] = useState<ChatMsg[]>([]);
@@ -155,7 +158,7 @@ export const CanvasScreen: React.FC = () => {
     useEffect(() => { loadProgress().then(setProgress); }, []);
 
     // ── Animated card height when keyboard opens ──
-    const cardHeight = SCREEN_H - (headerHeight || 80) - (62 + insets.bottom) - 16;
+    const cardHeight = SCREEN_H - (headerHeight || 80) - (62 + insets.bottom) - 32; // -32 = 16 top gap + 16 bottom gap
     const cardH = useRef(new RNAnimated.Value(cardHeight)).current;
     const cardHRef = useRef(cardHeight);
     const headerHeightRef = useRef(headerHeight);
@@ -196,17 +199,28 @@ export const CanvasScreen: React.FC = () => {
         return () => { show.remove(); hide.remove(); };
     }, []);
 
-    // ── Chat init: pre-seeded opening exchange (no AI needed) ──
+    // ── Chat init + language sync: pre-seeded opening exchange ──
+    // Runs on first load (init) and whenever language changes (re-translates the first 3 messages
+    // in-place, leaving any real conversation messages intact).
     useEffect(() => {
-        if (chatInitialized || !todayQuote.text) return;
-        setChatInitialized(true);
+        if (!todayQuoteText) return;
         const authorLine = todayQuote.author ? `\n— ${todayQuote.author}` : '';
-        setChatMessages([
-            { id: 'user-0', role: 'user', text: 'Hey Ulbo, what wisdom do you have for me today?' },
-            { id: 'ulbo-0', role: 'ulbo', text: `"${todayQuote.text}"${authorLine}` },
-            { id: 'ulbo-1', role: 'ulbo', text: 'sit with that for a moment. what does it stir up in you?' },
-        ]);
-    }, [chatInitialized, todayQuote.text]);
+        const openingMsgs: ChatMsg[] = [
+            { id: 'user-0', role: 'user', text: t('canvas.chat_opening_user') },
+            { id: 'ulbo-0', role: 'ulbo', text: `"${todayQuoteText}"${authorLine}` },
+            { id: 'ulbo-1', role: 'ulbo', text: t('canvas.chat_opening_ulbo') },
+        ];
+        if (!chatInitialized) {
+            setChatInitialized(true);
+            setChatMessages(openingMsgs);
+        } else {
+            setChatMessages(prev => [
+                ...openingMsgs,
+                ...prev.filter(m => !['user-0', 'ulbo-0', 'ulbo-1'].includes(m.id)),
+            ]);
+        }
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [todayQuoteText, i18n.language]);
 
     // ── Send user message and fetch Ulbo's reply ──
     const handleSendChat = useCallback(async () => {
@@ -219,7 +233,7 @@ export const CanvasScreen: React.FC = () => {
         setTimeout(() => chatScrollRef.current?.scrollToEnd({ animated: true }), 100);
 
         setUlboThinking(true);
-        const name = await AsyncStorage.getItem('@ulbo_user_name') || 'Friend';
+        const name = await AsyncStorage.getItem(STORAGE_KEYS.USER_NAME) || 'Friend';
         try {
             const memory = await buildMemoryContext();
             const memoryPayload = {
@@ -233,8 +247,9 @@ export const CanvasScreen: React.FC = () => {
             const res = await chatWithUlbo(
                 updated.map(m => ({ role: m.role, text: m.text })),
                 name,
-                { text: todayQuote.text, author: todayQuote.author },
-                memoryPayload
+                { text: todayQuoteText, author: todayQuote.author },
+                memoryPayload,
+                i18n.language
             );
             const reply = res?.reply || ULBO_FALLBACKS[Math.floor(Math.random() * ULBO_FALLBACKS.length)];
             setChatMessages(prev => [...prev, { id: `ulbo-${Date.now()}`, role: 'ulbo', text: reply }]);
@@ -256,16 +271,16 @@ export const CanvasScreen: React.FC = () => {
             if (result.xpGained > 0) {
                 setXpToast({
                     amount:   result.xpGained,
-                    label:    'Chat saved',
+                    label:    t('canvas.chat_saved'),
                     leveledUp: result.leveledUp,
                     newLevelTitle: result.leveledUp
-                        ? LEVEL_TIERS.find(t => t.level === result.progress.level)?.title
+                        ? t(`level.tier_${result.progress.level}_title`)
                         : undefined,
                 });
             }
             setHasAwardedXP(true);
         }
-    }, [chatInput, chatMessages, ulboThinking, hasAwardedXP, progress, todayQuote]);
+    }, [chatInput, chatMessages, ulboThinking, hasAwardedXP, progress, todayQuote, todayQuoteText]);
 
     const handleVoiceTranscription = useCallback((text: string) => {
         setChatInput(prev => prev ? `${prev} ${text}` : text);
@@ -296,7 +311,7 @@ export const CanvasScreen: React.FC = () => {
                         <Animated.View entering={FadeInDown.duration(400)} style={[styles.reflectCard, { flex: 1 }]}>
                             {/* Header */}
                             <View style={styles.reflectHeader}>
-                                <Text style={styles.reflectQuestion}>reflect with ulbo on today's wisdom</Text>
+                                <Text style={styles.reflectQuestion}>{t('canvas.header')}</Text>
                             </View>
                             <View style={styles.reflectDivider} />
 
@@ -344,7 +359,7 @@ export const CanvasScreen: React.FC = () => {
                             <View style={styles.chatInputRow}>
                                 <RNTextInput
                                     style={styles.chatInput}
-                                    placeholder="Message Ulbo..."
+                                    placeholder={t('canvas.input_placeholder')}
                                     placeholderTextColor="#AAAAAA"
                                     multiline
                                     value={chatInput}

@@ -2,6 +2,7 @@
 export interface Quote {
   id: number;
   text: string;
+  ko?: string;
   author?: string;
   date?: string;
   category: string;

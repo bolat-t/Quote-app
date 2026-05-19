@@ -27,6 +27,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { trackEvent } from '../lib/analytics';
 import { useHeaderHeight } from '../context/HeaderHeightContext';
 import { useHistoryCalendar } from '../context/HistoryCalendarContext';
+import { useTranslation } from 'react-i18next';
 
 // ─── Helpers ────────────────────────────────────────────────────────────────
 
@@ -147,7 +148,6 @@ const dayStripStyles = StyleSheet.create({
         width:          36,
         height:         36,
         borderRadius:   999,
-        overflow:       'hidden',
         alignItems:     'center',
         justifyContent: 'center',
     },
@@ -405,9 +405,10 @@ const EmotionCard: React.FC<{
     text:      string;
     moodScore?: number;
 }> = ({ date, text, moodScore }) => {
+    const { t } = useTranslation();
     const mood = getMoodLevel(moodScore);
     return (
-        <CardFrame date={date} section="Mood">
+        <CardFrame date={date} section={t('hunt.tab_mood')}>
             <View style={emotionStyles.row}>
                 <Text style={emotionStyles.text}>{text}</Text>
                 {mood && (
@@ -448,8 +449,10 @@ const ArrowRight = () => (
     </Svg>
 );
 
-const ThreeThingsCard: React.FC<{ date: string; items: string[] }> = ({ date, items }) => (
-    <CardFrame date={date} section="Highlights">
+const ThreeThingsCard: React.FC<{ date: string; items: string[] }> = ({ date, items }) => {
+    const { t } = useTranslation();
+    return (
+    <CardFrame date={date} section={t('hunt.tab_highlights')}>
         <View>
             {items.map((it, i) => (
                 <React.Fragment key={i}>
@@ -462,7 +465,8 @@ const ThreeThingsCard: React.FC<{ date: string; items: string[] }> = ({ date, it
             ))}
         </View>
     </CardFrame>
-);
+    );
+};
 
 const threeStyles = StyleSheet.create({
     item: {
@@ -493,8 +497,10 @@ const ReflectCard: React.FC<{
     quote:     string;
     answer:    string;
     ulboReply?: string;
-}> = ({ date, quote, answer, ulboReply }) => (
-    <CardFrame date={date} section="Reflect">
+}> = ({ date, quote, answer, ulboReply }) => {
+    const { t } = useTranslation();
+    return (
+    <CardFrame date={date} section={t('hunt.tab_reflect')}>
         {/* Quote bubble */}
         <View style={reflectStyles.quoteBubble}>
             <Text style={reflectStyles.quoteText}>{quote}</Text>
@@ -507,14 +513,15 @@ const ReflectCard: React.FC<{
                 <View style={reflectStyles.ulboBubble}>
                     <Image source={potatoAvatar} style={reflectStyles.ulboAvatar} resizeMode="contain" />
                     <View style={reflectStyles.ulboBody}>
-                        <Text style={reflectStyles.ulboName}>ulbo says</Text>
+                        <Text style={reflectStyles.ulboName}>{t('history.ulbo_says')}</Text>
                         <Text style={reflectStyles.ulboText}>{ulboReply}</Text>
                     </View>
                 </View>
             </>
         ) : null}
     </CardFrame>
-);
+    );
+};
 
 const reflectStyles = StyleSheet.create({
     quoteBubble: {
@@ -572,8 +579,10 @@ const reflectStyles = StyleSheet.create({
 
 // ─── VisionBoardCard ─────────────────────────────────────────────────────────
 
-const VisionBoardCard: React.FC<{ date: string; snapshots: VisionActivity[] }> = ({ date, snapshots }) => (
-    <CardFrame date={date} section="Vision Board">
+const VisionBoardCard: React.FC<{ date: string; snapshots: VisionActivity[] }> = ({ date, snapshots }) => {
+    const { t } = useTranslation();
+    return (
+    <CardFrame date={date} section={t('routes.vision_board')}>
         <View style={visionCardStyles.grid}>
             {snapshots.map((s, i) => (
                 <Image
@@ -585,7 +594,8 @@ const VisionBoardCard: React.FC<{ date: string; snapshots: VisionActivity[] }> =
             ))}
         </View>
     </CardFrame>
-);
+    );
+};
 
 const visionCardStyles = StyleSheet.create({
     grid: {
@@ -615,6 +625,7 @@ const DaySection: React.FC<{
     vision?:    VisionActivity[];
     onLayoutY?: (date: string, y: number) => void;
 }> = React.memo(({ date, entries, hunt, vision, onLayoutY }) => {
+    const { t } = useTranslation();
     const d = new Date(date + 'T00:00:00');
     const dividerLabel = d.toLocaleDateString('en-US', {
         weekday: 'long', month: 'long', day: 'numeric',
@@ -667,7 +678,7 @@ const DaySection: React.FC<{
 
             {empty && (
                 <View style={styles.emptyDayWrap}>
-                    <Text style={styles.emptyDayText}>Nothing recorded this day</Text>
+                    <Text style={styles.emptyDayText}>{t('history.nothing_recorded')}</Text>
                 </View>
             )}
         </View>
@@ -680,6 +691,7 @@ export const JournalScreen: React.FC = () => {
     const navigation   = useNavigation<TabScreenNavigationProp<'History'>>();
     const headerHeight = useHeaderHeight();
     const insets       = useSafeAreaInsets();
+    const { t }        = useTranslation();
     const { expanded: calExpanded, setExpanded: setCalExpanded } = useHistoryCalendar();
 
     // ── Base data ─────────────────────────────────────────────────────────────
@@ -868,7 +880,7 @@ export const JournalScreen: React.FC = () => {
 
                         {reachedEnd && allDates.length > 0 && (
                             <Text style={styles.endOfHistoryText}>
-                                You've reached the beginning of your history
+                                {t('history.beginning_of_history')}
                             </Text>
                         )}
                     </>

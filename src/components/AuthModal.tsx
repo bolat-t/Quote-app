@@ -4,6 +4,7 @@ import { View, Text, StyleSheet, Modal, TouchableOpacity, TextInput, ActivityInd
 import { Svg, Path } from 'react-native-svg';
 import { useAuth } from '../context/AuthContext';
 import { BLACK, WHITE, YELLOW } from '../constants/colors';
+import { useTranslation } from 'react-i18next';
 
 interface AuthModalProps {
     visible: boolean;
@@ -12,6 +13,7 @@ interface AuthModalProps {
 
 export const AuthModal: React.FC<AuthModalProps> = ({ visible, onClose }) => {
     const { signIn, signUp, isLoading: isAuthLoading } = useAuth();
+    const { t } = useTranslation();
     const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
     const [isSignUp, setIsSignUp] = useState(false);
@@ -21,7 +23,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({ visible, onClose }) => {
 
     const handleAuth = async () => {
         if (!email || !password) {
-            Alert.alert('Error', 'Please enter both email and password');
+            Alert.alert(t('auth.error_title'), t('auth.error_fields'));
             return;
         }
 
@@ -58,7 +60,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({ visible, onClose }) => {
                 >
                     <View style={styles.header}>
                         <Text style={styles.modalTitle}>
-                            {isSignUp ? 'Join Ulbo' : 'Welcome Back'}
+                            {isSignUp ? t('auth.title_signup') : t('auth.title_signin')}
                         </Text>
                         <TouchableOpacity onPress={onClose} style={styles.closeButton} accessibilityLabel="Close" accessibilityRole="button">
                             <Svg width={24} height={24} viewBox="0 0 24 24" fill="none">
@@ -68,15 +70,13 @@ export const AuthModal: React.FC<AuthModalProps> = ({ visible, onClose }) => {
                     </View>
 
                     <Text style={styles.subtitle}>
-                        {isSignUp
-                            ? 'Create an account to backup your journal to the cloud.'
-                            : 'Sign in to sync your reflections across devices.'}
+                        {isSignUp ? t('auth.subtitle_signup') : t('auth.subtitle_signin')}
                     </Text>
 
                     <View style={styles.inputContainer}>
                         <TextInput
                             style={[styles.input, emailFocused && styles.inputFocused]}
-                            placeholder="Email"
+                            placeholder={t('auth.email')}
                             placeholderTextColor={BLACK + '50'}
                             value={email}
                             onChangeText={setEmail}
@@ -88,7 +88,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({ visible, onClose }) => {
                         />
                         <TextInput
                             style={[styles.input, passwordFocused && styles.inputFocused]}
-                            placeholder="Password"
+                            placeholder={t('auth.password')}
                             placeholderTextColor={BLACK + '50'}
                             value={password}
                             onChangeText={setPassword}
@@ -111,7 +111,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({ visible, onClose }) => {
                             <ActivityIndicator color={BLACK} />
                         ) : (
                             <Text style={styles.authButtonText}>
-                                {isSignUp ? 'Create Account' : 'Sign In'}
+                                {isSignUp ? t('auth.create_account') : t('auth.sign_in')}
                             </Text>
                         )}
                     </TouchableOpacity>
@@ -123,7 +123,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({ visible, onClose }) => {
                         accessibilityRole="button"
                     >
                         <Text style={styles.switchText}>
-                            {isSignUp ? 'Already have an account? Sign In' : "Don't have an account? Sign Up"}
+                            {isSignUp ? t('auth.switch_to_signin') : t('auth.switch_to_signup')}
                         </Text>
                     </TouchableOpacity>
                 </KeyboardAvoidingView>

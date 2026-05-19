@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
+import { useTranslation } from 'react-i18next';
 import { BLACK, WHITE, YELLOW } from '../constants/colors';
 import {
     View,
@@ -46,6 +47,7 @@ export const VoiceSheet: React.FC<VoiceSheetProps> = ({
     onTranscriptionComplete,
     maxSeconds = 120,
 }) => {
+    const { t } = useTranslation();
     const [recordingObj, setRecordingObj] = useState<Audio.Recording | null>(null);
     const [isRecording, setIsRecording] = useState(false);
     const [isProcessing, setIsProcessing] = useState(false);
@@ -139,7 +141,7 @@ export const VoiceSheet: React.FC<VoiceSheetProps> = ({
         try {
             const { status } = await Audio.requestPermissionsAsync();
             if (status !== 'granted') {
-                Alert.alert('Microphone Access', 'Please allow microphone access in Settings to use voice input.');
+                Alert.alert(t('voice.permission_title'), t('voice.permission_message'));
                 return;
             }
 
@@ -232,10 +234,10 @@ export const VoiceSheet: React.FC<VoiceSheetProps> = ({
 
     // ── Status label ──
     const statusLabel = isProcessing
-        ? 'PROCESSING...'
+        ? t('voice.status_processing')
         : isRecording
-        ? 'LISTENING...'
-        : 'READY';
+        ? t('voice.status_listening')
+        : t('voice.status_ready');
 
     return (
         <Modal
@@ -327,10 +329,10 @@ export const VoiceSheet: React.FC<VoiceSheetProps> = ({
                 {/* Hint text */}
                 <Text style={styles.hint}>
                     {isProcessing
-                        ? 'Transcribing your voice...'
+                        ? t('voice.hint_transcribing')
                         : isRecording
-                        ? `Release to finish · ${fmt(remaining)} left`
-                        : 'Tap the microphone to start speaking'}
+                        ? t('voice.hint_recording', { time: fmt(remaining) })
+                        : t('voice.hint_idle')}
                 </Text>
 
                 {/* Cancel / Stop button */}
@@ -341,7 +343,7 @@ export const VoiceSheet: React.FC<VoiceSheetProps> = ({
                         activeOpacity={0.6}
                     >
                         <Text style={styles.cancelText}>
-                            {isRecording ? 'Stop & Save' : 'Cancel'}
+                            {isRecording ? t('voice.stop_save') : t('voice.cancel')}
                         </Text>
                     </TouchableOpacity>
                 )}
@@ -353,18 +355,21 @@ export const VoiceSheet: React.FC<VoiceSheetProps> = ({
 // ─── Small inline trigger button ───
 export const MicTriggerButton = ({
     onPress,
-    label = 'Speak',
+    label,
 }: {
     onPress: () => void;
     label?: string;
-}) => (
-    <TouchableOpacity style={triggerStyles.btn} onPress={onPress} activeOpacity={0.7}>
-        <View style={triggerStyles.iconWrap}>
-            <MicIcon color={BLACK} size={16} />
-        </View>
-        <Text style={triggerStyles.label}>{label}</Text>
-    </TouchableOpacity>
-);
+}) => {
+    const { t } = useTranslation();
+    return (
+        <TouchableOpacity style={triggerStyles.btn} onPress={onPress} activeOpacity={0.7}>
+            <View style={triggerStyles.iconWrap}>
+                <MicIcon color={BLACK} size={16} />
+            </View>
+            <Text style={triggerStyles.label}>{label ?? t('voice.speak')}</Text>
+        </TouchableOpacity>
+    );
+};
 
 const triggerStyles = StyleSheet.create({
     btn: {

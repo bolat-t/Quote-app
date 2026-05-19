@@ -4,6 +4,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import Svg, { Path as SvgPath } from 'react-native-svg';
 import * as Haptics from 'expo-haptics';
 import { BLACK, YELLOW } from '../constants/colors';
+import { useTranslation } from 'react-i18next';
 
 interface XPToastProps {
     xpAmount: number;
@@ -36,6 +37,7 @@ export const XPToast: React.FC<XPToastProps> = ({
     onDismiss,
 }) => {
     const insets     = useSafeAreaInsets();
+    const { t }      = useTranslation();
     const translateY = useRef(new Animated.Value(80)).current;
     const opacity    = useRef(new Animated.Value(0)).current;
     const scale      = useRef(new Animated.Value(0.8)).current;
@@ -81,7 +83,7 @@ export const XPToast: React.FC<XPToastProps> = ({
                     <View style={styles.levelUpContainer}>
                         <StarIcon />
                         <View>
-                            <Text style={styles.levelUpText}>Level Up!</Text>
+                            <Text style={styles.levelUpText}>{t('hub.level_up')}</Text>
                             <Text style={styles.levelUpTitle}>{newLevelTitle}</Text>
                         </View>
                         <StarIcon />

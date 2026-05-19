@@ -24,26 +24,28 @@ import { HeaderHeightProvider, useSetHeaderHeight } from './src/context/HeaderHe
 import { HistoryCalendarProvider } from './src/context/HistoryCalendarContext';
 import { OnboardingProvider, useOnboarding } from './src/context/OnboardingContext';
 import { useFonts } from 'expo-font';
+import { useTranslation } from 'react-i18next';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import i18n from './src/lib/i18n';
+import { STORAGE_KEYS } from './src/constants/storageKeys';
 
 const Tab = createBottomTabNavigator<RootTabParamList>();
 const Stack = createNativeStackNavigator<RootStackParamList>();
-
-// Note on naming: route names are kept stable (Canvas/Journal/History) so existing
-// navigation calls keep working. ROUTE_TITLES drives the visible header text and
-// `tabBarLabel` overrides drive the visible tab-bar text.
-const ROUTE_TITLES: Record<string, { title: string; subtitle?: string }> = {
-    Canvas:  { title: 'Wisdom' },         // daily quote + Ulbo chat
-    Journal: { title: 'Journal' },        // emotion / 3 things / reflect
-    History: { title: 'History' },        // timeline of past entries
-    Vision:  { title: 'Vision Board' },
-    Home:    { title: 'Welcome' },
-};
 
 const BottomTabsInner = () => {
     const insets = useSafeAreaInsets();
     const [userName, setUserName] = useState<string | null>(null);
     const setHeaderHeight = useSetHeaderHeight();
     const { isActive: isOnboarding } = useOnboarding();
+    const { t } = useTranslation();
+
+    const routeTitles: Record<string, { title: string; subtitle?: string }> = {
+        Canvas:  { title: t('routes.wisdom') },
+        Journal: { title: t('routes.journal') },
+        History: { title: t('routes.history') },
+        Vision:  { title: t('routes.vision_board') },
+        Home:    { title: t('routes.welcome') },
+    };
 
     const tabIndex = useNavigationState(state => {
         const tabsRoute = state?.routes?.find((r: any) => r.name === 'Tabs');
@@ -51,7 +53,7 @@ const BottomTabsInner = () => {
     });
     const routeNames = ['Canvas', 'Journal', 'History', 'Vision', 'Home'];
     const currentRoute = routeNames[tabIndex] ?? 'Home';
-    const headerInfo = { ...ROUTE_TITLES[currentRoute] };
+    const headerInfo = { ...routeTitles[currentRoute] };
     if (currentRoute === 'Home') headerInfo.subtitle = userName ?? '';
 
     useEffect(() => { getUserName().then(setUserName); }, []);
@@ -127,11 +129,11 @@ const BottomTabsInner = () => {
                 },
             }}
         >
-            <Tab.Screen name="Canvas"  component={CanvasScreen}      options={{ tabBarLabel: 'Wisdom' }} />
-            <Tab.Screen name="Journal" component={HuntScreen}        options={{ tabBarLabel: 'Journal' }} />
-            <Tab.Screen name="History" component={JournalScreen}     options={{ tabBarLabel: 'History' }} />
-            <Tab.Screen name="Vision"  component={VisionBoardScreen} options={{ tabBarLabel: 'Vision' }} />
-            <Tab.Screen name="Home"    component={HubScreen}         options={{ tabBarLabel: 'Home' }} />
+            <Tab.Screen name="Canvas"  component={CanvasScreen}      options={{ tabBarLabel: t('tabs.wisdom') }} />
+            <Tab.Screen name="Journal" component={HuntScreen}        options={{ tabBarLabel: t('tabs.journal') }} />
+            <Tab.Screen name="History" component={JournalScreen}     options={{ tabBarLabel: t('tabs.history') }} />
+            <Tab.Screen name="Vision"  component={VisionBoardScreen} options={{ tabBarLabel: t('tabs.vision') }} />
+            <Tab.Screen name="Home"    component={HubScreen}         options={{ tabBarLabel: t('tabs.home') }} />
         </Tab.Navigator>
         </View>
     );
@@ -146,6 +148,17 @@ const BottomTabs = () => (
 );
 
 export default function App() {
+    // Restore language preference saved by the in-app toggle (dev section).
+    // Runs once on mount — i18n is already initialized with device locale, so
+    // this just overrides it when the user has explicitly picked a language.
+    useEffect(() => {
+        AsyncStorage.getItem(STORAGE_KEYS.LANGUAGE).then(lang => {
+            if (lang === 'en' || lang === 'ko') {
+                i18n.changeLanguage(lang);
+            }
+        });
+    }, []);
+
     const [fontsLoaded] = useFonts({
         'GasoekOne':                   require('./assets/fonts/GasoekOne_400Regular.ttf'),
         'GasoekOne-Regular':           require('./assets/fonts/GasoekOne_400Regular.ttf'),

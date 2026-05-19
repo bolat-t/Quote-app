@@ -38,13 +38,11 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { BLACK, WHITE, YELLOW } from '../constants/colors';
 import { useHeaderHeight } from '../context/HeaderHeightContext';
 import {
-    ONBOARDING_CONTENT,
     ONBOARDING_TUNABLES,
     SLIDE_ORDER,
-    interpolate,
-    summarizeIntents,
     projectedDateLabel,
 } from '../constants/onboardingContent';
+import { useTranslation } from 'react-i18next';
 import { OnboardingAnswers, OnboardingMood } from '../types';
 import { trackEvent } from '../lib/analytics';
 import { saveOnboardingAnswers } from '../utils/storage';
@@ -109,8 +107,27 @@ const CARD_BORDER          = 2;
 // Tuned so Ulbo fits the slide card with title + body + CTA on every supported
 // phone height, and shrinks to a sensible size when the card squares-up above
 // the keyboard.
-const MASCOT_HERO_SIZE     = 150;
-const MASCOT_DEFAULT_SIZE  = 80;
+const MASCOT_HERO_SIZE     = 110;
+const MASCOT_DEFAULT_SIZE  = 110;
+
+// ─── Option ID arrays (used for rendering translated option labels) ───────────
+
+const INTENT_OPTION_IDS = ['less_anxious', 'be_grateful', 'think_clear', 'sleep_better', 'grow', 'just_looking'] as const;
+
+const FIELD_OPTION_IDS: Record<'frequency' | 'area' | 'stakes', readonly string[]> = {
+    frequency: ['rarely', 'sometimes', 'often', 'constant'],
+    area:      ['work', 'rels', 'body', 'mind', 'purpose'],
+    stakes:    ['fine', 'tired', 'regret', 'find_out'],
+};
+
+const INTENT_SUMMARY_KEYS: Record<string, string> = {
+    less_anxious: 'calm',
+    be_grateful:  'gratitude',
+    think_clear:  'clarity',
+    sleep_better: 'rest',
+    grow:         'growth',
+    just_looking: 'curiosity',
+};
 
 // ─── Empty answers (fresh state for every modal open) ────────────────────────
 
@@ -139,9 +156,23 @@ interface OnboardingModalProps {
 // ─────────────────────────────────────────────────────────────────────────────
 
 export const OnboardingModal: React.FC<OnboardingModalProps> = ({ visible, onComplete }) => {
+    const { t } = useTranslation();
     const [currentIndex, setCurrentIndex] = useState(0);
     const [answers, setAnswers]           = useState<OnboardingAnswers>(EMPTY_ANSWERS);
     const [isSigning, setIsSigning]       = useState(false);
+
+    const localizedSummarizeIntents = useCallback((intentIds: readonly string[]): string => {
+        const summaries = intentIds
+            .map(id => {
+                const key = INTENT_SUMMARY_KEYS[id];
+                return key ? t(`onboarding.intent.summary_${key}`) : null;
+            })
+            .filter((s): s is string => s !== null);
+        if (summaries.length === 0) return t('onboarding.intent.summary_yourself');
+        if (summaries.length === 1) return summaries[0];
+        if (summaries.length === 2) return `${summaries[0]} ${t('onboarding.intent.summary_and')} ${summaries[1]}`;
+        return `${summaries.slice(0, -1).join(', ')}${t('onboarding.intent.summary_comma_and')} ${summaries[summaries.length - 1]}`;
+    }, [t]);
 
     const { setProgress: setHeaderProgress } = useOnboarding();
     const insets       = useSafeAreaInsets();
@@ -152,7 +183,10 @@ export const OnboardingModal: React.FC<OnboardingModalProps> = ({ visible, onCom
     const mascotJumpAnim = useRef(new Animated.Value(0)).current;
 
     // Refs for the three journal-taste inputs so Enter can advance focus.
-    const journalInputRefs = useRef<Array<TextInput | null>>([null, null, null]);
+    const journalInputRefs   = useRef<Array<TextInput | null>>([null, null, null]);
+    // Kept in sync synchronously inside updateEntry so onSubmitEditing can
+    // check the latest values without waiting for a React re-render.
+    const journalEntriesRef  = useRef<string[]>(['', '', '']);
 
     // Card-height animation (matches HuntScreen): when the keyboard rises, the
     // slide card shrinks to a square sitting above the keyboard.
@@ -253,12 +287,12 @@ export const OnboardingModal: React.FC<OnboardingModalProps> = ({ visible, onCom
     }, [visible, cardW, cardH]);
 
     // ── Mascot jump (tap-to-bounce; also fires on CTA for slides with Ulbo) ──
-    // Lift kept modest (-22) so the float (-8) + jump combined never exceeds
+    // Lift kept modest (-34) so the float (-8) + jump combined never exceeds
     // the slide's top padding and Ulbo never clips against the card border.
     const triggerMascotJump = useCallback(() => {
         mascotJumpAnim.setValue(0);
         Animated.sequence([
-            Animated.timing(mascotJumpAnim, { toValue: -22, duration: 170, useNativeDriver: true }),
+            Animated.timing(mascotJumpAnim, { toValue: -34, duration: 170, useNativeDriver: true }),
             Animated.spring(mascotJumpAnim,  { toValue:   0, tension: 220, friction: 7, useNativeDriver: true }),
         ]).start();
     }, [mascotJumpAnim]);
@@ -375,78 +409,58 @@ export const OnboardingModal: React.FC<OnboardingModalProps> = ({ visible, onCom
     // ── Footer CTA label per slide ──────────────────────────────────────────
     const ctaLabel = useMemo(() => {
         switch (slideId) {
-            case 'welcome':         return ONBOARDING_CONTENT.welcome.cta;
-            case 'outcomePromise':  return ONBOARDING_CONTENT.outcomePromise.cta;
-            case 'intent':          return ONBOARDING_CONTENT.intent.cta;
-            case 'moodNow':         return ONBOARDING_CONTENT.moodNow.cta;
-            case 'frequency':       return ONBOARDING_CONTENT.frequency.cta;
-            case 'socialProof1':    return ONBOARDING_CONTENT.socialProof1.cta;
-            case 'area':            return ONBOARDING_CONTENT.area.cta;
-            case 'stakes':          return ONBOARDING_CONTENT.stakes.cta;
-            case 'name':            return ONBOARDING_CONTENT.name.cta;
-            case 'plan':            return ONBOARDING_CONTENT.plan.cta;
+            case 'welcome':         return t('onboarding.welcome.cta');
+            case 'outcomePromise':  return t('onboarding.outcome_promise.cta');
+            case 'intent':          return t('onboarding.intent.cta');
+            case 'moodNow':         return t('onboarding.mood_now.cta');
+            case 'frequency':       return t('onboarding.frequency.cta');
+            case 'socialProof1':    return t('onboarding.social_proof1.cta');
+            case 'area':            return t('onboarding.area.cta');
+            case 'stakes':          return t('onboarding.stakes.cta');
+            case 'name':            return t('onboarding.name.cta');
+            case 'plan':            return t('onboarding.plan.cta');
             case 'notification':    return ''; // notification slide renders its own buttons
-            case 'journalTaste':    return ONBOARDING_CONTENT.journalTaste.cta;
-            case 'socialProof2':    return ONBOARDING_CONTENT.socialProof2.cta;
-            case 'promise':         return ONBOARDING_CONTENT.promise.cta;
+            case 'journalTaste':    return t('onboarding.journal_taste.cta');
+            case 'socialProof2':    return t('onboarding.social_proof2.cta');
+            case 'promise':         return t('onboarding.promise.cta');
         }
-    }, [slideId]);
+    }, [slideId, t]);
 
     // ── Interpolation context for templated copy ────────────────────────────
     const interpolationCtx = useMemo(() => ({
         name:          answers.name.trim(),
-        intentSummary: summarizeIntents(answers.intents),
+        intentSummary: localizedSummarizeIntents(answers.intents),
         date30:        projectedDateLabel(ONBOARDING_TUNABLES.projectionDays),
         userCount:     ONBOARDING_TUNABLES.socialProofUserCount,
-    }), [answers.name, answers.intents]);
+    }), [answers.name, answers.intents, localizedSummarizeIntents]);
 
     // ───────────────────────────────────────────────────────────────────────
-    // Slide renderers (kept tiny — all copy comes from ONBOARDING_CONTENT)
+    // Slide renderers (kept tiny — all copy comes from i18n translations)
     // ───────────────────────────────────────────────────────────────────────
 
     const renderWelcome = () => {
-        const c = ONBOARDING_CONTENT.welcome;
         return (
-            <SlideShell cta={{ label: c.cta, onPress: handleNext }}>
-                <Pressable onPress={handleMascotTap} style={styles.heroMascot}>
-                    <Animated.View
-                        style={{
-                            transform: [
-                                { translateY: floatAnim },
-                                { translateY: mascotJumpAnim },
-                            ],
-                        }}
-                    >
-                        <Image
-                            source={ULBO}
-                            style={{ width: MASCOT_HERO_SIZE, height: MASCOT_HERO_SIZE }}
-                            resizeMode="contain"
-                        />
-                    </Animated.View>
-                </Pressable>
+            <SlideShell cta={{ label: t('onboarding.welcome.cta'), onPress: handleNext }} hasMascot isHero>
                 <View style={styles.textBlock}>
-                    <Text style={styles.title}>{c.title}</Text>
-                    <Text style={styles.body}>{c.body}</Text>
+                    <Text style={styles.title}>{t('onboarding.welcome.title')}</Text>
+                    <Text style={styles.body}>{t('onboarding.welcome.body')}</Text>
                 </View>
             </SlideShell>
         );
     };
 
     const renderOutcomePromise = () => {
-        const c = ONBOARDING_CONTENT.outcomePromise;
         return (
-            <SlideShell cta={{ label: c.cta, onPress: handleNext }}>
-                <SmallMascot floatAnim={floatAnim} jumpAnim={mascotJumpAnim} onTap={handleMascotTap} />
+            <SlideShell cta={{ label: t('onboarding.outcome_promise.cta'), onPress: handleNext }} hasMascot>
                 <View style={styles.textBlock}>
-                    <Text style={styles.title}>{interpolate(c.title, interpolationCtx)}</Text>
-                    <Text style={styles.body}>{c.body}</Text>
+                    <Text style={styles.title}>{t('onboarding.outcome_promise.title', interpolationCtx)}</Text>
+                    <Text style={styles.body}>{t('onboarding.outcome_promise.body')}</Text>
                 </View>
             </SlideShell>
         );
     };
 
     const renderIntent = () => {
-        const c = ONBOARDING_CONTENT.intent;
         const toggle = (id: string) => {
             const next = answers.intents.includes(id)
                 ? answers.intents.filter(x => x !== id)
@@ -459,22 +473,22 @@ export const OnboardingModal: React.FC<OnboardingModalProps> = ({ visible, onCom
             });
         };
         return (
-            <SlideShell cta={{ label: c.cta, onPress: handleNext, disabled: isCTADisabled }}>
+            <SlideShell cta={{ label: t('onboarding.intent.cta'), onPress: handleNext, disabled: isCTADisabled }}>
                 <View style={styles.questionHeader}>
-                    <Text style={styles.questionTitle}>{c.question}</Text>
-                    <Text style={styles.questionSub}>{c.sub}</Text>
+                    <Text style={styles.questionTitle}>{t('onboarding.intent.question')}</Text>
+                    <Text style={styles.questionSub}>{t('onboarding.intent.sub')}</Text>
                 </View>
                 <View style={styles.optionsList}>
-                    {c.options.map(opt => {
-                        const active = answers.intents.includes(opt.id);
+                    {INTENT_OPTION_IDS.map(id => {
+                        const active = answers.intents.includes(id);
                         return (
                             <TouchableOpacity
-                                key={opt.id}
+                                key={id}
                                 style={[styles.optionCard, active && styles.optionCardActive]}
-                                onPress={() => toggle(opt.id)}
+                                onPress={() => toggle(id)}
                                 activeOpacity={0.85}
                             >
-                                <Text style={styles.optionLabel}>{opt.label}</Text>
+                                <Text style={styles.optionLabel}>{t(`onboarding.intent.option_${id}`)}</Text>
                                 <View style={[styles.checkbox, active && styles.checkboxActive]}>
                                     {active && <CheckIcon />}
                                 </View>
@@ -487,7 +501,6 @@ export const OnboardingModal: React.FC<OnboardingModalProps> = ({ visible, onCom
     };
 
     const renderMoodNow = () => {
-        const c = ONBOARDING_CONTENT.moodNow;
         const select = (mood: OnboardingMood) => {
             setAnswer('moodNow', mood);
             Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
@@ -497,12 +510,9 @@ export const OnboardingModal: React.FC<OnboardingModalProps> = ({ visible, onCom
                 answer:      mood,
             });
         };
-        // Layout mirrors HuntScreen Step 0: title → emotion picker → divider →
-        // multiline note → CTA. Note auto-focuses so the keyboard rises with
-        // the slide, matching the journal flow's behaviour.
         return (
-            <SlideShell cta={{ label: c.cta, onPress: handleNext, disabled: isCTADisabled }}>
-                <Text style={styles.emotionTitle}>HOW DO YOU FEEL TODAY?</Text>
+            <SlideShell cta={{ label: t('onboarding.mood_now.cta'), onPress: handleNext, disabled: isCTADisabled }}>
+                <Text style={styles.emotionTitle}>{t('onboarding.mood_now.emotion_title')}</Text>
                 <View style={styles.emotionRow}>
                     {EMOTION_ORDER.map(emotion => (
                         <Pressable key={emotion} onPress={() => select(emotion)} style={styles.emotionBtn}>
@@ -521,7 +531,7 @@ export const OnboardingModal: React.FC<OnboardingModalProps> = ({ visible, onCom
                 <View style={styles.reflectDivider} />
                 <TextInput
                     style={styles.emotionInput}
-                    placeholder={c.notePlaceholder}
+                    placeholder={t('onboarding.mood_now.note_placeholder')}
                     placeholderTextColor="#AAAAAA"
                     multiline
                     value={answers.moodNote}
@@ -533,35 +543,33 @@ export const OnboardingModal: React.FC<OnboardingModalProps> = ({ visible, onCom
         );
     };
 
-    const renderSingleSelect = (
-        config: typeof ONBOARDING_CONTENT.frequency | typeof ONBOARDING_CONTENT.area | typeof ONBOARDING_CONTENT.stakes,
-        field:  'frequency' | 'area' | 'stakes',
-    ) => {
-        const sub = 'sub' in config ? (config as any).sub : undefined;
+    const renderSingleSelect = (field: 'frequency' | 'area' | 'stakes') => {
+        const section = field as string;
+        const hasSub = field === 'stakes';
         return (
-            <SlideShell cta={{ label: config.cta, onPress: handleNext, disabled: isCTADisabled }}>
+            <SlideShell cta={{ label: t(`onboarding.${section}.cta`), onPress: handleNext, disabled: isCTADisabled }}>
                 <View style={styles.questionHeader}>
-                    <Text style={styles.questionTitle}>{config.question}</Text>
-                    {sub && <Text style={styles.questionSub}>{sub}</Text>}
+                    <Text style={styles.questionTitle}>{t(`onboarding.${section}.question`)}</Text>
+                    {hasSub && <Text style={styles.questionSub}>{t(`onboarding.${section}.sub`)}</Text>}
                 </View>
                 <View style={styles.optionsList}>
-                    {config.options.map(opt => {
-                        const active = answers[field] === opt.id;
+                    {FIELD_OPTION_IDS[field].map(id => {
+                        const active = answers[field] === id;
                         return (
                             <TouchableOpacity
-                                key={opt.id}
+                                key={id}
                                 style={[styles.optionCard, active && styles.optionCardActive]}
                                 onPress={() => {
-                                    setAnswer(field, opt.id);
+                                    setAnswer(field, id);
                                     Haptics.selectionAsync();
                                     trackEvent('onboarding_question_answered', {
                                         question_id: field,
-                                        answer:      opt.id,
+                                        answer:      id,
                                     });
                                 }}
                                 activeOpacity={0.85}
                             >
-                                <Text style={styles.optionLabel}>{opt.label}</Text>
+                                <Text style={styles.optionLabel}>{t(`onboarding.${section}.option_${id}`)}</Text>
                                 <View style={[styles.radio, active && styles.radioActive]}>
                                     {active && <View style={styles.radioDot} />}
                                 </View>
@@ -573,30 +581,28 @@ export const OnboardingModal: React.FC<OnboardingModalProps> = ({ visible, onCom
         );
     };
 
-    const renderSocialProof = (config: typeof ONBOARDING_CONTENT.socialProof1 | typeof ONBOARDING_CONTENT.socialProof2) => (
-        <SlideShell cta={{ label: config.cta, onPress: handleNext }}>
-            <SmallMascot floatAnim={floatAnim} jumpAnim={mascotJumpAnim} onTap={handleMascotTap} />
+    const renderSocialProof = (section: 'social_proof1' | 'social_proof2') => (
+        <SlideShell cta={{ label: t(`onboarding.${section}.cta`), onPress: handleNext }} hasMascot>
             <View style={styles.textBlock}>
-                <Text style={styles.title}>{interpolate(config.title, interpolationCtx)}</Text>
-                <Text style={styles.body}>{interpolate(config.body, interpolationCtx)}</Text>
+                <Text style={styles.title}>{t(`onboarding.${section}.title`, interpolationCtx)}</Text>
+                <Text style={styles.body}>{t(`onboarding.${section}.body`, interpolationCtx)}</Text>
                 <View style={styles.testimonialCard}>
-                    <Text style={styles.testimonialText}>{config.testimonial.text}</Text>
-                    <Text style={styles.testimonialByline}>{config.testimonial.byline}</Text>
+                    <Text style={styles.testimonialText}>{t(`onboarding.${section}.testimonial_text`)}</Text>
+                    <Text style={styles.testimonialByline}>{t(`onboarding.${section}.testimonial_byline`)}</Text>
                 </View>
             </View>
         </SlideShell>
     );
 
     const renderName = () => {
-        const c = ONBOARDING_CONTENT.name;
         return (
-            <SlideShell cta={{ label: c.cta, onPress: handleNext, disabled: isCTADisabled }}>
+            <SlideShell cta={{ label: t('onboarding.name.cta'), onPress: handleNext, disabled: isCTADisabled }}>
                 <View style={styles.questionHeader}>
-                    <Text style={styles.questionTitle}>{c.question}</Text>
+                    <Text style={styles.questionTitle}>{t('onboarding.name.question')}</Text>
                 </View>
                 <TextInput
                     style={styles.nameInput}
-                    placeholder={c.placeholder}
+                    placeholder={t('onboarding.name.placeholder')}
                     placeholderTextColor={BLACK + '40'}
                     value={answers.name}
                     onChangeText={(text) => setAnswer('name', text)}
@@ -610,18 +616,16 @@ export const OnboardingModal: React.FC<OnboardingModalProps> = ({ visible, onCom
     };
 
     const renderPlan = () => {
-        const c = ONBOARDING_CONTENT.plan;
         return (
-            <SlideShell cta={{ label: c.cta, onPress: handleNext }}>
-                <SmallMascot floatAnim={floatAnim} jumpAnim={mascotJumpAnim} onTap={handleMascotTap} />
+            <SlideShell cta={{ label: t('onboarding.plan.cta'), onPress: handleNext }} hasMascot>
                 <View style={styles.textBlock}>
-                    <Text style={styles.title}>{interpolate(c.title, interpolationCtx)}</Text>
-                    <Text style={styles.body}>{c.intro}</Text>
+                    <Text style={styles.title}>{t('onboarding.plan.title', interpolationCtx)}</Text>
+                    <Text style={styles.body}>{t('onboarding.plan.intro')}</Text>
                     <View style={styles.planBullets}>
-                        {c.bullets.map((b, i) => (
+                        {[1, 2, 3, 4].map(i => (
                             <View key={i} style={styles.planBulletRow}>
                                 <View style={styles.planBulletDot} />
-                                <Text style={styles.planBulletText}>{interpolate(b, interpolationCtx)}</Text>
+                                <Text style={styles.planBulletText}>{t(`onboarding.plan.bullet_${i}`, interpolationCtx)}</Text>
                             </View>
                         ))}
                     </View>
@@ -631,8 +635,6 @@ export const OnboardingModal: React.FC<OnboardingModalProps> = ({ visible, onCom
     };
 
     const renderNotification = () => {
-        const c = ONBOARDING_CONTENT.notification;
-
         const handleAccept = async () => {
             Haptics.selectionAsync();
             setAnswer('notifyOptIn', true);
@@ -657,25 +659,25 @@ export const OnboardingModal: React.FC<OnboardingModalProps> = ({ visible, onCom
 
         return (
             <SlideShell
-                cta={{ label: c.ctaYes, onPress: handleAccept }}
+                cta={{ label: t('onboarding.notification.cta_yes'), onPress: handleAccept }}
                 extraBottom={
                     <TouchableOpacity onPress={handleDecline} style={styles.skipInline} activeOpacity={0.7}>
-                        <Text style={styles.skipInlineText}>{c.ctaNo}</Text>
+                        <Text style={styles.skipInlineText}>{t('onboarding.notification.cta_no')}</Text>
                     </TouchableOpacity>
                 }
+                hasMascot
             >
-                <SmallMascot floatAnim={floatAnim} jumpAnim={mascotJumpAnim} onTap={handleMascotTap} />
                 <View style={styles.textBlock}>
-                    <Text style={styles.title}>{c.title}</Text>
-                    <Text style={styles.body}>{c.body}</Text>
-                    <Text style={styles.notifTimeLine}>{c.timeLine}</Text>
+                    <Text style={styles.title}>{t('onboarding.notification.title')}</Text>
+                    <Text style={styles.body}>{t('onboarding.notification.body')}</Text>
+                    <Text style={styles.notifTimeLine}>{t('onboarding.notification.time_line')}</Text>
 
                     {/* Faux notification preview — anchors what they're opting in to. */}
                     <View style={styles.notifPreview}>
                         <View style={styles.notifPreviewIcon} />
                         <View style={{ flex: 1 }}>
-                            <Text style={styles.notifPreviewTitle}>{c.previewTitle}</Text>
-                            <Text style={styles.notifPreviewBody}>{c.previewBody}</Text>
+                            <Text style={styles.notifPreviewTitle}>{t('onboarding.notification.preview_title')}</Text>
+                            <Text style={styles.notifPreviewBody}>{t('onboarding.notification.preview_body')}</Text>
                         </View>
                     </View>
                 </View>
@@ -684,13 +686,15 @@ export const OnboardingModal: React.FC<OnboardingModalProps> = ({ visible, onCom
     };
 
     const renderJournalTaste = () => {
-        const c = ONBOARDING_CONTENT.journalTaste;
         const updateEntry = (idx: number, text: string) => {
             const next = [...answers.journalEntries];
             next[idx] = text;
+            // Sync the ref immediately so onSubmitEditing reads fresh values.
+            journalEntriesRef.current = next;
             setAnswer('journalEntries', next);
         };
         const filledCount = answers.journalEntries.filter(e => e.trim()).length;
+        const allFilled   = filledCount === 3;
 
         const handleSave = () => {
             trackEvent('onboarding_journal_taste_saved', { entry_count: filledCount });
@@ -703,20 +707,28 @@ export const OnboardingModal: React.FC<OnboardingModalProps> = ({ visible, onCom
             goToIndex(currentIndex + 1);
         };
 
-        // Lifts the exact gratitude UI from HuntScreen Step 1: header + counter
-        // + dividers between rows + arrow-prefixed inputs.
+        const placeholders = [
+            t('onboarding.journal_taste.placeholder_1'),
+            t('onboarding.journal_taste.placeholder_2'),
+            t('onboarding.journal_taste.placeholder_3'),
+        ];
+
         return (
             <SlideShell
-                cta={{ label: c.cta, onPress: handleSave, disabled: filledCount === 0 }}
+                // CTA only appears once all 3 are filled.
+                cta={allFilled ? { label: t('onboarding.journal_taste.cta'), onPress: handleSave } : undefined}
+                // Skip link shown while still writing; hidden once complete.
                 extraBottom={
-                    <TouchableOpacity onPress={handleSkip} style={styles.skipInline} activeOpacity={0.7}>
-                        <Text style={styles.skipInlineText}>{c.skipLabel}</Text>
-                    </TouchableOpacity>
+                    !allFilled ? (
+                        <TouchableOpacity onPress={handleSkip} style={styles.skipInline} activeOpacity={0.7}>
+                            <Text style={styles.skipInlineText}>{t('onboarding.journal_taste.skip_label')}</Text>
+                        </TouchableOpacity>
+                    ) : null
                 }
             >
-                <Text style={styles.title}>{c.title}</Text>
+                <Text style={styles.title}>{t('onboarding.journal_taste.title')}</Text>
                 <View style={styles.gratitudeHeader}>
-                    <Text style={styles.gratitudeTitle}>{c.headerLabel}</Text>
+                    <Text style={styles.gratitudeTitle}>{t('onboarding.journal_taste.header_label')}</Text>
                     <Text style={styles.gratitudeCounter}>
                         <Text style={styles.gratitudeCountNum}>{filledCount}</Text>
                         <Text style={styles.gratitudeCountTotal}>/3</Text>
@@ -730,15 +742,21 @@ export const OnboardingModal: React.FC<OnboardingModalProps> = ({ visible, onCom
                             <TextInput
                                 ref={(el) => { journalInputRefs.current[i] = el; }}
                                 style={styles.gratitudeInput}
-                                placeholder={c.placeholders[i]}
+                                placeholder={placeholders[i]}
                                 placeholderTextColor="#AAAAAA"
                                 value={answers.journalEntries[i]}
                                 onChangeText={(text) => updateEntry(i, text)}
-                                // Last row submits (Done); earlier rows advance focus on Enter.
-                                returnKeyType={i === 2 ? 'done' : 'next'}
+                                returnKeyType={i < 2 ? 'next' : 'done'}
                                 blurOnSubmit={i === 2}
                                 onSubmitEditing={() => {
-                                    if (i < 2) journalInputRefs.current[i + 1]?.focus();
+                                    if (i < 2) {
+                                        journalInputRefs.current[i + 1]?.focus();
+                                    } else {
+                                        // Read from ref — state update from onChangeText
+                                        // is async so answers.journalEntries may be stale.
+                                        const allNowFilled = journalEntriesRef.current.every(e => e.trim());
+                                        if (allNowFilled) handleSave();
+                                    }
                                 }}
                                 autoFocus={i === 0}
                             />
@@ -751,8 +769,7 @@ export const OnboardingModal: React.FC<OnboardingModalProps> = ({ visible, onCom
     };
 
     const renderPromise = () => {
-        const c = ONBOARDING_CONTENT.promise;
-        const contract = interpolate(c.contractTemplate, interpolationCtx);
+        const contract = t('onboarding.promise.contract_template', interpolationCtx);
         const hasSignature = answers.signaturePath.length > 0;
 
         // Functional updates — successive touch events must compose against the
@@ -784,10 +801,10 @@ export const OnboardingModal: React.FC<OnboardingModalProps> = ({ visible, onCom
         const clear = () => setAnswer('signaturePath', '');
 
         return (
-            <SlideShell cta={{ label: c.cta, onPress: handleNext, disabled: isCTADisabled }}>
+            <SlideShell cta={{ label: t('onboarding.promise.cta'), onPress: handleNext, disabled: isCTADisabled }}>
                 <View style={styles.questionHeader}>
-                    <Text style={styles.questionTitle}>{c.title}</Text>
-                    <Text style={styles.questionSub}>{c.sub}</Text>
+                    <Text style={styles.questionTitle}>{t('onboarding.promise.title')}</Text>
+                    <Text style={styles.questionSub}>{t('onboarding.promise.sub')}</Text>
                 </View>
                 <View style={styles.contractBlock}>
                     <Text style={styles.contractText}>{contract}</Text>
@@ -808,12 +825,12 @@ export const OnboardingModal: React.FC<OnboardingModalProps> = ({ visible, onCom
                             />
                         </Svg>
                         {!hasSignature && (
-                            <Text style={styles.signaturePlaceholder}>{c.signaturePlaceholder}</Text>
+                            <Text style={styles.signaturePlaceholder}>{t('onboarding.promise.signature_placeholder')}</Text>
                         )}
                     </View>
                     {hasSignature && (
                         <TouchableOpacity onPress={clear} style={styles.clearBtn}>
-                            <Text style={styles.clearBtnText}>{c.clearLabel}</Text>
+                            <Text style={styles.clearBtnText}>{t('onboarding.promise.clear_label')}</Text>
                         </TouchableOpacity>
                     )}
                 </View>
@@ -828,15 +845,15 @@ export const OnboardingModal: React.FC<OnboardingModalProps> = ({ visible, onCom
             case 'outcomePromise':  return renderOutcomePromise();
             case 'intent':          return renderIntent();
             case 'moodNow':         return renderMoodNow();
-            case 'frequency':       return renderSingleSelect(ONBOARDING_CONTENT.frequency, 'frequency');
-            case 'socialProof1':    return renderSocialProof(ONBOARDING_CONTENT.socialProof1);
-            case 'area':            return renderSingleSelect(ONBOARDING_CONTENT.area, 'area');
-            case 'stakes':          return renderSingleSelect(ONBOARDING_CONTENT.stakes, 'stakes');
+            case 'frequency':       return renderSingleSelect('frequency');
+            case 'socialProof1':    return renderSocialProof('social_proof1');
+            case 'area':            return renderSingleSelect('area');
+            case 'stakes':          return renderSingleSelect('stakes');
             case 'name':            return renderName();
             case 'plan':            return renderPlan();
             case 'notification':    return renderNotification();
             case 'journalTaste':    return renderJournalTaste();
-            case 'socialProof2':    return renderSocialProof(ONBOARDING_CONTENT.socialProof2);
+            case 'socialProof2':    return renderSocialProof('social_proof2');
             case 'promise':         return renderPromise();
         }
     };
@@ -858,6 +875,33 @@ export const OnboardingModal: React.FC<OnboardingModalProps> = ({ visible, onCom
                 <Animated.View style={[styles.slideCard, { height: cardH }]}>
                     {renderSlide()}
                 </Animated.View>
+
+                {/* Mascot sits OUTSIDE the overflow:hidden card so float + jump
+                    animations are never clipped. Absolutely positioned over the
+                    card's top area; paddingTop on mascot slides reserves that space. */}
+                {SLIDES_WITH_MASCOT.includes(slideId) && (
+                    <Pressable
+                        onPress={handleMascotTap}
+                        style={styles.mascotFloat}
+                        hitSlop={12}
+                    >
+                        <Animated.View style={{
+                            transform: [
+                                { translateY: floatAnim },
+                                { translateY: mascotJumpAnim },
+                            ],
+                        }}>
+                            <Image
+                                source={ULBO}
+                                style={{
+                                    width:  slideId === 'welcome' ? MASCOT_HERO_SIZE : MASCOT_DEFAULT_SIZE,
+                                    height: slideId === 'welcome' ? MASCOT_HERO_SIZE : MASCOT_DEFAULT_SIZE,
+                                }}
+                                resizeMode="contain"
+                            />
+                        </Animated.View>
+                    </Pressable>
+                )}
             </Animated.View>
         </View>
     );
@@ -890,8 +934,13 @@ const SlideShell: React.FC<{
     children:     React.ReactNode;
     cta?:         { label: string; onPress: () => void; disabled?: boolean };
     extraBottom?: React.ReactNode;
-}> = ({ children, cta, extraBottom }) => (
-    <View style={styles.slide}>
+    hasMascot?:   boolean;
+    isHero?:      boolean;
+}> = ({ children, cta, extraBottom, hasMascot, isHero }) => (
+    <View style={[
+        styles.slide,
+        hasMascot && (isHero ? styles.slidePadHero : styles.slidePadMascot),
+    ]}>
         <ScrollView
             style={{ flex: 1, width: '100%' }}
             contentContainerStyle={{ flexGrow: 1, paddingBottom: 4 }}
@@ -908,29 +957,6 @@ const SlideShell: React.FC<{
 // ─────────────────────────────────────────────────────────────────────────────
 // Small subcomponents
 // ─────────────────────────────────────────────────────────────────────────────
-
-const SmallMascot: React.FC<{
-    floatAnim: Animated.Value;
-    jumpAnim:  Animated.Value;
-    onTap:     () => void;
-}> = ({ floatAnim, jumpAnim, onTap }) => (
-    <Pressable onPress={onTap} style={styles.smallMascot}>
-        <Animated.View
-            style={{
-                transform: [
-                    { translateY: floatAnim },
-                    { translateY: jumpAnim  },
-                ],
-            }}
-        >
-            <Image
-                source={ULBO}
-                style={{ width: MASCOT_DEFAULT_SIZE, height: MASCOT_DEFAULT_SIZE }}
-                resizeMode="contain"
-            />
-        </Animated.View>
-    </Pressable>
-);
 
 const CheckIcon: React.FC = () => (
     <Svg width={14} height={14} viewBox="0 0 24 24" fill="none">
@@ -964,19 +990,31 @@ const styles = StyleSheet.create({
         overflow:        'hidden',
     },
 
+    // Mascot floats above the card — absolutely positioned sibling so
+    // overflow:hidden on slideCard can never clip the float/jump animation.
+    mascotFloat: {
+        position:   'absolute',
+        top:        60,
+        left:       0,
+        right:      0,
+        alignItems: 'center',
+        zIndex:     10,
+    },
+
     // Slide content (lives inside slideCard).
-    // Default `alignItems: stretch` lets the InlineCTA span full width; mascot
-    // wrappers center themselves via their own alignItems.
-    // paddingTop is generous so the mascot jump (-22 + -8 float) stays inside
-    // the card's `overflow: hidden` border.
+    // Default `alignItems: stretch` lets the InlineCTA span full width.
+    // Non-mascot slides use a compact paddingTop; mascot slides reserve space
+    // at the top so text starts below where Ulbo floats.
     slide: {
         flex:              1,
         paddingHorizontal: CARD_INNER_PADDING_X,
-        paddingTop:        36,
+        paddingTop:        24,
         paddingBottom:     16,
     },
-    heroMascot:    { marginBottom: 20, alignItems: 'center' },
-    smallMascot:   { marginBottom: 14, alignItems: 'center' },
+    // Extra top padding injected on slides that show the mascot overlay.
+    // = top offset (16) + image height + gap (16).
+    slidePadMascot: { paddingTop: 24 + MASCOT_DEFAULT_SIZE + 16 },  // 104
+    slidePadHero:   { paddingTop: 16 + MASCOT_HERO_SIZE    + 16 },  // 142
     textBlock:     { width: '100%', flex: 1 },
 
     title: {

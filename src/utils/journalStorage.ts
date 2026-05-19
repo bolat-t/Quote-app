@@ -1,5 +1,6 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { supabase } from '../lib/supabase';
+import i18n from '../lib/i18n';
 import { decode } from 'base64-arraybuffer';
 // Fix deprecated API usage by importing from legacy
 import * as FileSystem from 'expo-file-system/legacy';
@@ -51,10 +52,10 @@ export const getAnalysisUsageToday = async (): Promise<number> => {
 /**
  * Call Supabase Edge Function to analyze journal text
  */
-export const analyzeJournalEntry = async (text: string, userName: string): Promise<{ reply: string; mood: number; tags: string[]; followUp?: string } | null> => {
+export const analyzeJournalEntry = async (text: string, userName: string, language?: string): Promise<{ reply: string; mood: number; tags: string[]; followUp?: string } | null> => {
     try {
         const { data, error } = await supabase.functions.invoke('analyze-journal', {
-            body: { journal_text: text, user_name: userName }
+            body: { journal_text: text, user_name: userName, language: language ?? 'en' }
         });
 
         if (error) {
@@ -96,7 +97,8 @@ export const chatWithUlbo = async (
         dominant_themes?: string[];
         sentiment?: string;
         days_since_last_entry?: number;
-    }
+    },
+    language?: string
 ): Promise<{ reply: string } | null> => {
     try {
         const { data, error } = await supabase.functions.invoke('chat-ulbo', {
@@ -105,6 +107,7 @@ export const chatWithUlbo = async (
                 user_name: userName,
                 quote: quote || null,
                 memory_context: memoryContext || null,
+                language: language ?? 'en',
             }
         });
 
@@ -158,7 +161,7 @@ export const saveJournalEntry = async (entry: JournalEntry): Promise<void> => {
             // Actually `journalStorage` does NOT import `storage.ts`. Good.
             const name = await AsyncStorage.getItem(STORAGE_KEYS.USER_NAME) || 'Friend';
 
-            analyzeJournalEntry(entry.response, name).then(async (analysis) => {
+            analyzeJournalEntry(entry.response, name, i18n.language).then(async (analysis) => {
                 if (analysis) {
                     logger.log('AI Analysis success:', analysis);
                     await updateEntryWithAI(entry.id, analysis);

@@ -84,6 +84,10 @@ export const PLANS: PricingPlan[] = [
         priceUSD:      39.99,
         priceString:   '$39.99',
         periodSuffix:  '/yr',
+        // To enable: see LAUNCH_PLAN.md §4 Step 4 — add Introductory Offer in
+        // App Store Connect + Play Console FIRST, then flip this to 7 (or 3).
+        // Shipping with trialDays > 0 before the store offer is configured =
+        // paywall promises trial but Apple charges immediately = rejection bait.
         trialDays:     0,
         isHighlighted: true,
         isDefault:     true,
@@ -123,12 +127,10 @@ export const TIERS: Record<TierId, PricingTier> = {
         name:    'Ulbo Pro',
         tagline: 'Go deeper, every day',
         features: [
-            { title: 'Deeper Reflections', desc: 'Unlock guided prompts & themes' },
-            { title: 'AI Insights',        desc: 'Smart mood analysis & patterns' },
-            { title: 'Evolving Journal',   desc: 'Custom backgrounds & fonts' },
-            { title: 'Mood Dashboard',     desc: 'Track your emotional journey' },
             { title: 'Longer Recordings',  desc: 'Unlimited voice reflections' },
-            { title: 'Weekly Summaries',   desc: 'AI-powered weekly insights' },
+            { title: 'Unlimited Vision Boards', desc: 'No caps on images or inspiration boards' },
+            { title: 'Unlimited Chat',     desc: 'Talk to Ulbo as much as you want' },
+            { title: 'Unlock Full History', desc: ' See your full history'}
         ],
     },
 };
@@ -191,6 +193,10 @@ export type PaywallTriggerId =
     | 'level_cap'
     | 'weekly_summary_unlock'
     | 'theme_locked'
+    | 'prompts_locked'
+    | 'vision_images_cap'
+    | 'inspiration_boards_cap'
+    | 'chat_messages_cap'
     | 'settings_upgrade';
 
 export interface PaywallTrigger {
@@ -251,10 +257,158 @@ export const PAYWALL_TRIGGERS: Record<PaywallTriggerId, PaywallTrigger> = {
         body:          'Pro unlocks every theme, font, and background.',
         highlightPlan: 'annual',
     },
+    prompts_locked: {
+        id:            'prompts_locked',
+        title:         'Pick your path',
+        body:          'Pro unlocks all 7 reflection themes — Growth, People, Body, Place, and more.',
+        highlightPlan: 'annual',
+    },
+    vision_images_cap: {
+        id:            'vision_images_cap',
+        title:         'Your board, your way',
+        body:          'Pro unlocks unlimited vision board images.',
+        highlightPlan: 'annual',
+    },
+    inspiration_boards_cap: {
+        id:            'inspiration_boards_cap',
+        title:         'More room to dream',
+        body:          'Pro unlocks unlimited inspiration boards.',
+        highlightPlan: 'annual',
+    },
+    chat_messages_cap: {
+        id:            'chat_messages_cap',
+        title:         'Keep the conversation going',
+        body:          'Pro unlocks unlimited messages with Ulbo.',
+        highlightPlan: 'annual',
+    },
     settings_upgrade: {
         id:            'settings_upgrade',
         title:         'Unlock Ulbo Pro',
         highlightPlan: 'annual',
+    },
+};
+
+// ── Feature gates ────────────────────────────────────────────────────────────
+// Maps each gateable feature to: required tier, free/pro limits, paywall trigger,
+// and human-readable label for upgrade prompts.
+//
+// To gate a new feature:
+//   1. Add an entry below
+//   2. Call useFeatureAccess('your_feature_id') at the call site
+//   3. Branch behavior on { allowed, limit }
+//
+// Limits are unit-agnostic — interpret per feature (seconds, count, days, etc.).
+// `freeLimit` is what the user gets without Pro; `proLimit` is the Pro cap
+// (undefined = unlimited).
+
+export type FeatureId =
+    | 'voice_long_recordings'   // seconds — recording cap
+    | 'deeper_prompts'          // count — distinct prompt categories
+    | 'vision_board_images'     // count — images per board
+    | 'inspiration_boards'      // count — total inspiration boards
+    | 'daily_chat_messages'     // count/day — messages to Ulbo per day
+    | 'unlimited_ai_analysis'   // count/day — server-side cap (not yet wired)
+    | 'ai_insights_dashboard'   // boolean — UI access (not yet built)
+    | 'mood_dashboard'          // boolean — UI access (not yet built)
+    | 'weekly_summaries'        // boolean — UI access (not yet built)
+    | 'custom_themes';          // count — selectable themes (not yet built)
+
+export interface FeatureGate {
+    id:           FeatureId;
+    /** Tier required for full (Pro-level) access. */
+    requiredTier: TierId;
+    /** What a free user gets. Undefined = no access at all. */
+    freeLimit:    number | undefined;
+    /** What a Pro user gets. Undefined = unlimited. */
+    proLimit:     number | undefined;
+    /** Trigger ID used when paywall is opened from this feature's gate. */
+    trigger:      PaywallTriggerId;
+    /** Short human label for upgrade prompts. */
+    label:        string;
+}
+
+export const FEATURES: Record<FeatureId, FeatureGate> = {
+    voice_long_recordings: {
+        id:           'voice_long_recordings',
+        requiredTier: 'pro',
+        freeLimit:    60,    // seconds
+        proLimit:     600,   // seconds (10 min)
+        trigger:      'voice_length_cap',
+        label:        'Longer voice recordings',
+    },
+    deeper_prompts: {
+        id:           'deeper_prompts',
+        requiredTier: 'pro',
+        freeLimit:    1,     // 1 category (default fallback)
+        proLimit:     undefined,  // all 7 categories
+        trigger:      'prompts_locked',
+        label:        'Deeper Reflections',
+    },
+    vision_board_images: {
+        id:           'vision_board_images',
+        requiredTier: 'pro',
+        freeLimit:    4,
+        proLimit:     undefined,  // unlimited
+        trigger:      'vision_images_cap',
+        label:        'Unlimited vision board images',
+    },
+    inspiration_boards: {
+        id:           'inspiration_boards',
+        requiredTier: 'pro',
+        freeLimit:    3,
+        proLimit:     undefined,  // unlimited
+        trigger:      'inspiration_boards_cap',
+        label:        'Unlimited inspiration boards',
+    },
+    daily_chat_messages: {
+        id:           'daily_chat_messages',
+        requiredTier: 'pro',
+        freeLimit:    2,
+        proLimit:     undefined,  // unlimited
+        trigger:      'chat_messages_cap',
+        label:        'Unlimited chat with Ulbo',
+    },
+    unlimited_ai_analysis: {
+        // Server-side cap still applies — wire requires backend tier-awareness.
+        // Listed here so the registry stays the source of truth; not yet enforced.
+        id:           'unlimited_ai_analysis',
+        requiredTier: 'pro',
+        freeLimit:    20,
+        proLimit:     undefined,
+        trigger:      'ai_insight_preview',
+        label:        'Unlimited AI analysis',
+    },
+    ai_insights_dashboard: {
+        id:           'ai_insights_dashboard',
+        requiredTier: 'pro',
+        freeLimit:    undefined,  // no access
+        proLimit:     undefined,
+        trigger:      'ai_insight_preview',
+        label:        'AI Insights dashboard',
+    },
+    mood_dashboard: {
+        id:           'mood_dashboard',
+        requiredTier: 'pro',
+        freeLimit:    undefined,
+        proLimit:     undefined,
+        trigger:      'ai_insight_preview',
+        label:        'Mood Dashboard',
+    },
+    weekly_summaries: {
+        id:           'weekly_summaries',
+        requiredTier: 'pro',
+        freeLimit:    undefined,
+        proLimit:     undefined,
+        trigger:      'weekly_summary_unlock',
+        label:        'Weekly Summaries',
+    },
+    custom_themes: {
+        id:           'custom_themes',
+        requiredTier: 'pro',
+        freeLimit:    1,     // default theme only
+        proLimit:     undefined,
+        trigger:      'theme_locked',
+        label:        'Custom themes & fonts',
     },
 };
 
@@ -267,6 +421,15 @@ export const getDefaultPlan = (): PricingPlan =>
     PLANS.find(p => p.isDefault) ?? PLANS[0];
 
 export const getTier = (id: TierId): PricingTier => TIERS[id];
+
+export const getFeature = (id: FeatureId): FeatureGate => FEATURES[id];
+
+/** Resolve a user tier to whether they unlock a required tier. */
+export const tierUnlocks = (userTier: TierId, requiredTier: TierId): boolean => {
+    if (requiredTier === 'free') return true;
+    if (requiredTier === 'pro')  return userTier === 'pro';
+    return false;
+};
 
 /** Apply gift discount to a USD price. Caller decides whether the gift is active. */
 export const applyGiftDiscount = (priceUSD: number): number =>

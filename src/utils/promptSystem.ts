@@ -3,6 +3,16 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { PROMPTS, GratitudePrompt, PromptCategory } from '../data/gratitudePrompts';
 import { MascotMood } from '../hooks/useMascotState';
 import { STORAGE_KEYS } from '../constants/storageKeys';
+import i18n from '../lib/i18n';
+
+/**
+ * Categories available to free-tier users. Pro users get all 7. Edit this list
+ * to change which categories are accessible without upgrading.
+ *
+ * "Micro Moments" is the default because it appears in every mood preference
+ * list — free users still get mood-relevant prompts even with one category.
+ */
+export const FREE_PROMPT_CATEGORIES: PromptCategory[] = ['Micro Moments'];
 
 const PROMPT_HISTORY_KEY = STORAGE_KEYS.PROMPT_HISTORY;
 const LAST_PROMPT_DATE_KEY = STORAGE_KEYS.LAST_PROMPT_DATE;
@@ -49,19 +59,29 @@ const getDaysSince = (dateStr: string | null): number => {
 };
 
 /**
+ * @param mood              Current user mood (drives soft prioritization).
  * @param journalEntryCount Total journal entries (for unlocking advanced prompts).
- * @param excludeIds IDs to exclude from selection (for shuffle functionality).
+ * @param excludeIds        IDs to exclude from selection (for shuffle).
+ * @param isPremium         If false, restrict to FREE_PROMPT_CATEGORIES.
  */
-export const selectDailyPrompt = async (mood: MascotMood, journalEntryCount: number, excludeIds: string[] = []): Promise<GratitudePrompt> => {
+export const selectDailyPrompt = async (
+    mood: MascotMood,
+    journalEntryCount: number,
+    excludeIds: string[] = [],
+    isPremium: boolean = false,
+): Promise<GratitudePrompt> => {
     const history = await getHistory();
     const today = new Date().toISOString().split('T')[0];
 
-    // Check if we already selected one for today? 
+    // Check if we already selected one for today?
     // Usually we want to persist the same prompt for the day unless user asks for another.
     // For now, let's assume this is called when we need a NEW prompt.
 
     // 1. FILTERING
     let candidates = PROMPTS.filter(p => {
+        // Tier Check — free users only see categories in FREE_PROMPT_CATEGORIES
+        if (!isPremium && !FREE_PROMPT_CATEGORIES.includes(p.category)) return false;
+
         // Mood Check
         if (p.excludedMoods?.includes(mood)) return false;
         if (p.allowedMoods && !p.allowedMoods.includes(mood)) return false;
@@ -141,14 +161,7 @@ export const recordPromptUsage = async (prompt: GratitudePrompt) => {
     await saveHistory(history);
 };
 
-export const getMascotIntro = (category: PromptCategory): string => {
-    const intros = [
-        "sprout has a question for u today~",
-        "heart wants u to think about this one:",
-        "ok this one's a soft one:",
-        "hey, gently asking:",
-        "just between us:",
-        "something to sit with:",
-    ];
-    return intros[Math.floor(Math.random() * intros.length)];
+export const getMascotIntro = (_category: PromptCategory): string => {
+    const idx = Math.floor(Math.random() * 6);
+    return i18n.t(`prompts.mascot_intro_${idx}`);
 };
