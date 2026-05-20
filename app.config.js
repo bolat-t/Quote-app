@@ -1,7 +1,7 @@
 module.exports = {
   expo: {
     name: 'ulbo',
-    slug: 'ulbo-app',
+    slug: 'ulbo',
     version: '1.0.1',
     orientation: 'portrait',
     icon: './assets/mascot/potato_levels/level_1_potato.png',
@@ -66,7 +66,7 @@ module.exports = {
       revenueCatIos:   process.env.REVENUECAT_IOS_KEY,
       revenueCatAndroid: process.env.REVENUECAT_ANDROID_KEY,
       eas: {
-        projectId: '9eb45f02-4452-4ab8-aa59-9cbcf0b453a5',
+        projectId: 'e51f1bb6-3814-4f9d-b01e-62486e320233',
       },
     },
   },
