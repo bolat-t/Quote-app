@@ -59,7 +59,7 @@ const BrutalToggle: React.FC<{ value: boolean; onToggle: () => void }> = ({ valu
 };
 const togSt = StyleSheet.create({
     track:       { width: 48, height: 28, borderRadius: 14, backgroundColor: GRAY, borderWidth: 2, borderColor: BLACK + '30', padding: 2, justifyContent: 'center' },
-    trackActive: { backgroundColor: YELLOW, borderColor: BLACK },
+    trackActive: { backgroundColor: YELLOW, borderColor: 'transparent' },
     thumb:       { width: 20, height: 20, borderRadius: 10, backgroundColor: '#CCCCCC', borderWidth: 1.5, borderColor: BLACK + '40' },
     thumbActive: { backgroundColor: BLACK, borderColor: BLACK },
 });
@@ -83,7 +83,7 @@ const DayBubble: React.FC<{ label: string; active: boolean; onPress: () => void 
 };
 const daySt = StyleSheet.create({
     bubble:      { width: 38, height: 38, borderRadius: 19, backgroundColor: GRAY, alignItems: 'center', justifyContent: 'center', borderWidth: 0 },
-    active:      { backgroundColor: YELLOW, borderWidth: 2, borderColor: BLACK },
+    active:      { backgroundColor: YELLOW },
     label:       { fontFamily: 'Inter-Medium', fontSize: 13, color: MUTED },
     labelActive: { color: BLACK },
 });
@@ -201,6 +201,9 @@ export const ReminderSettingsScreen: React.FC<Props> = ({ navigation }) => {
 
     return (
         <SafeAreaView style={st.screen}>
+
+            {/* Drag handle */}
+            <View style={st.handle} />
 
             {/* Header */}
             <View style={st.header}>
@@ -422,9 +425,15 @@ const st = StyleSheet.create({
 
     screen: { flex: 1, backgroundColor: WHITE },
 
+    handle: {
+        width: 40, height: 4, borderRadius: 2,
+        backgroundColor: BLACK + '20',
+        alignSelf: 'center',
+        marginTop: 12, marginBottom: 8,
+    },
     header: {
         flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
-        paddingHorizontal: 20, paddingTop: 8, paddingBottom: 4,
+        paddingHorizontal: 20, paddingTop: 12, paddingBottom: 4,
     },
     backBtn: {
         width: 44, height: 44, borderRadius: 22,
@@ -490,7 +499,7 @@ const st = StyleSheet.create({
     saveBtnWrap: { marginTop: 24 },
     saveBtn: {
         alignItems: 'center', justifyContent: 'center',
-        backgroundColor: YELLOW, borderWidth: 2, borderColor: BLACK, borderRadius: 16,
+        backgroundColor: YELLOW, borderRadius: 16,
         paddingVertical: 18,
     },
     saveBtnDisabled:     { backgroundColor: GRAY, borderColor: '#DDDDDD' },
@@ -527,7 +536,7 @@ const st = StyleSheet.create({
         borderWidth:       1.5,
         borderColor:       BLACK + '25',
     },
-    ampmActive:     { backgroundColor: YELLOW, borderColor: BLACK },
+    ampmActive:     { backgroundColor: YELLOW, borderColor: 'transparent' },
     ampmText:       { fontFamily: 'Inter-Medium', fontSize: 13, color: BLACK + '60' },
     ampmTextActive: { color: BLACK, fontFamily: 'Inter-Bold' },
     sheetActions: { flexDirection: 'row', gap: 12, marginTop: 24 },
@@ -538,7 +547,7 @@ const st = StyleSheet.create({
     sheetCancelText: { fontFamily: 'Inter-Bold', fontSize: 16, color: MUTED },
     sheetConfirmBtn: {
         flex: 2, paddingVertical: 16, borderRadius: 14,
-        borderWidth: 2, borderColor: BLACK, alignItems: 'center', backgroundColor: YELLOW,
+        alignItems: 'center', backgroundColor: YELLOW,
     },
     sheetConfirmText: { fontFamily: 'Inter-Bold', fontSize: 16, color: BLACK },
 });
