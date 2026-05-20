@@ -26,7 +26,8 @@
     "quest_write_journal": "일지 쓰기",
     "quest_positivity_hunt": "긍정 헌트 완료",
     "quest_daily_login": "일일 로그인",
-    "level_up": "레벨 업!"
+    "level_up": "레벨 업!",
+    "feedback_sub": "Ulbo를 더 좋게 만들어 주세요."
   },
   "hunt": {
     "tab_mood": "기분",

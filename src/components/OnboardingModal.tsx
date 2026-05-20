@@ -428,10 +428,11 @@ export const OnboardingModal: React.FC<OnboardingModalProps> = ({ visible, onCom
 
     // ── Interpolation context for templated copy ────────────────────────────
     const interpolationCtx = useMemo(() => ({
-        name:          answers.name.trim(),
-        intentSummary: localizedSummarizeIntents(answers.intents),
-        date30:        projectedDateLabel(ONBOARDING_TUNABLES.projectionDays),
-        userCount:     ONBOARDING_TUNABLES.socialProofUserCount,
+        name:           answers.name.trim(),
+        intentSummary:  localizedSummarizeIntents(answers.intents),
+        date30:         projectedDateLabel(ONBOARDING_TUNABLES.projectionDays),
+        projectionDays: ONBOARDING_TUNABLES.projectionDays,
+        userCount:      ONBOARDING_TUNABLES.socialProofUserCount,
     }), [answers.name, answers.intents, localizedSummarizeIntents]);
 
     // ───────────────────────────────────────────────────────────────────────

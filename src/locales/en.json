@@ -26,7 +26,8 @@
     "quest_write_journal": "Write in your journal",
     "quest_positivity_hunt": "Complete Positivity Hunt",
     "quest_daily_login": "Daily login",
-    "level_up": "Level Up!"
+    "level_up": "Level Up!",
+    "feedback_sub": "Help us improve Ulbo."
   },
   "hunt": {
     "tab_mood": "Mood",
