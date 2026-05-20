@@ -202,7 +202,7 @@ export default function App() {
                                     <Stack.Screen
                                         name="ReminderSettings"
                                         component={ReminderSettingsScreen}
-                                        options={{ presentation: 'card' }}
+                                        options={{ presentation: 'modal' }}
                                     />
                                 </Stack.Navigator>
                             </NavigationContainer>

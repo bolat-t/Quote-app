@@ -161,16 +161,15 @@ export const FeedbackModal: React.FC<FeedbackModalProps> = ({ visible, onClose }
 const styles = StyleSheet.create({
     overlay: {
         flex: 1,
-        backgroundColor: 'rgba(0,0,0,0.4)',
+        backgroundColor: 'rgba(0,0,0,0.5)',
         justifyContent: 'flex-end',
+        paddingHorizontal: 16,
+        paddingBottom: 32,
     },
     modalContainer: {
         backgroundColor: WHITE,
-        borderTopLeftRadius: 24,
-        borderTopRightRadius: 24,
-        borderTopWidth: 2,
-        borderLeftWidth: 2,
-        borderRightWidth: 2,
+        borderRadius: 24,
+        borderWidth: 2,
         borderColor: BLACK,
         padding: 24,
         maxHeight: '90%',

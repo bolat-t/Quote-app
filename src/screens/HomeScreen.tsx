@@ -11,7 +11,6 @@ import {
     Dimensions,
     Animated,
     Easing,
-    ScrollView,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import Svg, { Path as SvgPath } from 'react-native-svg';
@@ -41,7 +40,6 @@ import { getXPProgress, LEVEL_TIERS, XP_REWARDS } from '../data/progressionConfi
 import { XPToast } from '../components/XPToast';
 import { StreakModal } from '../components/StreakModal';
 import { OnboardingModal } from '../components/OnboardingModal';
-import { FeedbackModal } from '../components/FeedbackModal';
 import { isOnboardingCompleted, completeOnboarding } from '../utils/storage';
 import { trackEvent, setUserProperties } from '../lib/analytics';
 import { useDailyQuote } from '../hooks/useDailyQuote';
@@ -545,7 +543,6 @@ export const HubScreen: React.FC = () => {
     });
 
     const [isStreakModalVisible,  setIsStreakModalVisible] = useState(false);
-    const [isFeedbackVisible,     setIsFeedbackVisible]   = useState(false);
     const [xpToast, setXpToast] = useState<{
         amount: number; label?: string; leveledUp?: boolean; newLevelTitle?: string;
     } | null>(null);
@@ -731,80 +728,47 @@ export const HubScreen: React.FC = () => {
 
     return (
         <View style={styles.container}>
-            <ScrollView
-                style={{ flex: 1 }}
-                contentContainerStyle={[
-                    styles.scrollContent,
-                    {
-                        paddingTop: (headerHeight || 0) + 16,
-                        paddingBottom: isOnboardingVisible
-                            ? insets.bottom + 16
-                            : 62 + insets.bottom + 16,
-                    },
-                ]}
-                showsVerticalScrollIndicator={false}
-                keyboardShouldPersistTaps="handled"
-            >
+            <View style={[
+                styles.scrollContent,
+                {
+                    paddingTop: (headerHeight || 0) + 16,
+                    paddingBottom: isOnboardingVisible
+                        ? insets.bottom + 16
+                        : 62 + insets.bottom + 16,
+                },
+            ]}>
                 {isOnboardingVisible ? (
                     <OnboardingModal
                         visible={isOnboardingVisible}
                         onComplete={handleOnboardingComplete}
                     />
                 ) : (
-                    <>
-                        {xpProgress && currentTier && (
-                            <MainCard
-                                level={progress.level}
-                                currentTitle={t(`level.tier_${progress.level}_title`)}
-                                xpInCurrentLevel={xpProgress.xpInCurrentLevel}
-                                xpNeededForNext={xpProgress.xpNeededForNext}
-                                getJumpHeight={getJumpHeight}
-                                onPeak={handlePotatoPeak}
-                                actions={dailyQuests}
-                                dailyActions={dailyActions}
-                                brokenTasks={brokenTasks}
-                                breakAnims={breakAnims}
-                                cardLayouts={cardLayouts}
-                                onNavigate={nav => navigation.navigate(nav as any)}
-                                completedCount={completedCount}
-                                todayMoodScore={todayMoodScore}
-                            />
-                        )}
-
-                        {/* ── Action cards ── */}
-                        <View style={styles.actionCards}>
-                            <TouchableOpacity
-                                style={styles.actionCard}
-                                onPress={() => navigation.navigate('ReminderSettings')}
-                                activeOpacity={0.75}
-                            >
-                                <Text style={styles.actionCardTitle}>{t('header.reminders')}</Text>
-                                <Text style={styles.actionCardSub}>{t('header.reminders_sub')}</Text>
-                            </TouchableOpacity>
-
-                            <TouchableOpacity
-                                style={styles.actionCard}
-                                onPress={() => setIsFeedbackVisible(true)}
-                                activeOpacity={0.75}
-                            >
-                                <Text style={styles.actionCardTitle}>{t('header.feedback')}</Text>
-                                <Text style={styles.actionCardSub}>{t('hub.feedback_sub')}</Text>
-                            </TouchableOpacity>
-                        </View>
-                    </>
+                    xpProgress && currentTier && (
+                        <MainCard
+                            level={progress.level}
+                            currentTitle={t(`level.tier_${progress.level}_title`)}
+                            xpInCurrentLevel={xpProgress.xpInCurrentLevel}
+                            xpNeededForNext={xpProgress.xpNeededForNext}
+                            getJumpHeight={getJumpHeight}
+                            onPeak={handlePotatoPeak}
+                            actions={dailyQuests}
+                            dailyActions={dailyActions}
+                            brokenTasks={brokenTasks}
+                            breakAnims={breakAnims}
+                            cardLayouts={cardLayouts}
+                            onNavigate={nav => navigation.navigate(nav as any)}
+                            completedCount={completedCount}
+                            todayMoodScore={todayMoodScore}
+                        />
+                    )
                 )}
-            </ScrollView>
+            </View>
 
             {/* ── Modals ── */}
             <StreakModal
                 visible={isStreakModalVisible}
                 onClose={() => setIsStreakModalVisible(false)}
                 streak={streak}
-            />
-
-            <FeedbackModal
-                visible={isFeedbackVisible}
-                onClose={() => setIsFeedbackVisible(false)}
             />
 
             <XPToast
@@ -825,27 +789,7 @@ export const HubScreen: React.FC = () => {
 
 const styles = StyleSheet.create({
     container:     { flex: 1, backgroundColor: BLACK },
-    scrollContent: { paddingHorizontal: 16, gap: 16 },
-    actionCards: {
-        gap: 12,
-    },
-    actionCard: {
-        backgroundColor: WHITE,
-        borderRadius:    18,
-        paddingHorizontal: 20,
-        paddingVertical:   18,
-        gap: 4,
-    },
-    actionCardTitle: {
-        fontFamily: 'Inter-SemiBold',
-        fontSize:   16,
-        color:      BLACK,
-    },
-    actionCardSub: {
-        fontFamily: 'Inter-Medium',
-        fontSize:   13,
-        color:      '#6B7280',
-    },
+    scrollContent: { flex: 1, paddingHorizontal: 16 },
 });
 
 export default HubScreen;
