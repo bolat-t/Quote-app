@@ -43,7 +43,6 @@ export type RootStackParamList = {
     offer?: 'first_promise_gift';
   } | undefined;
   VisionBoard: undefined;
-  ReminderSettings: undefined;
 };
 
 // ── Onboarding ──

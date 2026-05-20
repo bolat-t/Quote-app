@@ -17,7 +17,6 @@ import { HuntScreen } from './src/screens/JournalScreen';
 import { JournalScreen } from './src/screens/HistoryScreen';
 import { VisionBoardScreen } from './src/screens/VisionBoardScreen';
 import { PaywallScreen } from './src/screens/PaywallScreen';
-import { ReminderSettingsScreen } from './src/screens/ReminderSettingsScreen';
 import { AppHeader } from './src/components/AppHeader';
 import { getUserName } from './src/utils/storage';
 import { HeaderHeightProvider, useSetHeaderHeight } from './src/context/HeaderHeightContext';
@@ -198,11 +197,6 @@ export default function App() {
                                         name="VisionBoard"
                                         component={VisionBoardScreen}
                                         options={{ presentation: 'card' }}
-                                    />
-                                    <Stack.Screen
-                                        name="ReminderSettings"
-                                        component={ReminderSettingsScreen}
-                                        options={{ presentation: 'modal' }}
                                     />
                                 </Stack.Navigator>
                             </NavigationContainer>

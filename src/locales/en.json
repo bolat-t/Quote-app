@@ -153,7 +153,11 @@
     "go_back": "Go back",
     "save": "Save",
     "saving": "Saving…",
-    "save_off": "Reminders off — save anyway"
+    "save_off": "Reminders off — save anyway",
+    "done": "Done",
+    "active_count_one": "{{count}} reminder active",
+    "active_count_other": "{{count}} reminders active",
+    "all_off": "All reminders off"
   },
   "auth": {
     "title_signup": "Join Ulbo",
@@ -186,7 +190,8 @@
     "success_title": "Thank you!",
     "success_message": "Your feedback helps us make Ulbo better.",
     "error_title": "Error",
-    "error_message": "Something went wrong. Please try again later."
+    "error_message": "Something went wrong. Please try again later.",
+    "done": "Done"
   },
   "level": {
     "close_label": "Close level modal",

@@ -31,7 +31,7 @@ export const ONBOARDING_TUNABLES = {
     notifyHour:       19,   // 7 PM
     notifyMinute:     0,
     /** Social-proof number shown on the two break slides. Bump as we grow. */
-    socialProofUserCount: 47213,
+    socialProofUserCount: 23762,
 };
 
 // ── Slide IDs (one per screen in the flow) ───────────────────────────────────
@@ -66,8 +66,8 @@ export const ONBOARDING_CONTENT = {
 
     // 2 — Outcome promise. Future-Self voice. Replaces the old feature list.
     outcomePromise: {
-        title: "In {projectionDays} days, you'll have written {projectionDays} reflections.",
-        body:  "You'll have met your past self on the page.\nYou'll know what your inner voice actually sounds like — not the noise around it.\n\nLet's get you there.",
+        title: "In 30 days, you'll have written over 100 reflections.",
+        body:  "You'll have met your past self on the page.\nYou'll know what your inner voice actually sounds like, not the noise around it.\n\nLet's get you there.",
         cta:   'Continue',
     },
 
@@ -89,7 +89,7 @@ export const ONBOARDING_CONTENT = {
     // 4 — Mood right now. First product touch — uses the same 4-emotion picker
     //     + free-text input as the Journal tab so the muscle memory transfers.
     moodNow: {
-        question:        'Before we go further — how are you, right now?',
+        question:        'Before we go further, how are you, right now?',
         sub:             'No need to be brave about it.',
         notePlaceholder: "What's on your mind?",
         cta:             'Continue',
@@ -97,7 +97,7 @@ export const ONBOARDING_CONTENT = {
 
     // 5 — Frequency (soft pain).
     frequency: {
-        question: 'How often does life feel louder than your inner voice?',
+        question: 'How often does do you question your own decisions?',
         options: [
             { id: 'rarely',    label: 'Almost never' },
             { id: 'sometimes', label: 'Some weeks'   },
@@ -113,7 +113,7 @@ export const ONBOARDING_CONTENT = {
         body:  '{userCount} people opened Ulbo this week.',
         testimonial: {
             text:    '"I started Ulbo when I was burning out. The reflections gave me back twenty quiet minutes a day."',
-            byline:  '— Mira, 1-year user',
+            byline:  '- Mira, 1-year user',
         },
         cta: 'Continue',
     },
@@ -134,7 +134,7 @@ export const ONBOARDING_CONTENT = {
     // 8 — Stakes. The gut-punch question, last by design (sunk-cost ladder).
     stakes: {
         question: 'One more.',
-        sub:      'If a year from now, nothing has changed — same noise, same feeling, same loop — how would that sit with you?',
+        sub:      'If a year from now, nothing has changed, same noise, same feeling, same loop, how would that sit with you?',
         options: [
             { id: 'fine',         label: "I'd be fine"             },
             { id: 'tired',        label: "I'd be tired"            },
@@ -158,8 +158,8 @@ export const ONBOARDING_CONTENT = {
         bullets: [
             'Your first reflections will focus on {intentSummary}',
             "One small action a day — that's all",
-            'By {date30}, you\'ll have {projectionDays} reflections in your journal',
-            'Your potato will grow from Raw Spud to Sprouting Spud',
+            'By {date30}, you\'ll have 30 reflections in your journal',
+            'Your potato will grow from Raw Spud to Sprouting Potato',
         ],
         cta: "Let's begin",
     },
@@ -167,7 +167,7 @@ export const ONBOARDING_CONTENT = {
     // 11 — Notification prime. Custom screen *before* the OS prompt.
     notification: {
         title:        'One small thing.',
-        body:         'Can I check in with you once a day? A short nudge — never noisy.',
+        body:         'Can I check in with you once a day? A short nudge.',
         timeLine:     '7:00 PM sounds good?',
         previewTitle: 'ulbo.',
         previewBody:  "take two minutes. just for you. i'll be here.",
@@ -182,8 +182,8 @@ export const ONBOARDING_CONTENT = {
         headerLabel:  "TODAY'S GRATITUDE",
         placeholders: [
             'Something good today...',
-            'Another thing...',
-            'One more...',
+            'Something your happy about...',
+            'What makes you smile...',
         ],
         cta:         'Save my first reflection',
         skipLabel:   "I'll do this later",

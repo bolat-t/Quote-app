@@ -22,6 +22,7 @@ import { useHistoryCalendar } from '../context/HistoryCalendarContext';
 import { useOnboarding } from '../context/OnboardingContext';
 import { AuthModal } from './AuthModal';
 import { FeedbackModal } from './FeedbackModal';
+import { ReminderSettingsScreen } from '../screens/ReminderSettingsScreen';
 import { useTranslation } from 'react-i18next';
 
 const SUBTEXT = '#4B5563';
@@ -106,6 +107,7 @@ export const AppHeader: React.FC<AppHeaderProps> = ({ title, subtitle, currentRo
     const [isExpanded, setIsExpanded]                   = useState(false);
     const [isAuthVisible, setIsAuthVisible]             = useState(false);
     const [isFeedbackVisible, setIsFeedbackVisible]     = useState(false);
+    const [isReminderVisible, setIsReminderVisible]     = useState(false);
     const [localPremium, setLocalPremium]               = useState(isPremium);
     const [localLang, setLocalLang]                     = useState<'en' | 'ko'>(
         i18n.language.startsWith('ko') ? 'ko' : 'en'
@@ -177,13 +179,13 @@ export const AppHeader: React.FC<AppHeaderProps> = ({ title, subtitle, currentRo
 
                     <View style={styles.divider} />
 
-                    {/* 2. Daily Reminders — opens the picker so the user chooses time + days */}
+                    {/* 2. Daily Reminders — opens the floating card modal */}
                     <SettingsRow
                         label={t('header.reminders')}
                         subtext={t('header.reminders_sub')}
                         onPress={() => {
                             setIsExpanded(false);
-                            navigation.navigate('ReminderSettings');
+                            setTimeout(() => setIsReminderVisible(true), 300);
                         }}
                     />
 
@@ -266,6 +268,7 @@ export const AppHeader: React.FC<AppHeaderProps> = ({ title, subtitle, currentRo
             {/* ── Modals ── */}
             <AuthModal visible={isAuthVisible} onClose={() => setIsAuthVisible(false)} />
             <FeedbackModal visible={isFeedbackVisible} onClose={() => setIsFeedbackVisible(false)} />
+            <ReminderSettingsScreen visible={isReminderVisible} onClose={() => setIsReminderVisible(false)} />
         </View>
     );
 };
